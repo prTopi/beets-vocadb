@@ -37,10 +37,68 @@ class VocaDBPlugin(BeetsPlugin):
         return get_distance(data_source="VocaDB", info=album_info, config=self.config)
 
     def candidates(self, items, artist, album, va_likely, extra_tags=None):
-        pass
+        self._log.debug("Searching for album {0}", album)
+        language = self.get_lang()
+        url = urljoin(
+            VOCADB_API_URL,
+            "albums/?query="
+            + quote(album)
+            + "&fields="
+            + self.get_album_fields()
+            + "&songFields="
+            + self.get_song_fields()
+            + "&lang="
+            + language
+            + "&maxResults=5",
+        )
+        request = Request(url, headers=HEADERS)
+        try:
+            with urlopen(request) as result:
+                # with open("/home/topi/Downloads/out-search-album.json") as result:
+                if result:
+                    result = load(result)
+                    return [
+                        album
+                        for album in map(self.album_info, result["items"])
+                        if album
+                    ]
+                else:
+                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    return []
+        except HTTPError as e:
+            self._log.debug("API Error: {0} (query: {1})", e, url)
+            return []
 
     def item_candidates(self, item, artist, album):
-        pass
+        self._log.debug("Searching for track {0}", item)
+        language = self.get_lang()
+        url = urljoin(
+            VOCADB_API_URL,
+            "songs/?query="
+            + quote(item)
+            + "&fields="
+            + self.get_song_fields()
+            + "&lang="
+            + language
+            + "&maxResults=5",
+        )
+        request = Request(url, headers=HEADERS)
+        try:
+            with urlopen(request) as result:
+                # with open("/home/topi/Downloads/out-search-album.json") as result:
+                if result:
+                    result = load(result)
+                    return [
+                        track
+                        for track in map(self.track_info, result["items"])
+                        if track
+                    ]
+                else:
+                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    return []
+        except HTTPError as e:
+            self._log.debug("API Error: {0} (query: {1})", e, url)
+            return []
 
     def album_for_id(self, album_id):
         self._log.debug("Searching for album {0}", album_id)
