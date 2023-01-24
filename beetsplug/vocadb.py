@@ -1,3 +1,4 @@
+from datetime import datetime
 from json import load
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
@@ -6,7 +7,7 @@ from urllib.request import Request, urlopen
 import beets
 from beets import config
 from beets.autotag.hooks import AlbumInfo, TrackInfo
-from beets.plugins import BeetsPlugin, MetadataSourcePlugin, get_distance
+from beets.plugins import BeetsPlugin, get_distance
 from beets.ui import Subcommand
 
 VOCADB_BASE_URL = "https://vocadb.net/"
@@ -125,6 +126,15 @@ class VocaDBPlugin(BeetsPlugin):
             lyrics = self.get_lyrics(result["lyrics"], language)
         else:
             lyrics = None
+        try:
+            date = datetime.fromisoformat(result["publishDate"][:-1])
+        except ValueError as e:
+            self._log.debug("Date Error: {0}", e)
+            original_day = original_month = original_year = None
+        else:
+            original_day = date.day
+            original_month = date.month
+            original_year = date.year
         return TrackInfo(
             title=title,
             track_id=track_id,
@@ -143,6 +153,9 @@ class VocaDBPlugin(BeetsPlugin):
             bpm=bpm,
             genre=genre,
             lyrics=lyrics,
+            original_day=original_day,
+            original_month=original_month,
+            original_year=original_year,
         )
 
     def get_album_fields(self):
