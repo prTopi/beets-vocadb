@@ -54,7 +54,6 @@ class VocaDBPlugin(BeetsPlugin):
         request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
-                # with open("/home/topi/Downloads/out-search-album.json") as result:
                 if result:
                     result = load(result)
                     return [
@@ -85,7 +84,6 @@ class VocaDBPlugin(BeetsPlugin):
         request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
-                # with open("/home/topi/Downloads/out-search-album.json") as result:
                 if result:
                     result = load(result)
                     return [
@@ -117,7 +115,6 @@ class VocaDBPlugin(BeetsPlugin):
         request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
-                # with open("/home/topi/Downloads/out-album.json") as result:
                 if result:
                     result = load(result)
                     return self.album_info(result, language=language)
@@ -143,7 +140,6 @@ class VocaDBPlugin(BeetsPlugin):
         request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
-                # with open("/home/topi/Downloads/out-track.json") as result:
                 if result:
                     result = load(result)
                     return self.track_info(result, language=language)
