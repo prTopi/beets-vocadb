@@ -97,18 +97,28 @@ class VocaDBPlugin(BeetsPlugin):
             return
 
     def album_info(self, release, language=None):
-        if not release["discs"]:
-            release["discs"].append({"discNumber": 1, "name": "CD"})
+        if "discs" not in release or not release["discs"]:
+            release["discs"] = [{"discNumber": 1, "name": "CD"}]
+        ignored_discs = []
         for x in release["discs"]:
-            x["total"] = max(
-                [y for y in release["tracks"] if y["discNumber"] == x["discNumber"]],
-                key=lambda y: y["trackNumber"],
-            )["trackNumber"]
+            if x["mediaType"] == "Video" and config["match"]["ignore_video_tracks"]:
+                ignored_discs.append(x["discNumber"])
+            else:
+                x["total"] = max(
+                    [
+                        y
+                        for y in release["tracks"]
+                        if y["discNumber"] == x["discNumber"]
+                    ],
+                    key=lambda y: y["trackNumber"],
+                )["trackNumber"]
 
         track_infos = []
         index = 0
         for track in release["tracks"]:
             index += 1
+            if track["discNumber"] in ignored_discs:
+                continue
             format = release["discs"][track["discNumber"] - 1]["name"]
             total = release["discs"][track["discNumber"] - 1]["total"]
             track_info = self.track_info(
