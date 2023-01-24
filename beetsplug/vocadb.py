@@ -135,7 +135,10 @@ class VocaDBPlugin(BeetsPlugin):
         album = release["name"]
         album_id = release["id"]
         artist = release["artistString"]
-        artist_id = release["artists"][0]["artist"]["id"]
+        if "artists" in release and release["artists"]:
+            artist_id = release["artists"][0]["artist"]["id"]
+        else:
+            artist_id = None
         tracks = track_infos
         albumtype = release["discType"]
         va = release["artistString"] == "Various artists"
@@ -150,9 +153,10 @@ class VocaDBPlugin(BeetsPlugin):
         mediums = len(release["discs"])
         catalognum = release["catalogNumber"]
         genres = []
-        for x in sorted(release["tags"], key=lambda x: x["count"]):
-            if x["tag"]["categoryName"] == "Genres":
-                genres.append(x["tag"]["name"].title())
+        if "tags" in release:
+            for x in sorted(release["tags"], key=lambda x: x["count"]):
+                if x["tag"]["categoryName"] == "Genres":
+                    genres.append(x["tag"]["name"].title())
         genre = "; ".join(genres)
         albumstatus = release["status"]
         media = release["discs"][0]["name"]
@@ -198,20 +202,21 @@ class VocaDBPlugin(BeetsPlugin):
         arrangers = []
         composers = []
         lyricists = []
-        for x in recording["artists"]:
-            if "Producer" in x["categories"]:
-                if not artist_id:
-                    if "artist" in x and "id" in x["artist"]:
-                        artist_id = x["artist"]["id"]
-                    else:
-                        artist_id = x["id"]
-                producers.append(x["name"])
-                if "Arranger" in x["effectiveRoles"]:
-                    arrangers.append(x["name"])
-                if "Composer" in x["effectiveRoles"]:
-                    composers.append(x["name"])
-                if "Lyricist" in x["effectiveRoles"]:
-                    lyricists.append(x["name"])
+        if "artist" in recording and recording["artists"]:
+            for x in recording["artists"]:
+                if "Producer" in x["categories"]:
+                    if not artist_id:
+                        if "artist" in x and "id" in x["artist"]:
+                            artist_id = x["artist"]["id"]
+                        else:
+                            artist_id = x["id"]
+                    producers.append(x["name"])
+                    if "Arranger" in x["effectiveRoles"]:
+                        arrangers.append(x["name"])
+                    if "Composer" in x["effectiveRoles"]:
+                        composers.append(x["name"])
+                    if "Lyricist" in x["effectiveRoles"]:
+                        lyricists.append(x["name"])
         arranger = ", ".join(arrangers)
         if not arranger and self.config["no_empty_roles"]:
             arranger = ", ".join(producers)
@@ -228,9 +233,10 @@ class VocaDBPlugin(BeetsPlugin):
         else:
             bpm = 0
         genres = []
-        for x in sorted(recording["tags"], key=lambda x: x["count"]):
-            if x["tag"]["categoryName"] == "Genres":
-                genres.append(x["tag"]["name"].title())
+        if "tags" in recording:
+            for x in sorted(recording["tags"], key=lambda x: x["count"]):
+                if x["tag"]["categoryName"] == "Genres":
+                    genres.append(x["tag"]["name"].title())
         genre = "; ".join(genres)
         if (
             self.config["import_lyrics"]
