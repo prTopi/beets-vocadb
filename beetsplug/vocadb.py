@@ -1,5 +1,5 @@
 from datetime import datetime
-from json import dump, load
+from json import load
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
@@ -56,19 +56,19 @@ class VocaDBPlugin(BeetsPlugin):
             + "&lang="
             + language,
         )
-        # request = Request(url, headers=HEADERS)
+        request = Request(url, headers=HEADERS)
         try:
-            # with urlopen(request) as result:
-            with open("/home/topi/Downloads/out-album.json") as result:
+            with urlopen(request) as result:
+                # with open("/home/topi/Downloads/out-album.json") as result:
                 if result:
                     result = load(result)
                     return self.album_info(result, language=language)
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
-                    return None
+                    return
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
-            return None
+            return
 
     def track_for_id(self, track_id):
         self._log.debug("Searching for track {0}", track_id)
@@ -82,19 +82,19 @@ class VocaDBPlugin(BeetsPlugin):
             + "&lang="
             + language,
         )
-        # request = Request(url, headers=HEADERS)
+        request = Request(url, headers=HEADERS)
         try:
-            # with urlopen(request) as result:
-            with open("/home/topi/Downloads/out-track.json") as result:
+            with urlopen(request) as result:
+                # with open("/home/topi/Downloads/out-track.json") as result:
                 if result:
                     result = load(result)
                     return self.track_info(result, language=language)
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
-                    return None
+                    return
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
-            return None
+            return
 
     def album_info(self, release, language=None):
         if not release["discs"]:
@@ -264,7 +264,7 @@ class VocaDBPlugin(BeetsPlugin):
         )
 
     def get_album_fields(self):
-        return "Discs,"
+        return "Artists,Discs,Tags,Tracks"
 
     def get_song_fields(self):
         fields = "Artists,Tags,Bpm"
@@ -294,17 +294,3 @@ class VocaDBPlugin(BeetsPlugin):
                 if x["translationType"] == "Romanized":
                     return x["value"]
         return lyrics[0]["value"]
-
-    def commands(self):
-        vocadb_cmd = Subcommand("vocadb", help="vocadb testing command")
-
-        def say_hi(lib, opts, args):
-            if opts.album:
-                with open("a.json", "w") as f:
-                    dump(self.album_for_id(args[0]), f, indent=2)
-            else:
-                print(self.track_for_id(args[0]))
-
-        vocadb_cmd.func = say_hi
-        vocadb_cmd.parser.add_album_option()
-        return [vocadb_cmd]
