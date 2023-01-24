@@ -21,8 +21,9 @@ class VocaDBPlugin(BeetsPlugin):
         self.config.add(
             {
                 "source_weight": 0.5,
+                "import_lyrics": False,
                 "prefer_romaji": True,
-                "no_empty_roles": True,
+                "no_empty_roles": False,
             }
         )
 
@@ -45,6 +46,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def track_for_id(self, track_id):
         self._log.debug("Searching for track {0}", track_id)
+        language = self.get_lang()
         url = urljoin(
             VOCADB_API_URL,
             "songs/"
@@ -52,7 +54,7 @@ class VocaDBPlugin(BeetsPlugin):
             + "?fields="
             + self.get_song_fields()
             + ",lang="
-            + self.get_lang(),
+            + language,
         )
         # request = Request(url, headers=HEADERS)
         try:
@@ -60,7 +62,7 @@ class VocaDBPlugin(BeetsPlugin):
             with open("/home/_/Downloads/out.json") as result:
                 if result:
                     result = load(result)
-                    return self.track_info(result)
+                    return self.track_info(result, language=language)
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return None
@@ -68,13 +70,20 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return None
 
-    def album_info(self, result):
+    def album_info(self, result, language=None):
         pass
 
     def track_info(
-        self, result, index=None, medium=None, medium_index=None, medium_total=None
+        self,
+        result,
+        index=None,
+        medium=None,
+        medium_index=None,
+        medium_total=None,
+        language=None,
     ):
         title = result["name"]
+        track_id = result["id"]
         artist = result["artistString"]
         artist_id = None
         producers = []
@@ -116,6 +125,10 @@ class VocaDBPlugin(BeetsPlugin):
             if x["tag"]["categoryName"] == "Genres":
                 genres.append(x["tag"]["name"].title())
         genre = "; ".join(genres)
+        if self.config["import_lyrics"] and "lyrics" in result and result["lyrics"]:
+            lyrics = self.get_lyrics(result["lyrics"], language)
+        else:
+            lyrics = None
         return TrackInfo(
             title=title,
             track_id=track_id,
@@ -126,20 +139,24 @@ class VocaDBPlugin(BeetsPlugin):
             medium=medium,
             medium_index=medium_index,
             medium_total=medium_total,
-            data_souce="VocaDB",
+            data_source="VocaDB",
             data_url=data_url,
             lyricist=lyricist,
             composer=composer,
             arranger=arranger,
             bpm=bpm,
             genre=genre,
+            lyrics=lyrics,
         )
 
     def get_album_fields(self):
         return "Discs,"
 
     def get_song_fields(self):
-        return "Artists,Lyrics,Tags,Bpm"
+        fields = "Artists,Tags,Bpm"
+        if self.config["import_lyrics"]:
+            fields += "Lyrics"
+        return fields
 
     def get_lang(self):
         if config["import"]["languages"]:
@@ -151,6 +168,18 @@ class VocaDBPlugin(BeetsPlugin):
                 if x == "en":
                     return "English"
         return "English"
+
+    def get_lyrics(self, lyrics, language):
+        if language == "English":
+            for x in lyrics:
+                if x["cultureCode"] == "en":
+                    return x["value"]
+            return self.get_lyrics(lyrics, "Romaji")
+        if language == "Romaji":
+            for x in lyrics:
+                if x["translationType"] == "Romanized":
+                    return x["value"]
+        return lyrics[0]["value"]
 
     def commands(self):
         vocadb_cmd = Subcommand("vocadb", help="vocadb testing command")
