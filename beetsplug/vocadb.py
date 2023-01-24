@@ -104,19 +104,15 @@ class VocaDBPlugin(BeetsPlugin):
                     composers.append(x["name"])
                 if "Lyricist" in x["effectiveRoles"]:
                     lyricists.append(x["name"])
-        if arrangers:
-            arranger = ", ".join(arrangers)
-        elif self.config["no_empty_roles"]:
+        arranger = ", ".join(arrangers)
+        if not arranger and self.config["no_empty_roles"]:
             arranger = ", ".join(producers)
-        if composers:
-            composer = ", ".join(composers)
-        elif self.config["no_empty_roles"]:
+        composer = ", ".join(composers)
+        if not composer and self.config["no_empty_roles"]:
             composer = ", ".join(producers)
-        if lyricists:
-            lyricist = ", ".join(lyricists)
-        elif self.config["no_empty_roles"]:
+        lyricist = ", ".join(lyricists)
+        if not lyricist and self.config["no_empty_roles"]:
             lyricist = ", ".join(producers)
-        track_id = result["id"]
         length = result["lengthSeconds"]
         data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
         bpm = result["maxMilliBpm"] // 1000
