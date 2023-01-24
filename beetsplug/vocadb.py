@@ -1,5 +1,5 @@
 from datetime import datetime
-from json import load
+from json import dump, load
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
@@ -43,7 +43,32 @@ class VocaDBPlugin(BeetsPlugin):
         pass
 
     def album_for_id(self, album_id):
-        pass
+        self._log.debug("Searching for album {0}", album_id)
+        language = self.get_lang()
+        url = urljoin(
+            VOCADB_API_URL,
+            "albums/"
+            + album_id
+            + "?fields="
+            + self.get_album_fields()
+            + "&songFields="
+            + self.get_song_fields()
+            + "&lang="
+            + language,
+        )
+        # request = Request(url, headers=HEADERS)
+        try:
+            # with urlopen(request) as result:
+            with open("/home/topi/Downloads/out-album.json") as result:
+                if result:
+                    result = load(result)
+                    return self.album_info(result, language=language)
+                else:
+                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    return None
+        except HTTPError as e:
+            self._log.debug("API Error: {0} (query: {1})", e, url)
+            return None
 
     def track_for_id(self, track_id):
         self._log.debug("Searching for track {0}", track_id)
@@ -54,13 +79,13 @@ class VocaDBPlugin(BeetsPlugin):
             + track_id
             + "?fields="
             + self.get_song_fields()
-            + ",lang="
+            + "&lang="
             + language,
         )
         # request = Request(url, headers=HEADERS)
         try:
             # with urlopen(request) as result:
-            with open("/home/_/Downloads/out.json") as result:
+            with open("/home/topi/Downloads/out-track.json") as result:
                 if result:
                     result = load(result)
                     return self.track_info(result, language=language)
@@ -71,27 +96,99 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return None
 
-    def album_info(self, result, language=None):
-        pass
+    def album_info(self, release, language=None):
+        if not release["discs"]:
+            release["discs"].append({"discNumber": 1, "name": "CD"})
+        for x in release["discs"]:
+            x["total"] = max(
+                [y for y in release["tracks"] if y["discNumber"] == x["discNumber"]],
+                key=lambda y: y["trackNumber"],
+            )["trackNumber"]
+
+        track_infos = []
+        index = 0
+        for track in release["tracks"]:
+            index += 1
+            format = release["discs"][track["discNumber"] - 1]["name"]
+            total = release["discs"][track["discNumber"] - 1]["total"]
+            track_info = self.track_info(
+                track["song"],
+                index=index,
+                media=format,
+                medium=track["discNumber"],
+                medium_index=track["trackNumber"],
+                medium_total=total,
+                language=language,
+            )
+            track_infos.append(track_info)
+
+        album = release["name"]
+        album_id = release["id"]
+        artist = release["artistString"]
+        artist_id = release["artists"][0]["artist"]["id"]
+        tracks = track_infos
+        albumtype = release["discType"]
+        va = release["artistString"] == "Various artists"
+        year = release["releaseDate"]["year"]
+        month = release["releaseDate"]["month"]
+        day = release["releaseDate"]["day"]
+        label = None
+        for x in release["artists"]:
+            if "Label" in x["categories"]:
+                label = x["name"]
+                break
+        mediums = len(release["discs"])
+        catalognum = release["catalogNumber"]
+        genres = []
+        for x in sorted(release["tags"], key=lambda x: x["count"]):
+            if x["tag"]["categoryName"] == "Genres":
+                genres.append(x["tag"]["name"].title())
+        genre = "; ".join(genres)
+        albumstatus = release["status"]
+        media = release["discs"][0]["name"]
+        data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
+        return AlbumInfo(
+            album=album,
+            album_id=album_id,
+            artist=artist,
+            artist_id=artist_id,
+            tracks=tracks,
+            albumtype=albumtype,
+            va=va,
+            year=year,
+            month=month,
+            day=day,
+            label=label,
+            mediums=mediums,
+            catalognum=catalognum,
+            genre=genre,
+            albumstatus=albumstatus,
+            media=media,
+            data_source="VocaDB",
+            data_url=data_url,
+        )
 
     def track_info(
         self,
-        result,
+        recording,
         index=None,
+        media=None,
         medium=None,
         medium_index=None,
         medium_total=None,
         language=None,
     ):
-        title = result["name"]
-        track_id = result["id"]
-        artist = result["artistString"]
+        title = recording["name"]
+        track_id = recording["id"]
+        artist = recording[
+            "artistString"
+        ]  # TODO: Feat. shortened to various. Maybe read from artists tag?
         artist_id = None
         producers = []
         arrangers = []
         composers = []
         lyricists = []
-        for x in result["artists"]:
+        for x in recording["artists"]:
             if "Producer" in x["categories"]:
                 if not artist_id:
                     if "artist" in x and "id" in x["artist"]:
@@ -114,20 +211,27 @@ class VocaDBPlugin(BeetsPlugin):
         lyricist = ", ".join(lyricists)
         if not lyricist and self.config["no_empty_roles"]:
             lyricist = ", ".join(producers)
-        length = result["lengthSeconds"]
+        length = recording["lengthSeconds"]
         data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
-        bpm = result["maxMilliBpm"] // 1000
+        if "maxMilliBpm" in recording:
+            bpm = recording["maxMilliBpm"] // 1000
+        else:
+            bpm = 0
         genres = []
-        for x in sorted(result["tags"], key=lambda x: x["count"]):
+        for x in sorted(recording["tags"], key=lambda x: x["count"]):
             if x["tag"]["categoryName"] == "Genres":
                 genres.append(x["tag"]["name"].title())
         genre = "; ".join(genres)
-        if self.config["import_lyrics"] and "lyrics" in result and result["lyrics"]:
-            lyrics = self.get_lyrics(result["lyrics"], language)
+        if (
+            self.config["import_lyrics"]
+            and "lyrics" in recording
+            and recording["lyrics"]
+        ):
+            lyrics = self.get_lyrics(recording["lyrics"], language)
         else:
             lyrics = None
         try:
-            date = datetime.fromisoformat(result["publishDate"][:-1])
+            date = datetime.fromisoformat(recording["publishDate"][:-1])
         except ValueError as e:
             self._log.debug("Date Error: {0}", e)
             original_day = original_month = original_year = None
@@ -142,6 +246,7 @@ class VocaDBPlugin(BeetsPlugin):
             artist_id=artist_id,
             length=length,
             index=index,
+            media=media,
             medium=medium,
             medium_index=medium_index,
             medium_total=medium_total,
@@ -195,7 +300,8 @@ class VocaDBPlugin(BeetsPlugin):
 
         def say_hi(lib, opts, args):
             if opts.album:
-                print(self.album_for_id(args[0]))
+                with open("a.json", "w") as f:
+                    dump(self.album_for_id(args[0]), f, indent=2)
             else:
                 print(self.track_for_id(args[0]))
 
