@@ -46,10 +46,6 @@ class VocaDBPlugin(BeetsPlugin):
             VOCADB_API_URL,
             "albums/?query="
             + quote(album)
-            + "&fields="
-            + self.get_album_fields()
-            + "&songFields="
-            + self.get_song_fields()
             + "&lang="
             + language
             + "&maxResults=5",
@@ -59,11 +55,9 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result = load(result)
-                    return [
-                        album
-                        for album in map(self.album_info, result["items"])
-                        if album
-                    ]
+                    # songFields parameter doesn't exist for album search so we'll get albums by their id
+                    ids = [x["id"] for x in result["items"]]
+                    return [album for album in map(self.album_for_id, ids) if album]
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return []
