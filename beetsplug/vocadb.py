@@ -48,7 +48,7 @@ class VocaDBPlugin(BeetsPlugin):
             + quote(album)
             + "&lang="
             + language
-            + "&maxResults=5",
+            + "&maxResults=5&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -76,7 +76,7 @@ class VocaDBPlugin(BeetsPlugin):
             + self.get_song_fields()
             + "&lang="
             + language
-            + "&maxResults=5",
+            + "&maxResults=5&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -101,7 +101,7 @@ class VocaDBPlugin(BeetsPlugin):
         url = urljoin(
             VOCADB_API_URL,
             "albums/"
-            + album_id
+            + str(album_id)
             + "?fields="
             + self.get_album_fields()
             + "&songFields="
@@ -128,7 +128,7 @@ class VocaDBPlugin(BeetsPlugin):
         url = urljoin(
             VOCADB_API_URL,
             "songs/"
-            + track_id
+            + str(track_id)
             + "?fields="
             + self.get_song_fields()
             + "&lang="
@@ -209,7 +209,6 @@ class VocaDBPlugin(BeetsPlugin):
                 if x["tag"]["categoryName"] == "Genres":
                     genres.append(x["tag"]["name"].title())
         genre = "; ".join(genres)
-        albumstatus = release["status"]
         media = release["discs"][0]["name"]
         data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
         return AlbumInfo(
@@ -227,7 +226,6 @@ class VocaDBPlugin(BeetsPlugin):
             mediums=mediums,
             catalognum=catalognum,
             genre=genre,
-            albumstatus=albumstatus,
             media=media,
             data_source=VOCADB_NAME,
             data_url=data_url,
@@ -253,7 +251,7 @@ class VocaDBPlugin(BeetsPlugin):
         arrangers = []
         composers = []
         lyricists = []
-        if "artist" in recording and recording["artists"]:
+        if "artists" in recording and recording["artists"]:
             for x in recording["artists"]:
                 if "Producer" in x["categories"]:
                     if not artist_id:
@@ -336,7 +334,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_song_fields(self):
         fields = "Artists,Tags,Bpm"
         if self.config["import_lyrics"]:
-            fields += "Lyrics"
+            fields += ",Lyrics"
         return fields
 
     def get_lang(self):
