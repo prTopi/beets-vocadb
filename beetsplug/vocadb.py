@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 import beets
 from beets import config
 from beets.autotag.hooks import AlbumInfo, TrackInfo
+from beets.importer import action
 from beets.plugins import BeetsPlugin, get_distance
 from beets.ui import Subcommand
 
@@ -28,6 +29,20 @@ class VocaDBPlugin(BeetsPlugin):
                 "no_empty_roles": False,
             }
         )
+        self.register_listener("import_task_choice", self.update_names)
+
+    def update_names(self, task, session):
+        """Updates names to the prefered language
+
+        We do it in an event to preserve distance while respecting language settings
+        """
+        if task.choice_flag in (action.SKIP, action.ASIS):
+            return
+        for match in task.candidates:
+            if match.info["data_source"] == VOCADB_NAME:
+                match.info["album"] = match.info.pop("newname")
+                for track in match.info["tracks"]:
+                    track["title"] = track.pop("newname")
 
     def track_distance(self, item, info):
         """Returns the track distance."""
@@ -41,14 +56,9 @@ class VocaDBPlugin(BeetsPlugin):
 
     def candidates(self, items, artist, album, va_likely, extra_tags=None):
         self._log.debug("Searching for album {0}", album)
-        language = self.get_lang()
         url = urljoin(
             VOCADB_API_URL,
-            "albums/?query="
-            + quote(album)
-            + "&lang="
-            + language
-            + "&maxResults=5&nameMatchMode=Auto",
+            "albums/?query=" + quote(album) + "&maxResults=5&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -183,7 +193,8 @@ class VocaDBPlugin(BeetsPlugin):
             )
             track_infos.append(track_info)
 
-        album = release["name"]
+        album = release["defaultName"]
+        newname = release["name"]
         album_id = release["id"]
         artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
         if "artists" in release and release["artists"]:
@@ -213,6 +224,7 @@ class VocaDBPlugin(BeetsPlugin):
         data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
         return AlbumInfo(
             album=album,
+            newname=newname,
             album_id=album_id,
             artist=artist,
             artist_id=artist_id,
@@ -241,7 +253,8 @@ class VocaDBPlugin(BeetsPlugin):
         medium_total=None,
         language=None,
     ):
-        title = recording["name"]
+        title = recording["defaultName"]
+        newname = recording["name"]
         track_id = recording["id"]
         artist = recording[
             "artistString"
@@ -306,6 +319,7 @@ class VocaDBPlugin(BeetsPlugin):
             original_year = date.year
         return TrackInfo(
             title=title,
+            newname=newname,
             track_id=track_id,
             artist=artist,
             artist_id=artist_id,
