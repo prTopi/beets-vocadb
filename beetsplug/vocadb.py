@@ -185,7 +185,7 @@ class VocaDBPlugin(BeetsPlugin):
 
         album = release["name"]
         album_id = release["id"]
-        artist = release["artistString"]
+        artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
         if "artists" in release and release["artists"]:
             artist_id = release["artists"][0]["artist"]["id"]
         else:
