@@ -10,6 +10,7 @@ from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.plugins import BeetsPlugin, get_distance
 from beets.ui import Subcommand
 
+VOCADB_NAME = "VocaDB"
 VOCADB_BASE_URL = "https://vocadb.net/"
 VOCADB_API_URL = "https://vocadb.net/api/"
 USER_AGENT = f"beets/{beets.__version__} +https://beets.io/"
@@ -30,11 +31,13 @@ class VocaDBPlugin(BeetsPlugin):
 
     def track_distance(self, item, info):
         """Returns the track distance."""
-        return get_distance(data_source="VocaDB", info=info, config=self.config)
+        return get_distance(data_source=VOCADB_NAME, info=info, config=self.config)
 
     def album_distance(self, items, album_info, mapping):
         """Returns the album distance."""
-        return get_distance(data_source="VocaDB", info=album_info, config=self.config)
+        return get_distance(
+            data_source=VOCADB_NAME, info=album_info, config=self.config
+        )
 
     def candidates(self, items, artist, album, va_likely, extra_tags=None):
         self._log.debug("Searching for album {0}", album)
@@ -232,7 +235,7 @@ class VocaDBPlugin(BeetsPlugin):
             genre=genre,
             albumstatus=albumstatus,
             media=media,
-            data_source="VocaDB",
+            data_source=VOCADB_NAME,
             data_url=data_url,
         )
 
@@ -320,7 +323,7 @@ class VocaDBPlugin(BeetsPlugin):
             medium=medium,
             medium_index=medium_index,
             medium_total=medium_total,
-            data_source="VocaDB",
+            data_source=VOCADB_NAME,
             data_url=data_url,
             lyricist=lyricist,
             composer=composer,
