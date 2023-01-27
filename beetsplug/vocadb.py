@@ -9,7 +9,6 @@ from beets import config
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.importer import action
 from beets.plugins import BeetsPlugin, get_distance
-from beets.ui import Subcommand
 
 VOCADB_NAME = "VocaDB"
 VOCADB_BASE_URL = "https://vocadb.net/"
@@ -25,7 +24,7 @@ class VocaDBPlugin(BeetsPlugin):
             {
                 "source_weight": 0.5,
                 "import_lyrics": False,
-                "prefer_romaji": True,
+                "prefer_romaji": False,
                 "no_empty_roles": False,
             }
         )
@@ -77,7 +76,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def item_candidates(self, item, artist, album):
         self._log.debug("Searching for track {0}", item)
-        language = self.get_lang()
+        language = self.get_lang(config["import"]["languages"])
         url = urljoin(
             VOCADB_API_URL,
             "songs/?query="
@@ -107,7 +106,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def album_for_id(self, album_id):
         self._log.debug("Searching for album {0}", album_id)
-        language = self.get_lang()
+        language = self.get_lang(config["import"]["languages"])
         url = urljoin(
             VOCADB_API_URL,
             "albums/"
@@ -133,7 +132,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def track_for_id(self, track_id):
         self._log.debug("Searching for track {0}", track_id)
-        language = self.get_lang()
+        language = self.get_lang(config["import"]["languages"])
         url = urljoin(
             VOCADB_API_URL,
             "songs/"
@@ -366,9 +365,9 @@ class VocaDBPlugin(BeetsPlugin):
     def get_song_fields(self):
         return "Artists,Tags,Bpm,Lyrics"
 
-    def get_lang(self):
-        if config["import"]["languages"]:
-            for x in config["import"]["languages"]:
+    def get_lang(self, languages):
+        if languages:
+            for x in languages:
                 if x == "jp":
                     if self.config["prefer_romaji"]:
                         return "Romaji"
