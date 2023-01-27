@@ -161,7 +161,11 @@ class VocaDBPlugin(BeetsPlugin):
             release["discs"] = [{"discNumber": 1, "name": "CD"}]
         ignored_discs = []
         for x in release["discs"]:
-            if x["mediaType"] == "Video" and config["match"]["ignore_video_tracks"]:
+            if (
+                "mediaType" in x
+                and x["mediaType"] == "Video"
+                and config["match"]["ignore_video_tracks"]
+            ):
                 ignored_discs.append(x["discNumber"])
             else:
                 x["total"] = max(
