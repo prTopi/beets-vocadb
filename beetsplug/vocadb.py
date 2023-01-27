@@ -123,7 +123,7 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result = load(result)
-                    return self.album_info(result, language=language)
+                    return self.album_info(result, search_lang=language)
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return
@@ -148,7 +148,7 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result = load(result)
-                    return self.track_info(result, language=language)
+                    return self.track_info(result, search_lang=language)
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return
@@ -156,7 +156,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return
 
-    def album_info(self, release, language=None):
+    def album_info(self, release, search_lang=None):
         if "discs" not in release or not release["discs"]:
             release["discs"] = [{"discNumber": 1, "name": "CD"}]
         ignored_discs = []
@@ -174,6 +174,8 @@ class VocaDBPlugin(BeetsPlugin):
                 )["trackNumber"]
 
         track_infos = []
+        script = None
+        language = None
         index = 0
         for track in release["tracks"]:
             index += 1
@@ -188,9 +190,25 @@ class VocaDBPlugin(BeetsPlugin):
                 medium=track["discNumber"],
                 medium_index=track["trackNumber"],
                 medium_total=total,
-                language=language,
+                search_lang=search_lang,
             )
+            if track_info.script and script != "Qaaa":
+                if not script:
+                    script = track_info.script
+                elif script != track_info.script:
+                    script = "Qaaa"
+            if track_info.language and language != "mul":
+                if not language:
+                    language = track_info.language
+                elif language != track_info.language:
+                    language = "mul"
             track_infos.append(track_info)
+        if script == "Qaaa":
+            for track in track_infos:
+                track.script = script
+        if language == "mul":
+            for track in track_infos:
+                track.language = language
 
         album = release["defaultName"]
         newname = release["name"]
@@ -236,6 +254,8 @@ class VocaDBPlugin(BeetsPlugin):
             label=label,
             mediums=mediums,
             catalognum=catalognum,
+            script=script,
+            language=language,
             genre=genre,
             media=media,
             data_source=VOCADB_NAME,
@@ -250,7 +270,7 @@ class VocaDBPlugin(BeetsPlugin):
         medium=None,
         medium_index=None,
         medium_total=None,
-        language=None,
+        search_lang=None,
     ):
         title = recording["defaultName"]
         newname = recording["name"]
@@ -304,9 +324,9 @@ class VocaDBPlugin(BeetsPlugin):
             and "lyrics" in recording
             and recording["lyrics"]
         ):
-            lyrics = self.get_lyrics(recording["lyrics"], language)
+            script, language, lyrics = self.get_lyrics(recording["lyrics"], search_lang)
         else:
-            lyrics = None
+            script = language = lyrics = None
         try:
             date = datetime.fromisoformat(recording["publishDate"][:-1])
         except ValueError as e:
@@ -335,6 +355,8 @@ class VocaDBPlugin(BeetsPlugin):
             arranger=arranger,
             bpm=bpm,
             genre=genre,
+            script=script,
+            language=language,
             lyrics=lyrics,
             original_day=original_day,
             original_month=original_month,
@@ -356,11 +378,34 @@ class VocaDBPlugin(BeetsPlugin):
         return "English"
 
     def get_lyrics(self, lyrics, language):
+        out_script = None
+        out_language = None
+        out_lyrics = None
+        for x in lyrics:
+            if x["cultureCode"] == "en":
+                if x["translationType"] == "Original":
+                    out_script = "Latn"
+                    out_language = "eng"
+                if language == "English":
+                    out_lyrics = x["value"]
+            elif x["cultureCode"] == "ja":
+                if x["translationType"] == "Original":
+                    out_script = "Jpan"
+                    out_language = "jpn"
+                if language == "Japanese":
+                    out_lyrics = x["value"]
+            if language == "Romaji" and x["translationType"] == "Romanized":
+                out_lyrics = x["value"]
+        if not out_lyrics:
+            out_lyrics = self.get_fallback_lyrics(lyrics, language)
+        return out_script, out_language, out_lyrics
+
+    def get_fallback_lyrics(self, lyrics, language):
         if language == "English":
             for x in lyrics:
                 if x["cultureCode"] == "en":
                     return x["value"]
-            return self.get_lyrics(lyrics, "Romaji")
+            return self.get_fallback_lyrics(lyrics, "Romaji")
         if language == "Romaji":
             for x in lyrics:
                 if x["translationType"] == "Romanized":
