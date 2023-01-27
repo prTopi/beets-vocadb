@@ -112,8 +112,7 @@ class VocaDBPlugin(BeetsPlugin):
             VOCADB_API_URL,
             "albums/"
             + str(album_id)
-            + "?fields="
-            + self.get_album_fields()
+            + "?fields=Artists,Discs,Tags,Tracks"
             + "&songFields="
             + self.get_song_fields()
             + "&lang="
@@ -342,14 +341,8 @@ class VocaDBPlugin(BeetsPlugin):
             original_year=original_year,
         )
 
-    def get_album_fields(self):
-        return "Artists,Discs,Tags,Tracks"
-
     def get_song_fields(self):
-        fields = "Artists,Tags,Bpm"
-        if self.config["import_lyrics"]:
-            fields += ",Lyrics"
-        return fields
+        return "Artists,Tags,Bpm,Lyrics"
 
     def get_lang(self):
         if config["import"]["languages"]:
