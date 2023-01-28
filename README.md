@@ -10,10 +10,7 @@ for tags.
 ```yaml
 vocadb:
   source_weight: 0.5    # Penalty to be added to all matches (0 disabled, 1 highest)
-  import_lyrics: false  # Import lyrics to lyrics tag
   prefer_romaji: false  # Prefer romanized if they exist rather than Japanese
-  no_empty_roles: false # Use producer(s) for arranger, composer and lyricist
-                        # if the roles are not defined
 ```
 
 ### Advanced configuration
