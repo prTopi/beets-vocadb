@@ -10,6 +10,60 @@ class TestVocaDBPlugin(TestCase):
     def test_get_song_fields(self):
         self.assertEqual(self.plugin.get_song_fields(), "Artists,Tags,Bpm,Lyrics")
 
+    def test_get_genres(self):
+        info = {}
+        self.assertEqual(self.plugin.get_genres(info), "")
+        info = {
+            "tags": [
+                {
+                    "count": 0,
+                    "tag": {
+                        "categoryName": "Genres",
+                        "name": "genre1",
+                    },
+                },
+            ]
+        }
+        self.assertEqual(self.plugin.get_genres(info), "Genre1")
+        info = {
+            "tags": [
+                {
+                    "count": 2,
+                    "tag": {
+                        "categoryName": "Genres",
+                        "name": "genre1",
+                    },
+                },
+                {
+                    "count": 1,
+                    "tag": {
+                        "categoryName": "Genres",
+                        "name": "genre2",
+                    },
+                },
+            ]
+        }
+        self.assertEqual(self.plugin.get_genres(info), "Genre1; Genre2")
+        info = {
+            "tags": [
+                {
+                    "count": 2,
+                    "tag": {
+                        "categoryName": "Vocalists",
+                        "name": "genre1",
+                    },
+                },
+                {
+                    "count": 1,
+                    "tag": {
+                        "categoryName": "Genres",
+                        "name": "genre2",
+                    },
+                },
+            ]
+        }
+        self.assertEqual(self.plugin.get_genres(info), "Genre2")
+
     def test_get_lang(self):
         self.assertEqual(self.plugin.get_lang(["en", "jp"]), "English")
         self.assertEqual(self.plugin.get_lang(["jp", "en"]), "Japanese")

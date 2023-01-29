@@ -16,7 +16,7 @@ vocadb:
 ### Advanced configuration
 
 Source name and URLs can be changed inside the plugin source code in case
-another site uses the same software as VocaDB
+another site uses the same software as VocaDB (UtaiteDB, TouhouDB)
 
 ```python
 VOCADB_NAME = "VocaDB"

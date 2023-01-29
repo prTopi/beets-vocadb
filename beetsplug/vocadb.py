@@ -351,7 +351,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_genres(self, info):
         genres = []
         if "tags" in info:
-            for tag in sorted(info["tags"], key=lambda x: x["count"]):
+            for tag in sorted(info["tags"], reverse=True, key=lambda x: x["count"]):
                 if tag["tag"]["categoryName"] == "Genres":
                     genres.append(tag["tag"]["name"].title())
         return "; ".join(genres)
