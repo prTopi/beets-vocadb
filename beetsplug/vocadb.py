@@ -181,18 +181,19 @@ class VocaDBPlugin(BeetsPlugin):
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
         )
-        albumtype = release["discType"]
-        va = release["artistString"] == "Various artists"
-        year = release["releaseDate"]["year"]
-        month = release["releaseDate"]["month"]
-        day = release["releaseDate"]["day"]
+        albumtype = release.get("discType", None)
+        va = release.get("artistString", "") == "Various artists"
+        date = release.get("releaseDate", {})
+        year = date.get("year", None)
+        month = date.get("month", None)
+        day = date.get("day", None)
         label = None
         for x in release["artists"]:
-            if "Label" in x["categories"]:
+            if "Label" in x.get("categories", ""):
                 label = x["name"]
                 break
         mediums = len(release["discs"])
-        catalognum = release["catalogNumber"]
+        catalognum = release.get("catalogNumber", None)
         genre = self.get_genres(release)
         media = release["discs"][0]["name"]
         data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
@@ -238,29 +239,22 @@ class VocaDBPlugin(BeetsPlugin):
         producers, arrangers, composers, lyricists, artist_id = self.get_producers(
             recording["artists"]
         )
-        if arrangers:
-            arranger = ", ".join(arrangers)
-        else:
-            arranger = ", ".join(producers)
-        if composers:
-            composer = ", ".join(composers)
-        else:
-            composer = ", ".join(producers)
-        if lyricists:
-            lyricist = ", ".join(lyricists)
-        else:
-            lyricist = ", ".join(producers)
-        length = recording["lengthSeconds"]
+        if not arrangers:
+            arrangers = producers
+        arranger = ", ".join(arrangers)
+        if not composers:
+            composers = producers
+        composer = ", ".join(composers)
+        if not lyricists:
+            lyricists = producers
+        lyricist = ", ".join(lyricists)
+        length = recording.get("lengthSeconds", 0)
         data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
-        if "maxMilliBpm" in recording:
-            bpm = recording["maxMilliBpm"] // 1000
-        else:
-            bpm = 0
+        bpm = recording.get("maxMilliBpm", 0) // 1000
         genre = self.get_genres(recording)
-        if "lyrics" in recording:
-            script, language, lyrics = self.get_lyrics(recording["lyrics"], search_lang)
-        else:
-            script = language = lyrics = None
+        script, language, lyrics = self.get_lyrics(
+            recording.get("lyrics", {}), search_lang
+        )
         date = datetime.fromisoformat(recording["publishDate"][:-1])
         original_day = date.day
         original_month = date.month
@@ -307,8 +301,8 @@ class VocaDBPlugin(BeetsPlugin):
                 track["song"],
                 index=index,
                 media=format,
-                medium=track["discNumber"],
-                medium_index=track["trackNumber"],
+                medium=track.get("discNumber", None),
+                medium_index=track.get("trackNumber", None),
                 medium_total=total,
                 search_lang=search_lang,
             )
@@ -350,10 +344,9 @@ class VocaDBPlugin(BeetsPlugin):
 
     def get_genres(self, info):
         genres = []
-        if "tags" in info:
-            for tag in sorted(info["tags"], reverse=True, key=lambda x: x["count"]):
-                if tag["tag"]["categoryName"] == "Genres":
-                    genres.append(tag["tag"]["name"].title())
+        for tag in sorted(info.get("tags", {}), reverse=True, key=lambda x: x["count"]):
+            if tag["tag"]["categoryName"] == "Genres":
+                genres.append(tag["tag"]["name"].title())
         return "; ".join(genres)
 
     def get_lang(self, languages):
