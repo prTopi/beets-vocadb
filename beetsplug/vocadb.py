@@ -36,10 +36,10 @@ class VocaDBPlugin(BeetsPlugin):
         """
         if task.choice_flag in (action.SKIP, action.ASIS):
             return
-        for match in task.candidates:
-            if match.info["data_source"] == VOCADB_NAME:
-                match.info["album"] = match.info.pop("newname")
-                for track in match.info["tracks"]:
+        for candidate in task.candidates:
+            if candidate.info["data_source"] == VOCADB_NAME:
+                candidate.info["album"] = candidate.info.pop("newname")
+                for track in candidate.info["tracks"]:
                     track["title"] = track.pop("newname")
 
     def track_distance(self, item, info):
