@@ -75,7 +75,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def item_candidates(self, item, artist, title):
         self._log.debug("Searching for track {0}", item)
-        language = self.get_lang(config["import"]["languages"])
+        language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
             "songs/?query="
@@ -105,7 +105,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def album_for_id(self, album_id):
         self._log.debug("Searching for album {0}", album_id)
-        language = self.get_lang(config["import"]["languages"])
+        language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
             "albums/"
@@ -131,7 +131,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     def track_for_id(self, track_id):
         self._log.debug("Searching for track {0}", track_id)
-        language = self.get_lang(config["import"]["languages"])
+        language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
             "songs/"
@@ -374,7 +374,7 @@ class VocaDBPlugin(BeetsPlugin):
                     return "Japanese"
                 if x == "en":
                     return "English"
-        return "Default"
+        return "English"
 
     def get_lyrics(self, lyrics, language):
         out_script = None
