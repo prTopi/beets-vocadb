@@ -244,21 +244,27 @@ class VocaDBPlugin(BeetsPlugin):
         title = recording["defaultName"]
         newname = recording["name"]
         track_id = recording["id"]
-        artist = recording[
-            "artistString"
-        ]  # TODO: Feat. shortened to various. Maybe read from artists tag?
-        producers, arrangers, composers, lyricists, artist_id = self.get_producers(
-            recording["artists"]
-        )
-        if not arrangers:
-            arrangers = producers
-        arranger = ", ".join(arrangers)
-        if not composers:
-            composers = producers
-        composer = ", ".join(composers)
-        if not lyricists:
-            lyricists = producers
-        lyricist = ", ".join(lyricists)
+        artists, artist_id = self.get_artists(recording["artists"])
+        if (
+            recording["artistString"].endswith(" feat. various")
+            and artists["vocalists"]
+        ):
+            artist = (
+                recording["artistString"].split(" feat. ", maxsplit=1)[0]
+                + " feat. "
+                + ", ".join(artists["vocalists"])
+            )
+        else:
+            artist = recording["artistString"]
+        if not artists["arrangers"]:
+            artists["arrangers"] = artists["producers"]
+        arranger = ", ".join(artists["arrangers"])
+        if not artists["composers"]:
+            artists["composers"] = artists["producers"]
+        composer = ", ".join(artists["composers"])
+        if not artists["lyricists"]:
+            artists["lyricists"] = artists["producers"]
+        lyricist = ", ".join(artists["lyricists"])
         length = recording.get("lengthSeconds", 0)
         data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
         bpm = recording.get("maxMilliBpm", 0) // 1000
@@ -339,24 +345,29 @@ class VocaDBPlugin(BeetsPlugin):
     def get_song_fields(self):
         return "Artists,Tags,Bpm,Lyrics"
 
-    def get_producers(self, artists):
+    def get_artists(self, artists):
         artist_id = None
-        producers = []
-        arrangers = []
-        composers = []
-        lyricists = []
+        out_artists = {
+            "producers": [],
+            "vocalists": [],
+            "arrangers": [],
+            "composers": [],
+            "lyricists": [],
+        }
         for x in artists:
             if "Producer" in x["categories"]:
                 if not artist_id:
                     artist_id = x["artist"]["id"]
-                producers.append(x["name"])
+                out_artists["producers"].append(x["name"])
                 if "Arranger" in x["effectiveRoles"]:
-                    arrangers.append(x["name"])
+                    out_artists["arrangers"].append(x["name"])
                 if "Composer" in x["effectiveRoles"]:
-                    composers.append(x["name"])
+                    out_artists["composers"].append(x["name"])
                 if "Lyricist" in x["effectiveRoles"]:
-                    lyricists.append(x["name"])
-        return producers, arrangers, composers, lyricists, artist_id
+                    out_artists["lyricists"].append(x["name"])
+            if "Vocalist" in x["categories"] and not x["isSupport"]:
+                out_artists["vocalists"].append(x["name"])
+        return out_artists, artist_id
 
     def get_genres(self, info):
         genres = []
