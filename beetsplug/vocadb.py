@@ -358,7 +358,7 @@ class VocaDBPlugin(BeetsPlugin):
                     return "Japanese"
                 if x == "en":
                     return "English"
-        return "English"
+        return "Default"
 
     def get_lyrics(self, lyrics, language):
         out_script = None
