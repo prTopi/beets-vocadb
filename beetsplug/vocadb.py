@@ -1,5 +1,6 @@
 from datetime import datetime
 from json import load
+from re import match, search
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
@@ -109,7 +110,7 @@ class VocaDBPlugin(BeetsPlugin):
             VOCADB_API_URL,
             "albums/"
             + str(album_id)
-            + "?fields=Artists,Discs,Tags,Tracks"
+            + "?fields=Artists,Discs,Tags,Tracks,WebLinks"
             + "&songFields="
             + self.get_song_fields()
             + "&lang="
@@ -181,6 +182,15 @@ class VocaDBPlugin(BeetsPlugin):
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
         )
+        asin = None
+        for x in release.get("webLinks", []):
+            if not x["disabled"] and match(
+                "Amazon( \\((LE|RE|JP|US)\\).*)?$", x["description"]
+            ):
+                asin = search("\\/dp\\/(.+?)(\\/|$)", x["url"])
+                if asin:
+                    asin = asin[1]
+                    break
         albumtype = release.get("discType", None)
         va = release.get("artistString", "") == "Various artists"
         date = release.get("releaseDate", {})
@@ -204,6 +214,7 @@ class VocaDBPlugin(BeetsPlugin):
             artist=artist,
             artist_id=artist_id,
             tracks=tracks,
+            asin=asin,
             albumtype=albumtype,
             va=va,
             year=year,
