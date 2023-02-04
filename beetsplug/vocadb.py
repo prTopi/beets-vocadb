@@ -72,18 +72,18 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return []
 
-    def item_candidates(self, item, artist, album):
+    def item_candidates(self, item, artist, title):
         self._log.debug("Searching for track {0}", item)
         language = self.get_lang(config["import"]["languages"])
         url = urljoin(
             VOCADB_API_URL,
             "songs/?query="
-            + quote(item)
+            + quote(title)
             + "&fields="
             + self.get_song_fields()
             + "&lang="
             + language
-            + "&maxResults=5&nameMatchMode=Auto",
+            + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
         try:
