@@ -188,7 +188,7 @@ class VocaDBPlugin(BeetsPlugin):
         month = date.get("month", None)
         day = date.get("day", None)
         label = None
-        for x in release["artists"]:
+        for x in release.get("artists", []):
             if "Label" in x.get("categories", ""):
                 label = x["name"]
                 break
@@ -255,10 +255,15 @@ class VocaDBPlugin(BeetsPlugin):
         script, language, lyrics = self.get_lyrics(
             recording.get("lyrics", {}), search_lang
         )
-        date = datetime.fromisoformat(recording["publishDate"][:-1])
-        original_day = date.day
-        original_month = date.month
-        original_year = date.year
+        if "publishDate" in recording:
+            date = datetime.fromisoformat(recording["publishDate"][:-1])
+            original_day = date.day
+            original_month = date.month
+            original_year = date.year
+        else:
+            original_day = None
+            original_month = None
+            original_year = None
         return TrackInfo(
             title=title,
             newname=newname,
