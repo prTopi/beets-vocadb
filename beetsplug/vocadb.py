@@ -256,7 +256,11 @@ class VocaDBPlugin(BeetsPlugin):
         newname = recording["name"]
         track_id = str(recording["id"])
         artists, artist_id = self.get_artists(recording["artists"])
-        if (
+        if recording["artistString"] == "Various artists":
+            artist = ", ".join(artists["producers"])
+            if artists["vocalists"]:
+                artist += " feat. " + ", ".join(artists["vocalists"])
+        elif (
             recording["artistString"].endswith(" feat. various")
             and artists["vocalists"]
         ):
@@ -368,16 +372,18 @@ class VocaDBPlugin(BeetsPlugin):
         for x in artists:
             if "Producer" in x["categories"]:
                 if not artist_id:
-                    artist_id = x["artist"]["id"]
+                    artist_id = x.get("artist", {}).get("id", None)
                 out_artists["producers"].append(x["name"])
-                if "Arranger" in x["effectiveRoles"]:
-                    out_artists["arrangers"].append(x["name"])
-                if "Composer" in x["effectiveRoles"]:
-                    out_artists["composers"].append(x["name"])
-                if "Lyricist" in x["effectiveRoles"]:
-                    out_artists["lyricists"].append(x["name"])
+            if "Arranger" in x["effectiveRoles"]:
+                out_artists["arrangers"].append(x["name"])
+            if "Composer" in x["effectiveRoles"]:
+                out_artists["composers"].append(x["name"])
+            if "Lyricist" in x["effectiveRoles"]:
+                out_artists["lyricists"].append(x["name"])
             if "Vocalist" in x["categories"] and not x["isSupport"]:
                 out_artists["vocalists"].append(x["name"])
+        if artist_id:
+            artist_id = str(artist_id)
         return out_artists, artist_id
 
     def get_genres(self, info):
