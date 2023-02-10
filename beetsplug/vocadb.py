@@ -181,10 +181,10 @@ class VocaDBPlugin(BeetsPlugin):
 
         album = release["defaultName"]
         newname = release["name"]
-        album_id = release["id"]
+        album_id = str(release["id"])
         artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
         if "artists" in release and release["artists"]:
-            artist_id = release["artists"][0]["artist"]["id"]
+            artist_id = str(release["artists"][0]["artist"]["id"])
         else:
             artist_id = None
         tracks, script, language = self.get_album_track_infos(
@@ -199,7 +199,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if asin:
                     asin = asin[1]
                     break
-        albumtype = release.get("discType", None)
+        albumtype = release.get("discType", "").lower()
         va = release.get("artistString", "") == "Various artists"
         date = release.get("releaseDate", {})
         year = date.get("year", None)
@@ -213,8 +213,11 @@ class VocaDBPlugin(BeetsPlugin):
         mediums = len(release["discs"])
         catalognum = release.get("catalogNumber", None)
         genre = self.get_genres(release)
-        media = release["discs"][0]["name"]
-        data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
+        if release["discs"]:
+            media = release["discs"][0]["name"]
+        else:
+            media = None
+        data_url = urljoin(VOCADB_BASE_URL, "Al/" + album_id)
         return AlbumInfo(
             album=album,
             newname=newname,
@@ -251,7 +254,7 @@ class VocaDBPlugin(BeetsPlugin):
     ):
         title = recording["defaultName"]
         newname = recording["name"]
-        track_id = recording["id"]
+        track_id = str(recording["id"])
         artists, artist_id = self.get_artists(recording["artists"])
         if (
             recording["artistString"].endswith(" feat. various")
@@ -274,7 +277,7 @@ class VocaDBPlugin(BeetsPlugin):
             artists["lyricists"] = artists["producers"]
         lyricist = ", ".join(artists["lyricists"])
         length = recording.get("lengthSeconds", 0)
-        data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
+        data_url = urljoin(VOCADB_BASE_URL, "S/" + track_id)
         bpm = recording.get("maxMilliBpm", 0) // 1000
         genre = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
