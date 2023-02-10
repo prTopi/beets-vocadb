@@ -155,8 +155,12 @@ class VocaDBPlugin(BeetsPlugin):
             return
 
     def album_info(self, release, search_lang=None):
-        if "discs" not in release or not release["discs"]:
-            release["discs"] = [{"discNumber": 1, "name": "CD", "mediaType": "Album"}]
+        discs = len(set([x["discNumber"] for x in release["tracks"]]))
+        if not release["discs"]:
+            release["discs"] = [
+                {"discNumber": x + 1, "name": "CD", "mediaType": "Album"}
+                for x in range(discs)
+            ]
         ignored_discs = []
         for x in release["discs"]:
             if x["mediaType"] == "Video" and config["match"]["ignore_video_tracks"]:
