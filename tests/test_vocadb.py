@@ -75,17 +75,17 @@ class TestVocaDBPlugin(TestCase):
     def test_get_lyrics(self):
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Original",
                 "value": "lyrics1",
             },
             {
-                "cultureCode": "en",
+                "cultureCodes": ["en"],
                 "translationType": "Translation",
                 "value": "lyrics2",
             },
             {
-                "cultureCode": "",
+                "cultureCodes": [""],
                 "translationType": "Romanized",
                 "value": "lyrics3",
             },
@@ -104,12 +104,12 @@ class TestVocaDBPlugin(TestCase):
         )
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Translation",
                 "value": "lyrics1",
             },
             {
-                "cultureCode": "en",
+                "cultureCodes": ["en"],
                 "translationType": "Original",
                 "value": "lyrics2",
             },
@@ -122,7 +122,7 @@ class TestVocaDBPlugin(TestCase):
         )
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Original",
                 "value": "lyrics1",
             },
@@ -134,17 +134,17 @@ class TestVocaDBPlugin(TestCase):
     def test_get_fallback_lyrics(self):
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Original",
                 "value": "lyrics1",
             },
             {
-                "cultureCode": "en",
+                "cultureCodes": ["en"],
                 "translationType": "Translation",
                 "value": "lyrics2",
             },
             {
-                "cultureCode": "",
+                "cultureCodes": [""],
                 "translationType": "Romanized",
                 "value": "lyrics3",
             },
@@ -164,12 +164,12 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(self.plugin.get_fallback_lyrics(lyrics, None), "lyrics1")
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Translation",
                 "value": "lyrics1",
             },
             {
-                "cultureCode": "en",
+                "cultureCodes": ["en"],
                 "translationType": "Original",
                 "value": "lyrics2",
             },
@@ -184,7 +184,7 @@ class TestVocaDBPlugin(TestCase):
         )
         lyrics = [
             {
-                "cultureCode": "ja",
+                "cultureCodes": ["ja"],
                 "translationType": "Original",
                 "value": "lyrics1",
             },
