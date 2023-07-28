@@ -430,7 +430,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_fallback_lyrics(self, lyrics, language):
         if language == "English":
             for x in lyrics:
-                if "en" in x["cultureCode"]:
+                if "en" in x["cultureCodes"]:
                     return x["value"]
             return self.get_fallback_lyrics(lyrics, "Romaji")
         if language == "Romaji":
