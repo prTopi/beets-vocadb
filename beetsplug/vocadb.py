@@ -25,9 +25,9 @@ class VocaDBPlugin(BeetsPlugin):
             {
                 "source_weight": 0.5,
                 "prefer_romaji": False,
+                "translated_lyrics": True,
             }
         )
-        self.register_listener("import_task_choice", self.update_names)
 
     def commands(self):
         cmd = ui.Subcommand('vdbsync', help='update metadata from VocaDB')
@@ -148,19 +148,6 @@ class VocaDBPlugin(BeetsPlugin):
                     if move and lib.directory in util.ancestry(items[0].path):
                         self._log.debug('moving album {0}', album_formatted)
                         album.move()
-
-    def update_names(self, task, session):
-        """Updates names to the prefered language
-
-        We do it in an event to preserve distance while respecting language settings
-        """
-        if task.choice_flag in (action.SKIP, action.ASIS):
-            return
-        for candidate in task.candidates:
-            if candidate.info["data_source"] == VOCADB_NAME:
-                candidate.info["album"] = candidate.info.pop("newname")
-                for track in candidate.info["tracks"]:
-                    track["title"] = track.pop("newname")
 
     def track_distance(self, item, info):
         """Returns the track distance."""
@@ -299,12 +286,11 @@ class VocaDBPlugin(BeetsPlugin):
                     key=lambda y: y["trackNumber"],
                 )["trackNumber"]
 
-        album = release["defaultName"]
-        newname = release["name"]
-        album_id = str(release["id"])
+        album = release["name"]
+        album_id = release["id"]
         artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
         if "artists" in release and release["artists"]:
-            artist_id = str(release["artists"][0]["artist"]["id"])
+            artist_id = release["artists"][0]["artist"]["id"]
         else:
             artist_id = None
         tracks, script, language = self.get_album_track_infos(
@@ -337,10 +323,9 @@ class VocaDBPlugin(BeetsPlugin):
             media = release["discs"][0]["name"]
         else:
             media = None
-        data_url = urljoin(VOCADB_BASE_URL, "Al/" + album_id)
+        data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
         return AlbumInfo(
             album=album,
-            newname=newname,
             album_id=album_id,
             artist=artist,
             artist_id=artist_id,
@@ -372,9 +357,8 @@ class VocaDBPlugin(BeetsPlugin):
         medium_total=None,
         search_lang=None,
     ):
-        title = recording["defaultName"]
-        newname = recording["name"]
-        track_id = str(recording["id"])
+        title = recording["name"]
+        track_id = recording["id"]
         artists, artist_id = self.get_artists(recording["artists"])
         if recording["artistString"] == "Various artists":
             artist = ", ".join(artists["producers"])
@@ -401,7 +385,7 @@ class VocaDBPlugin(BeetsPlugin):
             artists["lyricists"] = artists["producers"]
         lyricist = ", ".join(artists["lyricists"])
         length = recording.get("lengthSeconds", 0)
-        data_url = urljoin(VOCADB_BASE_URL, "S/" + track_id)
+        data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
         bpm = recording.get("maxMilliBpm", 0) // 1000
         genre = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
@@ -418,7 +402,6 @@ class VocaDBPlugin(BeetsPlugin):
             original_year = None
         return TrackInfo(
             title=title,
-            newname=newname,
             track_id=track_id,
             artist=artist,
             artist_id=artist_id,
@@ -503,7 +486,7 @@ class VocaDBPlugin(BeetsPlugin):
             if "Vocalist" in x["categories"] and not x["isSupport"]:
                 out_artists["vocalists"].append(x["name"])
         if artist_id:
-            artist_id = str(artist_id)
+            artist_id = artist_id
         return out_artists, artist_id
 
     def get_genres(self, info):
