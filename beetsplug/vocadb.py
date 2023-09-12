@@ -6,10 +6,10 @@ from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
 
 import beets
-from beets import config
+from beets import config, autotag, ui, library, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.importer import action
-from beets.plugins import BeetsPlugin, get_distance
+from beets.plugins import BeetsPlugin, get_distance, apply_item_changes
 
 VOCADB_NAME = "VocaDB"
 VOCADB_BASE_URL = "https://vocadb.net/"
@@ -28,6 +28,125 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
         self.register_listener("import_task_choice", self.update_names)
+
+    def commands(self):
+        cmd = ui.Subcommand('vdbsync', help='update metadata from VocaDB')
+        cmd.parser.add_option(
+            '-p',
+            '--pretend',
+            action='store_true',
+            help='show all changes but do nothing',
+        )
+        cmd.parser.add_option(
+            '-m',
+            '--move',
+            action='store_true',
+            dest='move',
+            help="move files in the library directory",
+        )
+        cmd.parser.add_option(
+            '-M',
+            '--nomove',
+            action='store_false',
+            dest='move',
+            help="don't move files in library",
+        )
+        cmd.parser.add_option(
+            '-W',
+            '--nowrite',
+            action='store_false',
+            default=None,
+            dest='write',
+            help="don't write updated metadata to files",
+        )
+        cmd.parser.add_format_option()
+        cmd.func = self.func
+        return [cmd]
+
+    def func(self, lib, opts, args):
+        """Command handler for the vdbsync function.
+        """
+        move = ui.should_move(opts.move)
+        pretend = opts.pretend
+        write = ui.should_write(opts.write)
+        query = ui.decargs(args)
+
+        self.singletons(lib, query, move, pretend, write)
+        self.albums(lib, query, move, pretend, write)
+
+    def singletons(self, lib, query, move, pretend, write):
+        """Retrieve and apply info from the autotagger for items matched by
+        query.
+        """
+        for item in lib.items(query + ['singleton:true']):
+            item_formatted = format(item)
+            if not item.mb_trackid:
+                self._log.info('Skipping singleton with no mb_trackid: {0}',
+                               item_formatted)
+                continue
+            if not (item.get("data_source") == VOCADB_NAME
+                    and item.mb_trackid.isnumeric()):
+                self._log.info('Skipping non-{0} singleton: {1}', VOCADB_NAME, item_formatted)
+                continue
+            track_info = self.track_for_id(item.mb_trackid)
+            if not track_info:
+                self._log.info('Recording ID not found: {0} for track {0}',
+                               item.mb_trackid,
+                               item_formatted)
+                continue
+            with lib.transaction():
+                autotag.apply_item_metadata(item, track_info)
+                apply_item_changes(lib, item, move, pretend, write)
+
+    def albums(self, lib, query, move, pretend, write):
+        """Retrieve and apply info from the autotagger for albums matched by
+        query and their items.
+        """
+        for album in lib.albums(query):
+            album_formatted = format(album)
+            if not album.mb_albumid:
+                self._log.info('Skipping album with no mb_albumid: {0}',
+                               album_formatted)
+                continue
+            items = list(album.items())
+            if not (album.get("data_source") == VOCADB_NAME
+                    and album.mb_albumid.isnumeric()):
+                self._log.info('Skipping non-{0} album: {1}', VOCADB_NAME, album_formatted)
+                continue
+            album_info = self.album_for_id(album.mb_albumid)
+            if not album_info:
+                self._log.info('Release ID {0} not found for album {1}',
+                               album.mb_albumid,
+                               album_formatted)
+                continue
+            trackid_to_trackinfo = {
+                track.track_id: track for track in album_info.tracks
+            }
+            library_trackid_to_item = {int(item.mb_trackid): item for item in items}
+            mapping = {
+                item: trackid_to_trackinfo[track_id]
+                for track_id, item in library_trackid_to_item.items()
+            }
+            self._log.debug('applying changes to {}', album_formatted)
+            with lib.transaction():
+                autotag.apply_metadata(album_info, mapping)
+                changed = False
+                any_changed_item = items[0]
+                for item in items:
+                    item_changed = ui.show_model_changes(item)
+                    changed |= item_changed
+                    if item_changed:
+                        any_changed_item = item
+                        apply_item_changes(lib, item, move, pretend, write)
+                if not changed:
+                    continue
+                if not pretend:
+                    for key in library.Album.item_keys:
+                        album[key] = any_changed_item[key]
+                    album.store()
+                    if move and lib.directory in util.ancestry(items[0].path):
+                        self._log.debug('moving album {0}', album_formatted)
+                        album.move()
 
     def update_names(self, task, session):
         """Updates names to the prefered language
