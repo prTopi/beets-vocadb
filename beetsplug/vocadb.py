@@ -96,6 +96,7 @@ class VocaDBPlugin(BeetsPlugin):
                 continue
             with lib.transaction():
                 autotag.apply_item_metadata(item, track_info)
+                ui.show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
     def albums(self, lib, query, move, pretend, write):
