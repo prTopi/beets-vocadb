@@ -11,6 +11,7 @@ for tags.
 vocadb:
   source_weight: 0.5    # Penalty to be added to all matches (0 disabled, 1 highest)
   prefer_romaji: false  # Prefer romanized if they exist rather than Japanese
+  translated_lyrics: false  # Always get translated lyrics if they're available
 ```
 
 ### Advanced configuration

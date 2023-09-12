@@ -532,15 +532,19 @@ class VocaDBPlugin(BeetsPlugin):
                 if x["translationType"] == "Original":
                     out_script = "Latn"
                     out_language = "eng"
-                if language == "English":
+                if self.config["translated_lyrics"] or language == "English":
                     out_lyrics = x["value"]
             elif "ja" in x["cultureCodes"]:
                 if x["translationType"] == "Original":
                     out_script = "Jpan"
                     out_language = "jpn"
-                if language == "Japanese":
+                if not self.config["translated_lyrics"] and language == "Japanese":
                     out_lyrics = x["value"]
-            if language == "Romaji" and x["translationType"] == "Romanized":
+            if (
+                not self.config["translated_lyrics"]
+                and language == "Romaji"
+                and x["translationType"] == "Romanized"
+            ):
                 out_lyrics = x["value"]
         if not out_lyrics and lyrics:
             out_lyrics = self.get_fallback_lyrics(lyrics, language)
@@ -551,7 +555,7 @@ class VocaDBPlugin(BeetsPlugin):
             for x in lyrics:
                 if "en" in x["cultureCodes"]:
                     return x["value"]
-            return self.get_fallback_lyrics(lyrics, "Romaji")
+            language = "Romaji"
         if language == "Romaji":
             for x in lyrics:
                 if x["translationType"] == "Romanized":
