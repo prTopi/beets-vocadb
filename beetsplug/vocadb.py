@@ -25,7 +25,7 @@ class VocaDBPlugin(BeetsPlugin):
             {
                 "source_weight": 0.5,
                 "prefer_romaji": False,
-                "translated_lyrics": True,
+                "translated_lyrics": False,
             }
         )
 
