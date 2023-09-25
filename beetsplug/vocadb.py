@@ -169,7 +169,7 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for album {0}", album)
         url = urljoin(
             VOCADB_API_URL,
-            "albums/?query=" + quote(album) + "&maxResults=5&nameMatchMode=Auto",
+            f"albums/?query={quote(album)}&maxResults=5&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -191,12 +191,9 @@ class VocaDBPlugin(BeetsPlugin):
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
-            "songs/?query="
-            + quote(title)
-            + "&fields="
-            + self.get_song_fields()
-            + "&lang="
-            + language
+            f"songs/?query={quote(title)}"
+            + f"&fields={self.get_song_fields()}"
+            + f"&lang={language}"
             + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request = Request(url, headers=HEADERS)
@@ -221,13 +218,10 @@ class VocaDBPlugin(BeetsPlugin):
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
-            "albums/"
-            + str(album_id)
+            f"albums/{album_id}"
             + "?fields=Artists,Discs,Tags,Tracks,WebLinks"
-            + "&songFields="
-            + self.get_song_fields()
-            + "&lang="
-            + language,
+            + f"&songFields={self.get_song_fields()}"
+            + f"&lang={language}",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -247,12 +241,9 @@ class VocaDBPlugin(BeetsPlugin):
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
             VOCADB_API_URL,
-            "songs/"
-            + str(track_id)
-            + "?fields="
-            + self.get_song_fields()
-            + "&lang="
-            + language,
+            f"songs/{track_id}"
+            + f"?fields={self.get_song_fields()}"
+            + f"&lang={language}",
         )
         request = Request(url, headers=HEADERS)
         try:
@@ -329,7 +320,7 @@ class VocaDBPlugin(BeetsPlugin):
             media = release["discs"][0]["name"]
         else:
             media = None
-        data_url = urljoin(VOCADB_BASE_URL, "Al/" + str(album_id))
+        data_url = urljoin(VOCADB_BASE_URL, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
             album_id=album_id,
@@ -391,7 +382,7 @@ class VocaDBPlugin(BeetsPlugin):
             artists["lyricists"] = artists["producers"]
         lyricist = ", ".join(artists["lyricists"])
         length = recording.get("lengthSeconds", 0)
-        data_url = urljoin(VOCADB_BASE_URL, "S/" + str(track_id))
+        data_url = urljoin(VOCADB_BASE_URL, f"S/{track_id}")
         bpm = recording.get("maxMilliBpm", 0) // 1000
         genre = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
