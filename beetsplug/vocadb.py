@@ -6,9 +6,8 @@ from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
 
 import beets
-from beets import autotag, config, library, ui, util
+from beets import autotag, config, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo
-from beets.importer import action
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 
 VOCADB_NAME = "VocaDB"
