@@ -131,9 +131,9 @@ class VocaDBPlugin(BeetsPlugin):
                 )
                 continue
             trackid_to_trackinfo = {
-                track.track_id: track for track in album_info.tracks
+                str(track.track_id): track for track in album_info.tracks
             }
-            library_trackid_to_item = {int(item.mb_trackid): item for item in items}
+            library_trackid_to_item = {item.mb_trackid: item for item in items}
             mapping = {
                 item: trackid_to_trackinfo[track_id]
                 for track_id, item in library_trackid_to_item.items()
