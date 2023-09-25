@@ -404,6 +404,7 @@ class VocaDBPlugin(BeetsPlugin):
             artist_id=artist_id,
             length=length,
             index=index,
+            track_alt=str(index) if index is not None else None,
             media=media,
             medium=medium,
             medium_index=medium_index,
