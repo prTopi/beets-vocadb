@@ -6,7 +6,7 @@ from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
 
 import beets
-from beets import autotag, config, ui, util
+from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 
@@ -142,14 +142,24 @@ class VocaDBPlugin(BeetsPlugin):
             with lib.transaction():
                 autotag.apply_metadata(album_info, mapping)
                 changed = False
+                any_changed_item = items[0]
                 for item in items:
                     item_changed = ui.show_model_changes(item)
                     changed |= item_changed
                     if item_changed:
+                        any_changed_item = item
                         apply_item_changes(lib, item, move, pretend, write)
                 if not changed:
                     continue
                 if not pretend:
+                    for key in library.Album.item_keys:
+                        if key not in [
+                            "original_day",
+                            "original_month",
+                            "original_year",
+                            "genre",
+                        ]:
+                            album[key] = any_changed_item[key]
                     album.store()
                     if move and lib.directory in util.ancestry(items[0].path):
                         self._log.debug("moving album {0}", album_formatted)
