@@ -295,12 +295,26 @@ class VocaDBPlugin(BeetsPlugin):
                     key=lambda y: y["trackNumber"],
                 )["trackNumber"]
 
+        va = release.get("discType", "") == "Compilation"
         album = release["name"]
         album_id = str(release["id"])
-        artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
-        if "artists" in release and release["artists"]:
-            artist_id = release["artists"][0]["artist"]["id"]
-        else:
+        artist_categories, artist = self.get_artists(
+            release["artists"], album=True, comp=va
+        )
+        if artist == "Various artists":
+            va = True
+        artists = []
+        artists_ids = []
+        for category in artist_categories.values():
+            artists.extend(
+                [artist for artist in category.keys() if artist not in artists]
+            )
+            artists_ids.extend(
+                [id for id in category.values() if id not in artists_ids]
+            )
+        try:
+            artist_id = artists_ids[0]
+        except IndexError:
             artist_id = None
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
@@ -315,7 +329,7 @@ class VocaDBPlugin(BeetsPlugin):
                     asin = asin[1]
                     break
         albumtype = release.get("discType", "").lower()
-        va = release.get("artistString", "") == "Various artists"
+        albumtypes = [albumtype]
         date = release.get("releaseDate", {})
         year = date.get("year", None)
         month = date.get("month", None)
@@ -334,10 +348,13 @@ class VocaDBPlugin(BeetsPlugin):
             album=album,
             album_id=album_id,
             artist=artist,
+            artists=artists,
             artist_id=artist_id,
+            artists_ids=artists_ids,
             tracks=tracks,
             asin=asin,
             albumtype=albumtype,
+            albumtypes=albumtypes,
             va=va,
             year=year,
             month=month,
@@ -365,31 +382,23 @@ class VocaDBPlugin(BeetsPlugin):
     ):
         title = recording["name"]
         track_id = str(recording["id"])
-        artists, artist_id = self.get_artists(recording["artists"])
-        if recording["artistString"] == "Various artists":
-            artist = ", ".join(artists["producers"])
-            if artists["vocalists"]:
-                artist += " feat. " + ", ".join(artists["vocalists"])
-        elif (
-            recording["artistString"].endswith(" feat. various")
-            and artists["vocalists"]
-        ):
-            artist = (
-                recording["artistString"].split(" feat. ", maxsplit=1)[0]
-                + " feat. "
-                + ", ".join(artists["vocalists"])
+        artist_categories, artist = self.get_artists(recording["artists"])
+        artists = []
+        artists_ids = []
+        for category in artist_categories.values():
+            artists.extend(
+                [artist for artist in category.keys() if artist not in artists]
             )
-        else:
-            artist = recording["artistString"]
-        if not artists["arrangers"]:
-            artists["arrangers"] = artists["producers"]
-        arranger = ", ".join(artists["arrangers"])
-        if not artists["composers"]:
-            artists["composers"] = artists["producers"]
-        composer = ", ".join(artists["composers"])
-        if not artists["lyricists"]:
-            artists["lyricists"] = artists["producers"]
-        lyricist = ", ".join(artists["lyricists"])
+            artists_ids.extend(
+                [id for id in category.values() if id not in artists_ids]
+            )
+        try:
+            artist_id = artists_ids[0]
+        except IndexError:
+            artist_id = None
+        arranger = ", ".join(artist_categories["arrangers"])
+        composer = ", ".join(artist_categories["composers"])
+        lyricist = ", ".join(artist_categories["lyricists"])
         length = recording.get("lengthSeconds", 0)
         data_url = urljoin(VOCADB_BASE_URL, f"S/{track_id}")
         bpm = str(recording.get("maxMilliBpm", 0) // 1000)
@@ -410,7 +419,9 @@ class VocaDBPlugin(BeetsPlugin):
             title=title,
             track_id=track_id,
             artist=artist,
+            artists=artists,
             artist_id=artist_id,
+            artists_ids=artists_ids,
             length=length,
             index=index,
             track_alt=str(index) if index is not None else None,
@@ -468,31 +479,56 @@ class VocaDBPlugin(BeetsPlugin):
     def get_song_fields(self):
         return "Artists,Tags,Bpm,Lyrics"
 
-    def get_artists(self, artists):
-        artist_id = None
-        out_artists = {
-            "producers": [],
-            "vocalists": [],
-            "arrangers": [],
-            "composers": [],
-            "lyricists": [],
+    def get_artists(self, artists, album=False, comp=False):
+        out = {
+            "producers": {},
+            "circles": {},
+            "vocalists": {},
+            "arrangers": {},
+            "composers": {},
+            "lyricists": {},
         }
-        for x in artists:
-            if "Producer" in x["categories"]:
-                if not artist_id:
-                    artist_id = x.get("artist", {}).get("id", None)
-                out_artists["producers"].append(x["name"])
-            if "Arranger" in x["effectiveRoles"]:
-                out_artists["arrangers"].append(x["name"])
-            if "Composer" in x["effectiveRoles"]:
-                out_artists["composers"].append(x["name"])
-            if "Lyricist" in x["effectiveRoles"]:
-                out_artists["lyricists"].append(x["name"])
-            if "Vocalist" in x["categories"] and not x["isSupport"]:
-                out_artists["vocalists"].append(x["name"])
-        if artist_id:
-            artist_id = artist_id
-        return out_artists, artist_id
+        composers, producers = [], []
+        for artist in artists:
+            parent = artist.get("artist", {})
+            if parent:
+                name = parent.get("name", "")
+                id = str(parent.get("id", ""))
+            else:
+                name = artist.get("name", "")
+                id = ""
+            if "Producer" in artist["categories"]:
+                if "Default" in artist["effectiveRoles"]:
+                    artist["effectiveRoles"] += ",Arranger,Composer,Lyricist"
+                out["producers"][name] = id
+                if "Composer" in artist["effectiveRoles"]:
+                    composers.append(name)
+                else:
+                    producers.append(name)
+            if "Circle" in artist["categories"]:
+                out["circles"][name] = id
+            if "Arranger" in artist["effectiveRoles"]:
+                out["arrangers"][name] = id
+            if "Composer" in artist["effectiveRoles"]:
+                out["composers"][name] = id
+            if "Lyricist" in artist["effectiveRoles"]:
+                out["lyricists"][name] = id
+            if "Vocalist" in artist["categories"] and not artist["isSupport"]:
+                out["vocalists"][name] = id
+        if not out["arrangers"]:
+            out["arrangers"] = out["producers"]
+        if not out["composers"]:
+            out["composers"] = out["producers"]
+        if not out["lyricists"]:
+            out["lyricists"] = out["producers"]
+        if comp or len(out["producers"]) > 5:
+            return out, "Various artists"
+        artistString = ", ".join(composers + producers + list(out["circles"].keys()))
+        if not album and out["vocalists"]:
+            artistString += " feat. " + ", ".join(
+                [name for name in out["vocalists"] if name not in out["producers"]]
+            )
+        return out, artistString
 
     def get_genres(self, info):
         genres = []
