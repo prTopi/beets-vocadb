@@ -133,7 +133,7 @@ class VocaDBPlugin(BeetsPlugin):
                 )
                 continue
             trackid_to_trackinfo = {
-                str(track.track_id): track for track in album_info.tracks
+                track.track_id: track for track in album_info.tracks
             }
             library_trackid_to_item = {item.mb_trackid: item for item in items}
             mapping = {
@@ -274,7 +274,7 @@ class VocaDBPlugin(BeetsPlugin):
         discs = len(set([x["discNumber"] for x in release["tracks"]]))
         if not release["discs"]:
             release["discs"] = [
-                {"discNumber": x + 1, "name": "CD", "mediaType": "Album"}
+                {"discNumber": x + 1, "name": "CD", "mediaType": "Audio"}
                 for x in range(discs)
             ]
         ignored_discs = []
@@ -296,7 +296,7 @@ class VocaDBPlugin(BeetsPlugin):
                 )["trackNumber"]
 
         album = release["name"]
-        album_id = release["id"]
+        album_id = str(release["id"])
         artist = release["artistString"].split(" feat. ", maxsplit=1)[0]
         if "artists" in release and release["artists"]:
             artist_id = release["artists"][0]["artist"]["id"]
@@ -328,10 +328,7 @@ class VocaDBPlugin(BeetsPlugin):
         mediums = len(release["discs"])
         catalognum = release.get("catalogNumber", None)
         genre = self.get_genres(release)
-        if release["discs"]:
-            media = release["discs"][0]["name"]
-        else:
-            media = None
+        media = release["discs"][0]["name"]
         data_url = urljoin(VOCADB_BASE_URL, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
@@ -367,7 +364,7 @@ class VocaDBPlugin(BeetsPlugin):
         search_lang=None,
     ):
         title = recording["name"]
-        track_id = recording["id"]
+        track_id = str(recording["id"])
         artists, artist_id = self.get_artists(recording["artists"])
         if recording["artistString"] == "Various artists":
             artist = ", ".join(artists["producers"])
@@ -395,7 +392,7 @@ class VocaDBPlugin(BeetsPlugin):
         lyricist = ", ".join(artists["lyricists"])
         length = recording.get("lengthSeconds", 0)
         data_url = urljoin(VOCADB_BASE_URL, f"S/{track_id}")
-        bpm = recording.get("maxMilliBpm", 0) // 1000
+        bpm = str(recording.get("maxMilliBpm", 0) // 1000)
         genre = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
             recording.get("lyrics", {}), search_lang
@@ -440,16 +437,14 @@ class VocaDBPlugin(BeetsPlugin):
         track_infos = []
         script = None
         language = None
-        index = 0
-        for track in tracks:
-            index += 1
+        for index, track in enumerate(tracks):
             if track["discNumber"] in ignored_discs or "song" not in track:
                 continue
             format = discs[track["discNumber"] - 1]["name"]
             total = discs[track["discNumber"] - 1]["total"]
             track_info = self.track_info(
                 track["song"],
-                index=index,
+                index=index + 1,
                 media=format,
                 medium=track.get("discNumber", None),
                 medium_index=track.get("trackNumber", None),
