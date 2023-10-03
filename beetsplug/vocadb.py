@@ -18,6 +18,8 @@ HEADERS = {"accept": "application/json", "User-Agent": USER_AGENT}
 
 
 class VocaDBPlugin(BeetsPlugin):
+    data_source = VOCADB_NAME
+
     def __init__(self):
         super().__init__()
         self.config.add(
