@@ -342,7 +342,10 @@ class VocaDBPlugin(BeetsPlugin):
         mediums = len(release["discs"])
         catalognum = release.get("catalogNumber", None)
         genre = self.get_genres(release)
-        media = release["discs"][0]["name"]
+        try:
+            media = release["discs"][0]["name"]
+        except IndexError:
+            media = None
         data_url = urljoin(VOCADB_BASE_URL, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
