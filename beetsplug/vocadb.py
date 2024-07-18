@@ -491,7 +491,6 @@ class VocaDBPlugin(BeetsPlugin):
             "composers": {},
             "lyricists": {},
         }
-        composers, producers = [], []
         for artist in artists:
             parent = artist.get("artist", {})
             if parent:
@@ -504,10 +503,6 @@ class VocaDBPlugin(BeetsPlugin):
                 if "Default" in artist["effectiveRoles"]:
                     artist["effectiveRoles"] += ",Arranger,Composer,Lyricist"
                 out["producers"][name] = id
-                if "Composer" in artist["effectiveRoles"]:
-                    composers.append(name)
-                else:
-                    producers.append(name)
             if "Circle" in artist["categories"]:
                 out["circles"][name] = id
             if "Arranger" in artist["effectiveRoles"]:
@@ -526,7 +521,9 @@ class VocaDBPlugin(BeetsPlugin):
             out["lyricists"] = out["producers"]
         if comp or len(out["producers"]) > 5:
             return out, "Various artists"
-        artistString = ", ".join(composers + producers + list(out["circles"].keys()))
+        artistString = ", ".join(
+            list(out["producers"].keys()) + list(out["circles"].keys())
+        )
         if not album and out["vocalists"]:
             artistString += " feat. " + ", ".join(
                 [name for name in out["vocalists"] if name not in out["producers"]]
