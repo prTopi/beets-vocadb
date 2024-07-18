@@ -499,7 +499,7 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 name = artist.get("name", "")
                 id = ""
-            if "Producer" in artist["categories"]:
+            if "Producer" in artist["categories"] or "Band" in artist["categories"]:
                 if "Default" in artist["effectiveRoles"]:
                     artist["effectiveRoles"] += ",Arranger,Composer,Lyricist"
                 out["producers"][name] = id
@@ -513,6 +513,8 @@ class VocaDBPlugin(BeetsPlugin):
                 out["lyricists"][name] = id
             if "Vocalist" in artist["categories"] and not artist["isSupport"]:
                 out["vocalists"][name] = id
+        if not out["producers"] and out["vocalists"]:
+            out["producers"] = out["vocalists"]
         if not out["arrangers"]:
             out["arrangers"] = out["producers"]
         if not out["composers"]:
