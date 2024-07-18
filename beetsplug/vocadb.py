@@ -525,9 +525,11 @@ class VocaDBPlugin(BeetsPlugin):
             list(out["producers"].keys()) + list(out["circles"].keys())
         )
         if not album and out["vocalists"]:
-            artistString += " feat. " + ", ".join(
-                [name for name in out["vocalists"] if name not in out["producers"]]
-            )
+            featuring = [
+                name for name in out["vocalists"] if name not in out["producers"]
+            ]
+            if featuring:
+                artistString += " feat. " + ", ".join(featuring)
         return out, artistString
 
     def get_genres(self, info):
