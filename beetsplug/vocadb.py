@@ -106,13 +106,11 @@ class VocaDBPlugin(BeetsPlugin):
                 apply_item_changes(lib, item, move, pretend, write)
 
     def albums(self, lib, query, move, pretend, write):
-        """Retrieve and apply info from the autotagger for albums matched by
-        query and their items.
-        """
+        """Retrieve and apply info from the autotagger for albums matched by query and their items."""
         for album in lib.albums(query):
             album_formatted = format(album)
             if not album.mb_albumid:
-                self._log.info(
+                self._log.debug(
                     "Skipping album with no mb_albumid: {0}", album_formatted
                 )
                 continue
@@ -120,7 +118,7 @@ class VocaDBPlugin(BeetsPlugin):
             if not (
                 album.get("data_source") == VOCADB_NAME and album.mb_albumid.isnumeric()
             ):
-                self._log.info(
+                self._log.debug(
                     "Skipping non-{0} album: {1}", VOCADB_NAME, album_formatted
                 )
                 continue
@@ -136,10 +134,26 @@ class VocaDBPlugin(BeetsPlugin):
                 track.track_id: track for track in album_info.tracks
             }
             library_trackid_to_item = {item.mb_trackid: item for item in items}
-            mapping = {
-                item: trackid_to_trackinfo[track_id]
-                for track_id, item in library_trackid_to_item.items()
-            }
+            mapping = {}
+            missing_tracks = []
+            for track_id, item in library_trackid_to_item.items():
+                if track_id in trackid_to_trackinfo:
+                    mapping[item] = trackid_to_trackinfo[track_id]
+                else:
+                    missing_tracks.append(track_id)
+                    self._log.debug(
+                        "Missing track ID {0} in album info for {1}",
+                        track_id,
+                        album_formatted
+                    )
+    
+            if missing_tracks:
+                self._log.warning(
+                    "The following track IDs were missing in the VocaDB album info for {0}: {1}",
+                    album_formatted,
+                    ', '.join(missing_tracks)
+                )
+    
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
                 autotag.apply_metadata(album_info, mapping)
