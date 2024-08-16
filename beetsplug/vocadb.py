@@ -81,14 +81,14 @@ class VocaDBPlugin(BeetsPlugin):
         for item in lib.items(query + ["singleton:true"]):
             item_formatted = format(item)
             if not item.mb_trackid:
-                self._log.info(
+                self._log.debug(
                     "Skipping singleton with no mb_trackid: {0}", item_formatted
                 )
                 continue
             if not (
                 item.get("data_source") == VOCADB_NAME and item.mb_trackid.isnumeric()
             ):
-                self._log.info(
+                self._log.debug(
                     "Skipping non-{0} singleton: {1}", VOCADB_NAME, item_formatted
                 )
                 continue
@@ -106,7 +106,9 @@ class VocaDBPlugin(BeetsPlugin):
                 apply_item_changes(lib, item, move, pretend, write)
 
     def albums(self, lib, query, move, pretend, write):
-        """Retrieve and apply info from the autotagger for albums matched by query and their items."""
+        """Retrieve and apply info from the autotagger for albums matched by
+        query and their items.
+        """
         for album in lib.albums(query):
             album_formatted = format(album)
             if not album.mb_albumid:
