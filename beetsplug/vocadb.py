@@ -591,7 +591,7 @@ class VocaDBPlugin(BeetsPlugin):
 
 class UtaiteDBPlugin(VocaDBPlugin):
     def __init__(self):
-        super().__init__()
+        super(UtaiteDBPlugin, self).__init__()
         self.name = "UtaiteDB"
         self.base_url = "https://utaiteadb.net/"
         self.api_url = "https://utaitedb.net/api/"
@@ -599,7 +599,7 @@ class UtaiteDBPlugin(VocaDBPlugin):
 
 class TouhouDBPlugin(VocaDBPlugin):
     def __init__(self):
-        super(UtaiteDBPlugin, self).__init__()
+        super(TouhouDBPlugin, self).__init__()
         self.name = "TouhouDB"
         self.base_url = "https://touhoudb.com/"
         self.api_url = "https://touhoudb.com/api/"
