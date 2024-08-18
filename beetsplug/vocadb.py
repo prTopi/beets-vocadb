@@ -63,7 +63,7 @@ class VocaDBPlugin(BeetsPlugin):
         return [cmd]
 
     def func(self, lib, opts, args):
-        """Command handler for the *sync function."""
+        """Command handler for the *dbsync function."""
         move = ui.should_move(opts.move)
         pretend = opts.pretend
         write = ui.should_write(opts.write)
