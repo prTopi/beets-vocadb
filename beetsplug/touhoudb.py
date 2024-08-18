@@ -1,4 +1,4 @@
-
+from beetsplug.vocadb import VocaDBPlugin
 
 class TouhouDBPlugin(VocaDBPlugin):
     def __init__(self):
