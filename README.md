@@ -38,7 +38,7 @@ vocadb:
 
 utaitedb and touhoudb have the same configuration options.
 
-### Advanced configuration
+## Advanced configuration
 
 If you want to use another site based on VocaDB, create another .py file in the beetsplug directory.
 Look at utaitedb.py and touhoudb.py for reference
