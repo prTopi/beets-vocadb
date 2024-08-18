@@ -1,6 +1,28 @@
 # beets-vocadb
 
-Plugin for beets to use VocaDB (or similar) as an autotagger source.
+Plugin for beets to use VocaDB, UtaiteDB and TouhouDB as an autotagger source.
+
+## Installation
+
+```Shell
+pip install git+https://github.com/prTopi/beets-vocadb
+```
+
+or, if you use [pipx](https://pipx.pypa.io):
+
+```Shell
+pipx inject beets git+https://github.com/prTopi/beets-vocadb
+```
+
+This Plugin has 3 components: vocadb, utaitedb and touhoudb.
+To enable them, add them to the plugin section of your beets config file:
+
+```yaml
+plugins:
+  - vocadb
+  - utaitedb
+  - touhoudb
+```
 
 ## Configuration
 
@@ -14,13 +36,9 @@ vocadb:
   translated_lyrics: false  # Always get translated lyrics if they're available
 ```
 
+utaitedb and touhoudb have the same configuration options.
+
 ### Advanced configuration
 
-Source name and URLs can be changed inside the plugin source code in case
-another site uses the same software as VocaDB (UtaiteDB, TouhouDB)
-
-```python
-VOCADB_NAME = "VocaDB"
-VOCADB_BASE_URL = "https://vocadb.net/"
-VOCADB_API_URL = "https://vocadb.net/api/"
-```
+If you want to use another site based on VocaDB, create another .py file in the beetsplug directory.
+Look at utaitedb.py and touhoudb.py for reference
