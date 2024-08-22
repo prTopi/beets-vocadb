@@ -14,7 +14,7 @@ from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 class VocaDBPlugin(BeetsPlugin):
     def __init__(self):
         super().__init__()
-        self.db_name = "VocaDB"
+        self.data_source = "VocaDB"
         self.base_url = "https://vocadb.net/"
         self.api_url = "https://vocadb.net/api/"
         self.subcommand = "vdbsync"
@@ -29,7 +29,7 @@ class VocaDBPlugin(BeetsPlugin):
         )
 
     def commands(self):
-        cmd = ui.Subcommand(self.subcommand, help=f"update metadata from {self.db_name}")
+        cmd = ui.Subcommand(self.subcommand, help=f"update metadata from {self.data_source}")
         cmd.parser.add_option(
             "-p",
             "--pretend",
@@ -84,10 +84,10 @@ class VocaDBPlugin(BeetsPlugin):
                 )
                 continue
             if not (
-                item.get("data_source") == self.db_name and item.mb_trackid.isnumeric()
+                item.get("data_source") == self.data_source and item.mb_trackid.isnumeric()
             ):
                 self._log.debug(
-                    "Skipping non-{0} singleton: {1}", self.db_name, item_formatted
+                    "Skipping non-{0} singleton: {1}", self.data_source, item_formatted
                 )
                 continue
             track_info = self.track_for_id(item.mb_trackid)
@@ -116,10 +116,10 @@ class VocaDBPlugin(BeetsPlugin):
                 continue
             items = list(album.items())
             if not (
-                album.get("data_source") == self.db_name and album.mb_albumid.isnumeric()
+                album.get("data_source") == self.data_source and album.mb_albumid.isnumeric()
             ):
                 self._log.debug(
-                    "Skipping non-{0} album: {1}", self.db_name, album_formatted
+                    "Skipping non-{0} album: {1}", self.data_source, album_formatted
                 )
                 continue
             album_info = self.album_for_id(album.mb_albumid)
@@ -183,12 +183,12 @@ class VocaDBPlugin(BeetsPlugin):
 
     def track_distance(self, item, info):
         """Returns the track distance."""
-        return get_distance(data_source=self.db_name, info=info, config=self.config)
+        return get_distance(data_source=self.data_source, info=info, config=self.config)
 
     def album_distance(self, items, album_info, mapping):
         """Returns the album distance."""
         return get_distance(
-            data_source=self.db_name, info=album_info, config=self.config
+            data_source=self.data_source, info=album_info, config=self.config
         )
 
     def candidates(self, items, artist, album, va_likely, extra_tags=None):
@@ -383,7 +383,7 @@ class VocaDBPlugin(BeetsPlugin):
             language=language,
             genre=genre,
             media=media,
-            data_source=self.db_name,
+            data_source=self.data_source,
             data_url=data_url,
         )
 
@@ -446,7 +446,7 @@ class VocaDBPlugin(BeetsPlugin):
             medium=medium,
             medium_index=medium_index,
             medium_total=medium_total,
-            data_source=self.db_name,
+            data_source=self.data_source,
             data_url=data_url,
             lyricist=lyricist,
             composer=composer,
