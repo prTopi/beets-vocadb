@@ -5,13 +5,13 @@ Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources.
 ## Installation
 
 ```Shell
-pip install git+https://github.com/amogus07/beets-vocadb
+pip install git+https://github.com/prTopi/beets-vocadb
 ```
 
 or, if you use [pipx](https://pipx.pypa.io):
 
 ```Shell
-pipx inject beets git+https://github.com/amogus07/beets-vocadb
+pipx inject beets git+https://github.com/prTopi/beets-vocadb
 ```
 
 This repository contains 3 plugins: vocadb, utaitedb and touhoudb.
