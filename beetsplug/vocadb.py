@@ -1,6 +1,7 @@
 from datetime import datetime
 from json import load
 from re import match, search
+from typing import NamedTuple
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
@@ -10,16 +11,25 @@ from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 
+USER_AGENT = f"beets/{beets.__version__} +https://beets.io/"
+HEADERS = {"accept": "application/json", "User-Agent": USER_AGENT}
+
+
+class VocaDBInstance(NamedTuple):
+    base_url: str
+    api_url: str
+    subcommand: str
+
 
 class VocaDBPlugin(BeetsPlugin):
     def __init__(self):
         super().__init__()
         self.data_source = "VocaDB"
-        self.base_url = "https://vocadb.net/"
-        self.api_url = "https://vocadb.net/api/"
-        self.subcommand = "vdbsync"
-        self.user_agent = f"beets/{beets.__version__} +https://beets.io/"
-        self.headers = {"accept": "application/json", "User-Agent": self.user_agent}
+        self.instance = VocaDBInstance(
+            base_url = "https://vocadb.net/",
+            api_url = "https://vocadb.net/api/",
+            subcommand = "vdbsync"
+        )
         self.config.add(
             {
                 "source_weight": 0.5,
@@ -29,7 +39,7 @@ class VocaDBPlugin(BeetsPlugin):
         )
 
     def commands(self):
-        cmd = ui.Subcommand(self.subcommand, help=f"update metadata from {self.data_source}")
+        cmd = ui.Subcommand(self.instance.subcommand, help=f"update metadata from {self.data_source}")
         cmd.parser.add_option(
             "-p",
             "--pretend",
@@ -146,14 +156,14 @@ class VocaDBPlugin(BeetsPlugin):
                         track_id,
                         album_formatted
                     )
-    
+
             if missing_tracks:
                 self._log.warning(
                     "The following track IDs were missing in the VocaDB album info for {0}: {1}",
                     album_formatted,
                     ', '.join(missing_tracks)
                 )
-    
+
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
                 autotag.apply_metadata(album_info, mapping)
@@ -194,10 +204,10 @@ class VocaDBPlugin(BeetsPlugin):
     def candidates(self, items, artist, album, va_likely, extra_tags=None):
         self._log.debug("Searching for album {0}", album)
         url = urljoin(
-            self.api_url,
+            self.instance.api_url,
             f"albums/?query={quote(album)}&maxResults=5&nameMatchMode=Auto",
         )
-        request = Request(url, headers=self.headers)
+        request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
                 if result:
@@ -216,13 +226,13 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for track {0}", item)
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
-            self.api_url,
+            self.instance.api_url,
             f"songs/?query={quote(title)}"
             + f"&fields={self.get_song_fields()}"
             + f"&lang={language}"
             + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
-        request = Request(url, headers=self.headers)
+        request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
                 if result:
@@ -243,13 +253,13 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for album {0}", album_id)
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
-            self.api_url,
+            self.instance.api_url,
             f"albums/{album_id}"
             + "?fields=Artists,Discs,Tags,Tracks,WebLinks"
             + f"&songFields={self.get_song_fields()}"
             + f"&lang={language}",
         )
-        request = Request(url, headers=self.headers)
+        request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
                 if result:
@@ -266,12 +276,12 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for track {0}", track_id)
         language = self.get_lang(config["import"]["languages"].as_str_seq())
         url = urljoin(
-            self.api_url,
+            self.instance.api_url,
             f"songs/{track_id}"
             + f"?fields={self.get_song_fields()}"
             + f"&lang={language}",
         )
-        request = Request(url, headers=self.headers)
+        request = Request(url, headers=HEADERS)
         try:
             with urlopen(request) as result:
                 if result:
@@ -360,7 +370,7 @@ class VocaDBPlugin(BeetsPlugin):
             media = release["discs"][0]["name"]
         except IndexError:
             media = None
-        data_url = urljoin(self.base_url, f"Al/{album_id}")
+        data_url = urljoin(self.instance.base_url, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
             album_id=album_id,
@@ -417,7 +427,7 @@ class VocaDBPlugin(BeetsPlugin):
         composer = ", ".join(artist_categories["composers"])
         lyricist = ", ".join(artist_categories["lyricists"])
         length = recording.get("lengthSeconds", 0)
-        data_url = urljoin(self.base_url, f"S/{track_id}")
+        data_url = urljoin(self.instance.base_url, f"S/{track_id}")
         bpm = str(recording.get("maxMilliBpm", 0) // 1000)
         genre = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
