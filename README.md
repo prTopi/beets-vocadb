@@ -1,6 +1,6 @@
 # beets-vocadb
 
-Plugin for beets to use VocaDB, UtaiteDB and TouhouDB as an autotagger source.
+Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources.
 
 ## Installation
 
@@ -14,7 +14,7 @@ or, if you use [pipx](https://pipx.pypa.io):
 pipx inject beets git+https://github.com/amogus07/beets-vocadb
 ```
 
-This Plugin has 3 components: vocadb, utaitedb and touhoudb.
+This repository contains 3 plugins: vocadb, utaitedb and touhoudb.
 To enable them, add them to the plugin section of your beets config file:
 
 ```yaml
@@ -24,9 +24,15 @@ plugins:
   - touhoudb
 ```
 
+## Subcommands
+
+Each plugin adds a subcommand to beets that works similarly to the mbsync command.
+vocadb adds `vdbsync`, utaitedb adds `udbsync` and touhoudb adds `tdbsync`.
+For usage information run `beet [subcommand] -h`.
+
 ## Configuration
 
-The plugin uses beets default language list to determine which language to use
+The plugins use beets default language list to determine which language to use
 for tags.
 
 ```yaml
