@@ -503,10 +503,12 @@ class VocaDBPlugin(BeetsPlugin):
                 track.language = language
         return track_infos, script, language
 
-    def get_song_fields(self):
+    @staticmethod
+    def get_song_fields():
         return "Artists,Tags,Bpm,Lyrics"
 
-    def get_artists(self, artists, album=False, comp=False):
+    @staticmethod
+    def get_artists(artists, album=False, comp=False):
         out = {
             "producers": {},
             "circles": {},
@@ -558,7 +560,8 @@ class VocaDBPlugin(BeetsPlugin):
                 artistString += " feat. " + ", ".join(featuring)
         return out, artistString
 
-    def get_genres(self, info):
+    @staticmethod
+    def get_genres(info):
         genres = []
         for tag in sorted(info.get("tags", {}), reverse=True, key=lambda x: x["count"]):
             if tag["tag"]["categoryName"] == "Genres":
@@ -603,7 +606,8 @@ class VocaDBPlugin(BeetsPlugin):
             out_lyrics = self.get_fallback_lyrics(lyrics, language)
         return out_script, out_language, out_lyrics
 
-    def get_fallback_lyrics(self, lyrics, language):
+    @staticmethod
+    def get_fallback_lyrics(lyrics, language):
         if language == "English":
             for x in lyrics:
                 if "en" in x["cultureCodes"]:
