@@ -26,9 +26,9 @@ class VocaDBPlugin(BeetsPlugin):
         super().__init__()
         self.data_source = "VocaDB"
         self.instance = VocaDBInstance(
-            base_url = "https://vocadb.net/",
-            api_url = "https://vocadb.net/api/",
-            subcommand = "vdbsync"
+            base_url="https://vocadb.net/",
+            api_url="https://vocadb.net/api/",
+            subcommand="vdbsync"
         )
         self.config.add(
             {
