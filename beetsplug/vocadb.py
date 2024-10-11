@@ -261,8 +261,7 @@ class VocaDBPlugin(BeetsPlugin):
             f"songs/?query={quote(title)}"
             + f"&fields={self.get_song_fields()}"
             + f"&lang={language}"
-            + "&maxResults=5&sort=SongType\
-              &preferAccurateMatches=true&nameMatchMode=Auto",
+            + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=HEADERS)
         try:
