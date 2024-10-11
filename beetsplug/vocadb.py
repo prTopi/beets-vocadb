@@ -9,7 +9,6 @@ from urllib.request import Request, urlopen
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
-from beets.dbcore.query import NumericQuery
 from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
@@ -110,8 +109,8 @@ class VocaDBPlugin(BeetsPlugin):
                     item_formatted,
                 )
                 continue
-            track_info: Optional[TrackInfo] = self.track_for_id(item.mb_trackid)
-            if not track_info:
+            track_info: Optional[TrackInfo]
+            if not (track_info := self.track_for_id(item.mb_trackid)):
                 self._log.info(
                     "Recording ID not found: {0} for track {0}",
                     item.mb_trackid,
@@ -146,8 +145,8 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            album_info: Optional[AlbumInfo] = self.album_for_id(album.mb_albumid)
-            if not album_info:
+            album_info: Optional[AlbumInfo]
+            if not (album_info := self.album_for_id(album.mb_albumid)):
                 self._log.info(
                     "Release ID {0} not found for album {1}",
                     album.mb_albumid,
@@ -564,10 +563,10 @@ class VocaDBPlugin(BeetsPlugin):
             "lyricists": {},
         }
         for artist in artists:
-            parent: dict[str, str] = artist.get("artist", {})
+            parent: dict[str, Any]
             name: str
             id: str
-            if parent:
+            if parent := artist.get("artist", {}):
                 name = parent.get("name", "")
                 id = str(parent.get("id", ""))
             else:
@@ -620,15 +619,16 @@ class VocaDBPlugin(BeetsPlugin):
         return "; ".join(genres)
 
     def get_lang(self, languages):
-        if languages:
-            for x in languages:
-                if x == "jp":
-                    if self.config["prefer_romaji"]:
-                        return "Romaji"
-                    return "Japanese"
-                if x == "en":
-                    return "English"
-        return "English"
+        if not languages:
+            return "English"
+
+        for lang in languages:
+            if lang == "jp":
+                return "Romaji" if self.config["prefer_romaji"] else "Japanese"
+            if lang == "en":
+                return "English"
+
+        return "English"  # Default if no matching language found
 
     def get_lyrics(
         self, lyrics: list[dict[str, Any]], language: Optional[str]
