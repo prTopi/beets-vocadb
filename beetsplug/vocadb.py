@@ -134,7 +134,7 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            items: Sequence[Item] = album.items()
+            items: Sequence[Item] = list(album.items())
             if not (
                 album.get("data_source") == self.data_source
                 and album.mb_albumid.isnumeric()
@@ -153,14 +153,14 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            trackid_to_trackinfo: dict[Optional[str], TrackInfo] = {
-                track.track_id: track for track in album_info.tracks
+            trackid_to_trackinfo: dict[str, TrackInfo] = {
+                str(track.track_id): track for track in album_info.tracks
             }
-            library_trackid_to_item: dict[Optional[str], Item] = {
-                item.mb_trackid: item for item in items
+            library_trackid_to_item: dict[str, Item] = {
+                str(item.mb_trackid): item for item in items
             }
             mapping: dict[Item, TrackInfo] = {}
-            missing_tracks: list[Optional[str]] = []
+            missing_tracks: list[str] = []
             for track_id, item in library_trackid_to_item.items():
                 if track_id in trackid_to_trackinfo:
                     mapping[item] = trackid_to_trackinfo[track_id]
@@ -231,7 +231,7 @@ class VocaDBPlugin(BeetsPlugin):
         album: str,
         va_likely: bool,
         extra_tags: Optional[dict] = None,
-    ) -> list[Optional[AlbumInfo]]:
+    ) -> list[AlbumInfo]:
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
             self.instance.api_url,
@@ -253,9 +253,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return []
 
-    def item_candidates(
-        self, item: Item, artist: str, title: str
-    ) -> list[Optional[TrackInfo]]:
+    def item_candidates(self, item: Item, artist: str, title: str) -> list[TrackInfo]:
         self._log.debug("Searching for track {0}", item)
         language: str = self.get_lang(config["import"]["languages"].as_str_seq())
         url: str = urljoin(
@@ -283,7 +281,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return []
 
-    def album_for_id(self, album_id: Optional[str]) -> Optional[AlbumInfo]:
+    def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:
         self._log.debug("Searching for album {0}", album_id)
         language: str = self.get_lang(config["import"]["languages"].as_str_seq())
         url: str = urljoin(
@@ -306,7 +304,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return None
 
-    def track_for_id(self, track_id: Optional[str]) -> Optional[TrackInfo]:
+    def track_for_id(self, track_id: str) -> Optional[TrackInfo]:
         self._log.debug("Searching for track {0}", track_id)
         language: str = self.get_lang(config["import"]["languages"].as_str_seq())
         url: str = urljoin(
@@ -356,8 +354,8 @@ class VocaDBPlugin(BeetsPlugin):
                 )["trackNumber"]
 
         va: bool = release.get("discType", "") == "Compilation"
-        album: Optional[str] = release["name"]
-        album_id: Optional[str] = str(release["id"])
+        album: str = release["name"]
+        album_id: str = str(release["id"])
         artist_categories, artist = self.get_artists(
             release["artists"], album=True, comp=va
         )
@@ -389,7 +387,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if asin:
                     asin = asin[1]
                     break
-        albumtype: Optional[str] = release.get("discType", "").lower()
+        albumtype: str = release.get("discType", "").lower()
         albumtypes: Optional[list[str]] = [albumtype] if albumtype else None
         date: dict[str, Any] = release.get("releaseDate", {})
         year: Optional[int] = date.get("year", None)
@@ -400,15 +398,15 @@ class VocaDBPlugin(BeetsPlugin):
             if "Label" in x.get("categories", ""):
                 label = x["name"]
                 break
-        mediums: Optional[int] = len(release["discs"])
+        mediums: int = len(release["discs"])
         catalognum: Optional[str] = release.get("catalogNumber", None)
-        genre: Optional[str] = self.get_genres(release)
-        media: Optional[str]
+        genre: str = self.get_genres(release)
+        media: Optional[str] = None
         try:
             media = release["discs"][0]["name"]
         except IndexError:
-            media = None
-        data_url: Optional[str] = urljoin(self.instance.base_url, f"Al/{album_id}")
+            pass
+        data_url: str = urljoin(self.instance.base_url, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
             album_id=album_id,
@@ -522,8 +520,8 @@ class VocaDBPlugin(BeetsPlugin):
         for index, track in enumerate(tracks):
             if track["discNumber"] in ignored_discs or "song" not in track:
                 continue
-            format: Optional[str] = discs[track["discNumber"] - 1]["name"]
-            total: Optional[int] = discs[track["discNumber"] - 1]["total"]
+            format: str = discs[track["discNumber"] - 1]["name"]
+            total: int = discs[track["discNumber"] - 1]["total"]
             track_info: TrackInfo = self.track_info(
                 track["song"],
                 index=index + 1,
@@ -647,7 +645,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if x["translationType"] == "Original":
                     out_script = "Jpan"
                     out_language = "jpn"
-                if not (self.config["translated_lyrics"] and language == "Japanese"):
+                if not self.config["translated_lyrics"] and language == "Japanese":
                     out_lyrics = x["value"]
             if (
                 not self.config["translated_lyrics"]

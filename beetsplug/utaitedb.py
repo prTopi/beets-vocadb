@@ -8,5 +8,5 @@ class UtaiteDBPlugin(VocaDBPlugin):
         self.instance = VocaDBInstance(
             base_url="https://utaiteadb.net/",
             api_url="https://utaitedb.net/api/",
-            subcommand="udbsync"
+            subcommand="udbsync",
         )

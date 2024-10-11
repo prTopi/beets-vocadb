@@ -8,5 +8,5 @@ class TouhouDBPlugin(VocaDBPlugin):
         self.instance = VocaDBInstance(
             base_url="https://touhoudb.com/",
             api_url="https://touhoudb.com/api/",
-            subcommand="tdbsync"
+            subcommand="tdbsync",
         )
