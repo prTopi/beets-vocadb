@@ -1,6 +1,6 @@
 from datetime import datetime
 from json import load
-from re import match, search
+from re import Match, match, search
 from typing import Any, NamedTuple, Optional, Sequence
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
@@ -9,6 +9,7 @@ from urllib.request import Request, urlopen
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
+from beets.dbcore.query import NumericQuery
 from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
@@ -378,14 +379,15 @@ class VocaDBPlugin(BeetsPlugin):
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
         )
+        asin_match: Optional[Match[str]] = None
         asin: Optional[str] = None
         for x in release.get("webLinks", []):
             if not x["disabled"] and match(
                 "Amazon( \\((LE|RE|JP|US)\\).*)?$", x["description"]
             ):
-                asin = str(search("\\/dp\\/(.+?)(\\/|$)", x["url"]))
-                if asin:
-                    asin = asin[1]
+                asin_match = search("\\/dp\\/(.+?)(\\/|$)", x["url"])
+                if asin_match:
+                    asin = asin_match[1]
                     break
         albumtype: str = release.get("discType", "").lower()
         albumtypes: Optional[list[str]] = [albumtype] if albumtype else None
