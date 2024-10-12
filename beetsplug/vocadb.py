@@ -18,6 +18,7 @@ HEADERS = {"accept": "application/json", "User-Agent": USER_AGENT}
 
 
 class VocaDBInstance(NamedTuple):
+    name: str
     base_url: str
     api_url: str
     subcommand: str
@@ -26,17 +27,19 @@ class VocaDBInstance(NamedTuple):
 class VocaDBPlugin(BeetsPlugin):
     def __init__(self) -> None:
         super().__init__()
-        self.data_source: str = "VocaDB"
         self.instance: VocaDBInstance = VocaDBInstance(
+            name="VocaDB",
             base_url="https://vocadb.net/",
             api_url="https://vocadb.net/api/",
             subcommand="vdbsync",
         )
+        self.data_source: str = self.instance.name
         self.config.add(
             {
                 "source_weight": 0.5,
                 "prefer_romaji": False,
                 "translated_lyrics": False,
+                "va_string": "Various artists",
             }
         )
 
@@ -617,7 +620,7 @@ class VocaDBPlugin(BeetsPlugin):
                 genres.append(tag["tag"]["name"].title())
         return "; ".join(genres)
 
-    def get_lang(self, languages):
+    def get_lang(self, languages) -> str:
         if not languages:
             return "English"
 
