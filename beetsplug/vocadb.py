@@ -565,6 +565,8 @@ class VocaDBPlugin(BeetsPlugin):
             "lyricists": {},
         }
         for artist in artists:
+            if artist["isSupport"]:
+                continue
             parent: dict[str, Any]
             name: str
             id: str
@@ -589,7 +591,7 @@ class VocaDBPlugin(BeetsPlugin):
                 out["composers"][name] = id
             if "Lyricist" in effectiveRoles:
                 out["lyricists"][name] = id
-            if "Vocalist" in categories and not artist["isSupport"]:
+            if "Vocalist" in categories:
                 out["vocalists"][name] = id
         if not out["producers"] and out["vocalists"]:
             out["producers"] = out["vocalists"]
