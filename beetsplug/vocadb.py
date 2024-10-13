@@ -39,6 +39,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "source_weight": 0.5,
                 "prefer_romaji": False,
                 "translated_lyrics": False,
+                "include_featured_album_artists": False,
                 "va_string": "Various artists",
             }
         )
@@ -356,10 +357,11 @@ class VocaDBPlugin(BeetsPlugin):
                 )["trackNumber"]
 
         va: bool = release.get("discType", "") == "Compilation"
+        include_featured_album_artists: bool = bool(self.config["include_featured_album_artists"])
         album: str = release["name"]
         album_id: str = str(release["id"])
         artist_categories, artist = self.get_artists(
-            release["artists"], album=True, comp=va
+            release["artists"], include_featured_artists=include_featured_album_artists, comp=va
         )
         if artist == "Various artists":
             va = True
@@ -554,7 +556,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     @staticmethod
     def get_artists(
-        artists: list[dict[str, Any]], album=False, comp=False
+        artists: list[dict[str, Any]], include_featured_artists: bool = True, comp: bool = False
     ) -> tuple[dict[str, dict[str, Any]], str]:
         out: dict[str, dict[str, Any]] = {
             "producers": {},
@@ -606,7 +608,7 @@ class VocaDBPlugin(BeetsPlugin):
         artistString: str = ", ".join(
             list(out["producers"].keys()) + list(out["circles"].keys())
         )
-        if not album and out["vocalists"]:
+        if include_featured_artists and out["vocalists"]:
             featuring: list[str] = [
                 name for name in out["vocalists"] if name not in out["producers"]
             ]
