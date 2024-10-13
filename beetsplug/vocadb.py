@@ -43,6 +43,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "va_string": "Various artists",
             }
         )
+        self.va_string: str = str(self.config["va_string"].get())
 
     def commands(self) -> list[Subcommand]:
         cmd: Subcommand = Subcommand(
@@ -357,11 +358,11 @@ class VocaDBPlugin(BeetsPlugin):
                 )["trackNumber"]
 
         va: bool = release.get("discType", "") == "Compilation"
-        include_featured_album_artists: bool = bool(self.config["include_featured_album_artists"])
+        include_featured_album_artists: bool = bool(self.config["include_featured_album_artists"].get())
         album: str = release["name"]
         album_id: str = str(release["id"])
         artist_categories, artist = self.get_artists(
-            release["artists"], include_featured_artists=include_featured_album_artists, comp=va
+            release["artists"], self.va_string, include_featured_artists=include_featured_album_artists, comp=va
         )
         if artist == "Various artists":
             va = True
@@ -450,7 +451,7 @@ class VocaDBPlugin(BeetsPlugin):
     ) -> TrackInfo:
         title: str = recording["name"]
         track_id: str = str(recording["id"])
-        artist_categories, artist = self.get_artists(recording["artists"])
+        artist_categories, artist = self.get_artists(recording["artists"], self.va_string)
         artists: list[str] = []
         artists_ids: list[str] = []
         for category in artist_categories.values():
@@ -556,7 +557,10 @@ class VocaDBPlugin(BeetsPlugin):
 
     @staticmethod
     def get_artists(
-        artists: list[dict[str, Any]], include_featured_artists: bool = True, comp: bool = False
+        artists: list[dict[str, Any]],
+        va_string: str,
+        include_featured_artists: bool = True,
+        comp: bool = False
     ) -> tuple[dict[str, dict[str, Any]], str]:
         out: dict[str, dict[str, Any]] = {
             "producers": {},
@@ -630,7 +634,7 @@ class VocaDBPlugin(BeetsPlugin):
 
         for lang in languages:
             if lang == "jp":
-                return "Romaji" if self.config["prefer_romaji"] else "Japanese"
+                return "Romaji" if self.config["prefer_romaji"].get() else "Japanese"
             if lang == "en":
                 return "English"
 
@@ -642,21 +646,22 @@ class VocaDBPlugin(BeetsPlugin):
         out_script: Optional[str] = None
         out_language: Optional[str] = None
         out_lyrics: Optional[str] = None
+        translated_lyrics: bool = bool(self.config["translated_lyrics"].get())
         for x in lyrics:
             if "en" in x["cultureCodes"]:
                 if x["translationType"] == "Original":
                     out_script = "Latn"
                     out_language = "eng"
-                if self.config["translated_lyrics"] or language == "English":
+                if translated_lyrics or language == "English":
                     out_lyrics = x["value"]
             elif "ja" in x["cultureCodes"]:
                 if x["translationType"] == "Original":
                     out_script = "Jpan"
                     out_language = "jpn"
-                if not self.config["translated_lyrics"] and language == "Japanese":
+                if not translated_lyrics and language == "Japanese":
                     out_lyrics = x["value"]
             if (
-                not self.config["translated_lyrics"]
+                not translated_lyrics
                 and language == "Romaji"
                 and x["translationType"] == "Romanized"
             ):
