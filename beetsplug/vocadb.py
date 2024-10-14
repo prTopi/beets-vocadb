@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import chain
 from json import load
 from re import Match, match, search
 from typing import Any, NamedTuple, Optional, Sequence
@@ -364,7 +365,7 @@ class VocaDBPlugin(BeetsPlugin):
         artist_categories, artist = self.get_artists(
             release["artists"], self.va_string, include_featured_artists=include_featured_album_artists, comp=va
         )
-        if artist == "Various artists":
+        if artist == self.va_string:
             va = True
         artists: list[str] = []
         artists_ids: list[str] = []
@@ -570,9 +571,8 @@ class VocaDBPlugin(BeetsPlugin):
             "composers": {},
             "lyricists": {},
         }
+        is_support: list[str] = []
         for artist in artists:
-            if artist["isSupport"]:
-                continue
             parent: dict[str, Any]
             name: str
             id: str
@@ -582,6 +582,8 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 name = artist.get("name", "")
                 id = ""
+            if artist["isSupport"]:
+                is_support.append(id)
             categories: str = artist["categories"]
             effectiveRoles: str = artist["effectiveRoles"]
             if "Producer" in categories or "Band" in categories:
@@ -608,16 +610,20 @@ class VocaDBPlugin(BeetsPlugin):
         if not out["lyricists"]:
             out["lyricists"] = out["producers"]
         if comp or len(out["producers"]) > 5:
-            return out, "Various artists"
+            return out, va_string
         artistString: str = ", ".join(
-            list(out["producers"].keys()) + list(out["circles"].keys())
+            main_artist
+            for main_artist, id in chain(out["producers"].items(), out["circles"].items())
+            if id not in is_support
         )
         if include_featured_artists and out["vocalists"]:
-            featuring: list[str] = [
-                name for name in out["vocalists"] if name not in out["producers"]
+            featured_artists: list[str] = [
+                name
+                for name, id in out["vocalists"].items()
+                if name not in out["producers"] and id not in is_support
             ]
-            if featuring:
-                artistString += " feat. " + ", ".join(featuring)
+            if featured_artists:
+                artistString += " feat. " + ", ".join(featured_artists)
         return out, artistString
 
     @staticmethod
