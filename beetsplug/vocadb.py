@@ -43,11 +43,14 @@ class VocaDBPlugin(BeetsPlugin):
                 "va_string": "Various artists",
             }
         )
-        self.va_string: str = str(self.config["va_string"].get())
 
     @property
     def data_source(self) -> str:
         return self.instance.name
+
+    @property
+    def va_string(self) -> str:
+        return str(self.config["va_string"].get())
 
     def commands(self) -> list[Subcommand]:
         cmd: Subcommand = Subcommand(
