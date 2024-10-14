@@ -7,9 +7,6 @@ class TestVocaDBPlugin(TestCase):
     def setUp(self):
         self.plugin = VocaDBPlugin()
 
-    def test_get_song_fields(self):
-        self.assertEqual(self.plugin.get_song_fields(), "Artists,Tags,Bpm,Lyrics")
-
     def test_get_genres(self):
         info = {}
         self.assertEqual(self.plugin.get_genres(info), "")
@@ -65,12 +62,11 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(self.plugin.get_genres(info), "Genre2")
 
     def test_get_lang(self):
-        self.assertEqual(self.plugin.get_lang(["en", "jp"]), "English")
-        self.assertEqual(self.plugin.get_lang(["jp", "en"]), "Japanese")
-        self.plugin.config["prefer_romaji"] = True
-        self.assertEqual(self.plugin.get_lang(["jp", "en"]), "Romaji")
-        self.assertEqual(self.plugin.get_lang(["en", "jp"]), "English")
-        self.assertEqual(self.plugin.get_lang([]), "English")
+        self.assertEqual(self.plugin.get_lang(["en", "jp"], prefer_romaji=False), "English")
+        self.assertEqual(self.plugin.get_lang(["jp", "en"], prefer_romaji=False), "Japanese")
+        self.assertEqual(self.plugin.get_lang(["jp", "en"], prefer_romaji=True), "Romaji")
+        self.assertEqual(self.plugin.get_lang(["en", "jp"], prefer_romaji=True), "English")
+        self.assertEqual(self.plugin.get_lang([], prefer_romaji=True), "English")
 
     def test_get_lyrics(self):
         lyrics = [

@@ -1,11 +1,12 @@
 from beetsplug.vocadb import VocaDBPlugin, VocaDBInstance
 
+
 class UtaiteDBPlugin(VocaDBPlugin):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
-        self.data_source = "UtaiteDB"
         self.instance = VocaDBInstance(
-            base_url = "https://utaiteadb.net/",
-            api_url = "https://utaitedb.net/api/",
-            subcommand = "udbsync"
+            name="UtaiteDB",
+            base_url="https://utaiteadb.net/",
+            api_url="https://utaitedb.net/api/",
+            subcommand="udbsync",
         )
