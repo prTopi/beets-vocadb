@@ -2,7 +2,7 @@ from beetsplug.vocadb import VocaDBPlugin, VocaDBInstance
 
 
 class TouhouDBPlugin(VocaDBPlugin):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.instance = VocaDBInstance(
             name="TouhouDB",
