@@ -34,7 +34,6 @@ class VocaDBPlugin(BeetsPlugin):
             api_url="https://vocadb.net/api/",
             subcommand="vdbsync",
         )
-        self.data_source: str = self.instance.name
         self.config.add(
             {
                 "source_weight": 0.5,
@@ -45,6 +44,10 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
         self.va_string: str = str(self.config["va_string"].get())
+
+    @property
+    def data_source(self) -> str:
+        return self.instance.name
 
     def commands(self) -> list[Subcommand]:
         cmd: Subcommand = Subcommand(
@@ -180,8 +183,9 @@ class VocaDBPlugin(BeetsPlugin):
 
             if missing_tracks:
                 self._log.warning(
-                    "The following track IDs were missing in the VocaDB album \
-                    info for {0}: {1}",
+                    "The following track IDs were missing in the {0} album \
+                    info for {1}: {2}",
+                    self.data_source,
                     album_formatted,
                     ", ".join(
                         str(track) for track in missing_tracks if track is not None
