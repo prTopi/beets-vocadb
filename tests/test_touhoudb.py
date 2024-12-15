@@ -3,5 +3,4 @@ from tests.test_vocadb import TestVocaDBPlugin
 
 class TestTouhouDBPlugin(TestVocaDBPlugin):
     def setUp(self):
-        return super().setUp()
-        self.plugin = TouhouDBPlugin
+        self.plugin = TouhouDBPlugin()
