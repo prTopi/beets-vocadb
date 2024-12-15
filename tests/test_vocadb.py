@@ -5,10 +5,13 @@ from beetsplug.vocadb import VocaDBPlugin
 
 
 class TestVocaDBPlugin(TestCase):
-    def setUp(self):
+
+    plugin: VocaDBPlugin
+
+    def setUp(self) -> None:
         self.plugin = VocaDBPlugin()
 
-    def test_get_genres(self):
+    def test_get_genres(self) -> None:
         info: dict[str, list[dict[str, Any]]] = {}
         self.assertEqual(self.plugin.get_genres(info), "")
         info = {
@@ -62,15 +65,15 @@ class TestVocaDBPlugin(TestCase):
         }
         self.assertEqual(self.plugin.get_genres(info), "Genre2")
 
-    def test_get_lang(self):
+    def test_get_lang(self) -> None:
         self.assertEqual(self.plugin.get_lang(["en", "jp"], prefer_romaji=False), "English")
         self.assertEqual(self.plugin.get_lang(["jp", "en"], prefer_romaji=False), "Japanese")
         self.assertEqual(self.plugin.get_lang(["jp", "en"], prefer_romaji=True), "Romaji")
         self.assertEqual(self.plugin.get_lang(["en", "jp"], prefer_romaji=True), "English")
         self.assertEqual(self.plugin.get_lang([], prefer_romaji=True), "English")
 
-    def test_get_lyrics(self):
-        lyrics = [
+    def test_get_lyrics(self) -> None:
+        lyrics: list[dict[str, Any]] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
@@ -128,8 +131,8 @@ class TestVocaDBPlugin(TestCase):
             self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics1")
         )
 
-    def test_get_fallback_lyrics(self):
-        lyrics = [
+    def test_get_fallback_lyrics(self) -> None:
+        lyrics: list[dict[str, Any]] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
