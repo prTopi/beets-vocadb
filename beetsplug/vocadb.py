@@ -285,10 +285,10 @@ class VocaDBPlugin(BeetsPlugin):
                     return tuple([album for album in map(self.album_for_id, ids) if album])
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
-                    return tuple([])
+                    return tuple()
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
-            return tuple([])
+            return tuple()
 
     def item_candidates(self, item: Item, artist: str, title: str) -> tuple[()]:
         self._log.debug("Searching for track {0}", item)
@@ -311,10 +311,10 @@ class VocaDBPlugin(BeetsPlugin):
                     ])
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
-                    return tuple([])
+                    return tuple()
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
-            return tuple([])
+            return tuple()
 
     def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:
         self._log.debug("Searching for album {0}", album_id)
