@@ -627,21 +627,31 @@ class VocaDBPlugin(BeetsPlugin):
             out["composers"] = out["producers"]
         if not out["lyricists"]:
             out["lyricists"] = out["producers"]
-        if comp or len(out["producers"]) > 5:
-            return out, va_string
-        artist_string: str = ", ".join(
-            main_artist
-            for main_artist, id in chain(out["producers"].items(), out["circles"].items())
-            if id not in is_support
-        )
-        if include_featured_artists and out["vocalists"]:
+
+        artist_string: Optional[str] = None
+        main_artists: Optional[list[str]] = None
+
+        if not comp:
+            main_artists = [
+                name
+                for name, id in chain(out["producers"].items(), out["circles"].items())
+                if id not in is_support
+            ]
+            if not len(main_artists) > 5:
+                artist_string = ", ".join(main_artists)
+
+        if not artist_string:
+            artist_string = va_string
+
+        if include_featured_artists and out["vocalists"] and main_artists:
             featured_artists: list[str] = [
                 name
                 for name, id in out["vocalists"].items()
-                if name not in out["producers"] and id not in is_support
+                if id not in is_support
             ]
-            if featured_artists:
+            if featured_artists and not len(main_artists) + len(featured_artists) > 5:
                 artist_string += " feat. " + ", ".join(featured_artists)
+
         return out, artist_string
 
     @staticmethod
