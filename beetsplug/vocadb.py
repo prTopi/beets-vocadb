@@ -630,7 +630,7 @@ class VocaDBPlugin(BeetsPlugin):
             out["lyricists"] = out["producers"]
         if comp or len(out["producers"]) > 5:
             return out, va_string
-        artistString: str = ", ".join(
+        artist_string: str = ", ".join(
             main_artist
             for main_artist, id in chain(out["producers"].items(), out["circles"].items())
             if id not in is_support
@@ -642,8 +642,8 @@ class VocaDBPlugin(BeetsPlugin):
                 if name not in out["producers"] and id not in is_support
             ]
             if featured_artists:
-                artistString += " feat. " + ", ".join(featured_artists)
-        return out, artistString
+                artist_string += " feat. " + ", ".join(featured_artists)
+        return out, artist_string
 
     @staticmethod
     def get_genres(info: dict[str, Any]) -> str:
