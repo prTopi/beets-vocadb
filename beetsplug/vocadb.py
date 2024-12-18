@@ -406,8 +406,10 @@ class VocaDBPlugin(BeetsPlugin):
                 [id for id in category.values() if id not in artists_ids]
             )
         artist_id: Optional[str] = None
-        if artists_ids:
+        try:
             artist_id = artists_ids[0]
+        except IndexError:
+            pass
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
         )
@@ -436,8 +438,10 @@ class VocaDBPlugin(BeetsPlugin):
         catalognum: Optional[str] = release.get("catalogNumber", None)
         genre: str = self.get_genres(release)
         media: Optional[str] = None
-        if release["discs"]:
+        try:
             media = release["discs"][0]["name"]
+        except IndexError:
+            pass
         data_url: str = urljoin(self.instance.base_url, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
@@ -488,8 +492,10 @@ class VocaDBPlugin(BeetsPlugin):
                 [id for id in category.values() if id not in artists_ids]
             )
         artist_id: Optional[str] = None
-        if artists_ids:
+        try:
             artist_id = artists_ids[0]
+        except IndexError:
+            pass
         arranger: str = ", ".join(artist_categories["arrangers"])
         composer: str = ", ".join(artist_categories["composers"])
         lyricist: str = ", ".join(artist_categories["lyricists"])
