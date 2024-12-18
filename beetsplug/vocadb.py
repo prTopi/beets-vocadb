@@ -319,7 +319,7 @@ class VocaDBPlugin(BeetsPlugin):
             + f"&songFields={self.song_fields}"
             + f"&lang={language}",
         )
-        request = Request(url, headers=self.headers)
+        request: Request = Request(url, headers=self.headers)
         try:
             with urlopen(request) as result:
                 if result:
