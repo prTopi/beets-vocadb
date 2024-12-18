@@ -23,14 +23,23 @@ class VocaDBInstance(NamedTuple):
 
 
 class VocaDBPlugin(BeetsPlugin):
+
+    user_agent: str = f"beets/{beets.__version__} +https://beets.io/"
+    headers: dict[str, str] = {"accept": "application/json", "User-Agent": user_agent}
+    languages = config["import"]["languages"].as_str_seq()
+    song_fields: str = "Artists,Tags,Bpm,Lyrics"
+
+    instance: VocaDBInstance
+
     def __init__(self) -> None:
         super().__init__()
-        self.instance: VocaDBInstance = VocaDBInstance(
-            name="VocaDB",
-            base_url="https://vocadb.net/",
-            api_url="https://vocadb.net/api/",
-            subcommand="vdbsync",
-        )
+        if not hasattr(self, "instance"):
+            self.instance = VocaDBInstance(
+                name="VocaDB",
+                base_url="https://vocadb.net/",
+                api_url="https://vocadb.net/api/",
+                subcommand="vdbsync",
+            )
         self.config.add(
             {
                 "source_weight": 0.5,
@@ -41,10 +50,8 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
 
-    user_agent: str = f"beets/{beets.__version__} +https://beets.io/"
-    headers: dict[str, str] = {"accept": "application/json", "User-Agent": user_agent}
-    languages = config["import"]["languages"].as_str_seq()
-    song_fields: str = "Artists,Tags,Bpm,Lyrics"
+    def __init_subclass__(cls, instance: VocaDBInstance) -> None:
+        cls.instance = instance
 
     @property
     def language(self) -> str:
