@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
+from beets.autotag.match import track_distance
 from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
@@ -197,27 +198,23 @@ class VocaDBPlugin(BeetsPlugin):
                 str(item.mb_trackid): item for item in items
             }
             mapping: dict[Item, TrackInfo] = {}
-            missing_tracks: list[str] = []
             for track_id, item in library_trackid_to_item.items():
-                if track_id in trackid_to_trackinfo:
-                    mapping[item] = trackid_to_trackinfo[track_id]
-                else:
-                    missing_tracks.append(track_id)
-                    self._log.debug(
-                        "Missing track ID {0} in album info for {1}",
-                        track_id,
+                if not track_id in trackid_to_trackinfo:
+                    # Unset track id so that it won't affect distance
+                    item.mb_trackid = None
+                    old_track_id = track_id
+                    matches = {
+                        track_info["track_id"]: track_distance(item, track_info)
+                        for track_info in trackid_to_trackinfo.values()
+                    }
+                    track_id = min(matches, key=matches.get)
+                    self._log.warning(
+                        "Missing track ID {0} in album info for {1}, automatched to ID {2}",
+                        old_track_id,
                         album_formatted,
+                        track_id,
                     )
-
-            if missing_tracks:
-                self._log.warning(
-                    "The following track IDs were missing in the {0} album info for {1}: {2}",
-                    self.data_source,
-                    album_formatted,
-                    ", ".join(
-                        str(track) for track in missing_tracks if track is not None
-                    ),
-                )
+                mapping[item] = trackid_to_trackinfo[track_id]
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
