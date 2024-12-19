@@ -676,7 +676,7 @@ class VocaDBPlugin(BeetsPlugin):
         return "; ".join(genres)
 
     @staticmethod
-    def get_lang(languages: list[str], prefer_romaji: bool) -> str:
+    def get_lang(languages, prefer_romaji: bool) -> str:
         if not languages:
             return "English"
 
