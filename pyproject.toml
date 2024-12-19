@@ -20,6 +20,9 @@ classifiers = [
 ]
 dynamic = ["readme", "dependencies"]
 
+[tool.basedpyright]
+pythonVersion = "3.10"
+
 [tool.setuptools.dynamic]
 readme = { file = ["README.md"] }
 dependencies = { file = ["requirements.txt"] }
