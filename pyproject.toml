@@ -2,7 +2,7 @@
 name = "beets-vocadb"
 version = "0.0.1"
 description = "Plugin for beets to use VocaDB (or similar) as an autotagger source."
-authors = [ 
+authors = [
   { name="prTopi", email="17724308+prTopi@users.noreply.github.com" }
 ]
 license = { text = "MIT" }
