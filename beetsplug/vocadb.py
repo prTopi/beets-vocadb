@@ -176,7 +176,6 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            items: Sequence[Item] = list(album.items())
             if not (
                 album.get("data_source") == self.data_source
                 and album.mb_albumid.isnumeric()
@@ -195,30 +194,28 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            trackid_to_trackinfo: dict[str, TrackInfo] = {
+            items: Sequence[Item] = list(album.items())
+            track_index: dict[str, TrackInfo] = {
                 str(track.track_id): track for track in album_info.tracks
             }
-            library_trackid_to_item: dict[str, Item] = {
-                str(item.mb_trackid): item for item in items
-            }
             mapping: dict[Item, TrackInfo] = {}
-            for track_id, item in library_trackid_to_item.items():
-                if track_id not in trackid_to_trackinfo:
+            for item in items:
+                if item.mb_trackid not in track_index:
+                    old_track_id: str = item.mb_trackid
                     # Unset track id so that it won't affect distance
                     item.mb_trackid = None
-                    old_track_id: str = track_id
                     matches: dict[str, Distance] = {
                         track_info["track_id"]: track_distance(item, track_info)
-                        for track_info in trackid_to_trackinfo.values()
+                        for track_info in track_index.values()
                     }
-                    track_id = min(matches, key=lambda k: matches[k])
+                    item.mb_trackid = min(matches, key=lambda k: matches[k])
                     self._log.warning(
-                        "Missing track ID {0} in album info for {1}, automatched to ID {2}",
+                        "Missing track ID {0} in album info for {1} automatched to ID {2}",
                         old_track_id,
                         album_formatted,
-                        track_id,
+                        item.mb_trackid,
                     )
-                mapping[item] = trackid_to_trackinfo[track_id]
+                mapping[item] = track_index[item.mb_trackid]
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
