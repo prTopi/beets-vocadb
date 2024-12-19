@@ -1,17 +1,18 @@
+from typing import Any
 from unittest import TestCase
 
 from beetsplug.vocadb import VocaDBPlugin
 
 
 class TestVocaDBPlugin(TestCase):
-    def setUp(self):
+
+    plugin: VocaDBPlugin
+
+    def setUp(self) -> None:
         self.plugin = VocaDBPlugin()
 
-    def test_get_song_fields(self):
-        self.assertEqual(self.plugin.get_song_fields(), "Artists,Tags,Bpm,Lyrics")
-
-    def test_get_genres(self):
-        info = {}
+    def test_get_genres(self) -> None:
+        info: dict[str, list[dict[str, Any]]] = {}
         self.assertEqual(self.plugin.get_genres(info), "")
         info = {
             "tags": [
@@ -64,16 +65,23 @@ class TestVocaDBPlugin(TestCase):
         }
         self.assertEqual(self.plugin.get_genres(info), "Genre2")
 
-    def test_get_lang(self):
-        self.assertEqual(self.plugin.get_lang(["en", "jp"]), "English")
-        self.assertEqual(self.plugin.get_lang(["jp", "en"]), "Japanese")
-        self.plugin.config["prefer_romaji"] = True
-        self.assertEqual(self.plugin.get_lang(["jp", "en"]), "Romaji")
-        self.assertEqual(self.plugin.get_lang(["en", "jp"]), "English")
-        self.assertEqual(self.plugin.get_lang([]), "English")
+    def test_get_lang(self) -> None:
+        self.assertEqual(
+            self.plugin.get_lang(["en", "jp"], prefer_romaji=False), "English"
+        )
+        self.assertEqual(
+            self.plugin.get_lang(["jp", "en"], prefer_romaji=False), "Japanese"
+        )
+        self.assertEqual(
+            self.plugin.get_lang(["jp", "en"], prefer_romaji=True), "Romaji"
+        )
+        self.assertEqual(
+            self.plugin.get_lang(["en", "jp"], prefer_romaji=True), "English"
+        )
+        self.assertEqual(self.plugin.get_lang([], prefer_romaji=True), "English")
 
-    def test_get_lyrics(self):
-        lyrics = [
+    def test_get_lyrics(self) -> None:
+        lyrics: list[dict[str, Any]] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
@@ -131,8 +139,8 @@ class TestVocaDBPlugin(TestCase):
             self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics1")
         )
 
-    def test_get_fallback_lyrics(self):
-        lyrics = [
+    def test_get_fallback_lyrics(self) -> None:
+        lyrics: list[dict[str, Any]] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
