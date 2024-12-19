@@ -4,18 +4,18 @@ Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources.
 
 ## Installation
 
-```Shell
+```sh
 pip install git+https://github.com/prTopi/beets-vocadb
 ```
 
 or, if you use [pipx](https://pipx.pypa.io):
 
-```Shell
+```sh
 pipx inject beets git+https://github.com/prTopi/beets-vocadb
 ```
 
-This repository contains 3 plugins: vocadb, utaitedb and touhoudb.
-To enable them, add them to the plugin section of your beets config file:
+This repository currently contains 3 plugins: `vocadb`, `utaitedb` and `touhoudb`.
+To enable any of them, add the plugin name to the plugins section of your beets config.
 
 ```yaml
 plugins:
@@ -26,25 +26,39 @@ plugins:
 
 ## Subcommands
 
-Each plugin adds a subcommand to beets that works similarly to the mbsync command.
-vocadb adds `vdbsync`, utaitedb adds `udbsync` and touhoudb adds `tdbsync`.
+Each plugin adds a subcommand to beets that works similarly to the `mbsync` command.
+
+- VocaDB: `vdbsync`
+- UtaiteDB: `udbsync`
+- TouhouDB: `tdbsync`
+
 For usage information run `beet [subcommand] -h`.
 
 ## Configuration
 
-The plugins use beets default language list to determine which language to use
-for tags.
-
 ```yaml
-vocadb:
-  source_weight: 0.5    # Penalty to be added to all matches (0 disabled, 1 highest)
-  prefer_romaji: false  # Prefer romanized if they exist rather than Japanese
-  translated_lyrics: false  # Always get translated lyrics if they're available
+vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
+  source_weight: 0.5 # Penalty to be added to all matches when using autotagger (0 disabled, 1 highest)
+  prefer_romaji: false # Prefer romanized if they exist rather than Japanese
+  translated_lyrics: false # Always get translated lyrics if they're available
+  include_featured_album_artists: false # Include featured artists in album artists string
+  va_string: "Various artists" # Album artist name to use when artist list contains many artists
 ```
 
-utaitedb and touhoudb have the same configuration options.
+The plugins uses beets default import language list to determine which language to use for tags. (English is used as fallback)
+
+```yaml
+import:
+  languages: # Example: Prefer Japanese language for tags
+    - jp
+    - en
+```
 
 ## Advanced configuration
 
-If you want to use another site based on VocaDB, create another .py file in the beetsplug directory.
-Look at utaitedb.py and touhoudb.py for reference
+Adding new sources is easy as long as the site is based on VocaDB.
+
+A new source can be added by creating a new python file in the beetsplug folder with a class that inherits classes `VocaDBPlugin` and `VocaDBInstance` with the instance information (see `utaitedb.py` or `touhoudb.py` for reference.)
+The filename dictates the plugins name used for configuration.
+
+Feel free to create an issue or pull request about adding new sources.
