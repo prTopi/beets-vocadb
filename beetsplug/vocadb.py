@@ -10,6 +10,7 @@ from urllib.request import Request, urlopen
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
+from beets.autotag.match import track_distance
 from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
@@ -117,14 +118,16 @@ class VocaDBPlugin(BeetsPlugin):
     def func(self, lib: Library, opts, args) -> None:
         """Command handler for the *dbsync function."""
         move: bool = ui.should_move(opts.move)
-        pretend = opts.pretend
+        pretend: bool = opts.pretend
         write: bool = ui.should_write(opts.write)
         query = ui.decargs(args)
 
         self.singletons(lib, query, move, pretend, write)
         self.albums(lib, query, move, pretend, write)
 
-    def singletons(self, lib: Library, query, move: bool, pretend, write: bool) -> None:
+    def singletons(
+        self, lib: Library, query, move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for items matched by
         query.
         """
@@ -159,7 +162,9 @@ class VocaDBPlugin(BeetsPlugin):
                 show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
-    def albums(self, lib: Library, query, move: bool, pretend, write: bool) -> None:
+    def albums(
+        self, lib: Library, query, move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for albums matched by
         query and their items.
         """
@@ -197,27 +202,23 @@ class VocaDBPlugin(BeetsPlugin):
                 str(item.mb_trackid): item for item in items
             }
             mapping: dict[Item, TrackInfo] = {}
-            missing_tracks: list[str] = []
             for track_id, item in library_trackid_to_item.items():
-                if track_id in trackid_to_trackinfo:
-                    mapping[item] = trackid_to_trackinfo[track_id]
-                else:
-                    missing_tracks.append(track_id)
-                    self._log.debug(
-                        "Missing track ID {0} in album info for {1}",
-                        track_id,
+                if track_id not in trackid_to_trackinfo:
+                    # Unset track id so that it won't affect distance
+                    item.mb_trackid = None
+                    old_track_id: str = track_id
+                    matches: dict[str, Distance] = {
+                        track_info["track_id"]: track_distance(item, track_info)
+                        for track_info in trackid_to_trackinfo.values()
+                    }
+                    track_id = min(matches, key=lambda k: matches[k])
+                    self._log.warning(
+                        "Missing track ID {0} in album info for {1}, automatched to ID {2}",
+                        old_track_id,
                         album_formatted,
+                        track_id,
                     )
-
-            if missing_tracks:
-                self._log.warning(
-                    "The following track IDs were missing in the {0} album info for {1}: {2}",
-                    self.data_source,
-                    album_formatted,
-                    ", ".join(
-                        str(track) for track in missing_tracks if track is not None
-                    ),
-                )
+                mapping[item] = trackid_to_trackinfo[track_id]
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
