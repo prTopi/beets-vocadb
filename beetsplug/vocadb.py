@@ -118,14 +118,16 @@ class VocaDBPlugin(BeetsPlugin):
     def func(self, lib: Library, opts, args) -> None:
         """Command handler for the *dbsync function."""
         move: bool = ui.should_move(opts.move)
-        pretend = opts.pretend
+        pretend: bool = opts.pretend
         write: bool = ui.should_write(opts.write)
         query = ui.decargs(args)
 
         self.singletons(lib, query, move, pretend, write)
         self.albums(lib, query, move, pretend, write)
 
-    def singletons(self, lib: Library, query, move: bool, pretend, write: bool) -> None:
+    def singletons(
+        self, lib: Library, query, move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for items matched by
         query.
         """
@@ -160,7 +162,9 @@ class VocaDBPlugin(BeetsPlugin):
                 show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
-    def albums(self, lib: Library, query, move: bool, pretend, write: bool) -> None:
+    def albums(
+        self, lib: Library, query, move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for albums matched by
         query and their items.
         """
@@ -199,15 +203,15 @@ class VocaDBPlugin(BeetsPlugin):
             }
             mapping: dict[Item, TrackInfo] = {}
             for track_id, item in library_trackid_to_item.items():
-                if not track_id in trackid_to_trackinfo:
+                if track_id not in trackid_to_trackinfo:
                     # Unset track id so that it won't affect distance
                     item.mb_trackid = None
-                    old_track_id = track_id
-                    matches = {
+                    old_track_id: str = track_id
+                    matches: dict[str, Distance] = {
                         track_info["track_id"]: track_distance(item, track_info)
                         for track_info in trackid_to_trackinfo.values()
                     }
-                    track_id = min(matches, key=matches.get)
+                    track_id = min(matches, key=lambda k: matches[k])
                     self._log.warning(
                         "Missing track ID {0} in album info for {1}, automatched to ID {2}",
                         old_track_id,
@@ -672,7 +676,7 @@ class VocaDBPlugin(BeetsPlugin):
         return "; ".join(genres)
 
     @staticmethod
-    def get_lang(languages, prefer_romaji: bool) -> str:
+    def get_lang(languages: list[str], prefer_romaji: bool) -> str:
         if not languages:
             return "English"
 
