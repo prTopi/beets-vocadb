@@ -282,7 +282,9 @@ class VocaDBPlugin(BeetsPlugin):
                     # songFields parameter doesn't exist for album search
                     # so we'll get albums by their id
                     ids: list[str] = [str(x["id"]) for x in result["items"]]
-                    return tuple([album for album in map(self.album_for_id, ids) if album])
+                    return tuple(
+                        [album for album in map(self.album_for_id, ids) if album]
+                    )
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return tuple()
@@ -304,11 +306,13 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result = load(result)
-                    return tuple([
-                        track
-                        for track in map(self.track_info, result["items"])
-                        if track
-                    ])
+                    return tuple(
+                        [
+                            track
+                            for track in map(self.track_info, result["items"])
+                            if track
+                        ]
+                    )
                 else:
                     self._log.debug("API Error: Returned empty page (query: {0})", url)
                     return tuple()
@@ -344,9 +348,7 @@ class VocaDBPlugin(BeetsPlugin):
         language: str = self.language
         url: str = urljoin(
             self.instance.api_url,
-            f"songs/{track_id}"
-            + f"?fields={self.song_fields}"
-            + f"&lang={language}",
+            f"songs/{track_id}" + f"?fields={self.song_fields}" + f"&lang={language}",
         )
         request: Request = Request(url, headers=self.headers)
         try:
@@ -392,7 +394,10 @@ class VocaDBPlugin(BeetsPlugin):
         album: str = release["name"]
         album_id: str = str(release["id"])
         artist_categories, artist = self.get_artists(
-            release["artists"], self.va_string, include_featured_artists=self.include_featured_album_artists, comp=va
+            release["artists"],
+            self.va_string,
+            include_featured_artists=self.include_featured_album_artists,
+            comp=va,
         )
         if artist == self.va_string:
             va = True
@@ -481,7 +486,9 @@ class VocaDBPlugin(BeetsPlugin):
     ) -> TrackInfo:
         title: str = recording["name"]
         track_id: str = str(recording["id"])
-        artist_categories, artist = self.get_artists(recording["artists"], self.va_string, include_featured_artists=True)
+        artist_categories, artist = self.get_artists(
+            recording["artists"], self.va_string, include_featured_artists=True
+        )
         artists: list[str] = []
         artists_ids: list[str] = []
         for category in artist_categories.values():
@@ -586,7 +593,7 @@ class VocaDBPlugin(BeetsPlugin):
         artists: list[dict[str, Any]],
         va_string: str,
         include_featured_artists: bool,
-        comp: bool = False
+        comp: bool = False,
     ) -> tuple[dict[str, dict[str, Any]], str]:
         out: dict[str, dict[str, Any]] = {
             "producers": {},
@@ -652,9 +659,7 @@ class VocaDBPlugin(BeetsPlugin):
 
         if include_featured_artists and out["vocalists"] and main_artists:
             featured_artists: list[str] = [
-                name
-                for name, id in out["vocalists"].items()
-                if id not in is_support
+                name for name, id in out["vocalists"].items() if id not in is_support
             ]
             if featured_artists and not len(main_artists) + len(featured_artists) > 5:
                 artist_string += " feat. " + ", ".join(featured_artists)
@@ -684,9 +689,10 @@ class VocaDBPlugin(BeetsPlugin):
 
     @classmethod
     def get_lyrics(
-        cls, lyrics: list[dict[str, Any]],
+        cls,
+        lyrics: list[dict[str, Any]],
         language: Optional[str],
-        translated_lyrics: bool = False
+        translated_lyrics: bool = False,
     ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         out_script: Optional[str] = None
         out_language: Optional[str] = None
