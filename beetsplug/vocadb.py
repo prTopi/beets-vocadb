@@ -559,11 +559,11 @@ class VocaDBPlugin(BeetsPlugin):
             artists_ids.extend(
                 [id for id in category.values() if id not in artists_ids]
             )
-        artist_id: Optional[str] = None
+        artist_id: Optional[str]
         try:
             artist_id = artists_ids[0]
         except IndexError:
-            pass
+            artist_id = None
         tracks, script, language = self.get_album_track_infos(
             release["tracks"], release["discs"], ignored_discs, search_lang
         )
@@ -591,11 +591,11 @@ class VocaDBPlugin(BeetsPlugin):
         mediums: int = len(release["discs"])
         catalognum: Optional[str] = release.get("catalogNumber")
         genre: str = self.get_genres(release)
-        media: Optional[str] = None
+        media: Optional[str]
         try:
             media = release["discs"][0].get("name")
         except IndexError:
-            pass
+            media = None
         data_url: str = urljoin(self.instance_info.base_url, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
