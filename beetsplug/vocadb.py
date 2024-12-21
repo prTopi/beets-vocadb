@@ -4,7 +4,7 @@ from itertools import chain
 from json import load
 from optparse import Values
 from re import Match, match, search
-from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
+from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING, Union
 from typing_extensions import NotRequired, override
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
@@ -406,7 +406,7 @@ class VocaDBPlugin(BeetsPlugin):
             f"albums/?query={quote(album)}&maxResults=5&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
-        result: SupportsRead[str | bytes]
+        result: SupportsRead[Union[str, bytes]]
         try:
             with urlopen(request) as result:
                 if result:
@@ -437,7 +437,7 @@ class VocaDBPlugin(BeetsPlugin):
             + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
-        result: SupportsRead[str | bytes]
+        result: SupportsRead[Union[str, bytes]]
         try:
             with urlopen(request) as result:
                 if result:
@@ -467,7 +467,7 @@ class VocaDBPlugin(BeetsPlugin):
             + f"&lang={language}",
         )
         request: Request = Request(url, headers=self.headers)
-        result: SupportsRead[str | bytes]
+        result: SupportsRead[Union[str, bytes]]
         try:
             with urlopen(request) as result:
                 if result:
@@ -488,7 +488,7 @@ class VocaDBPlugin(BeetsPlugin):
             f"songs/{track_id}" + f"?fields={self.song_fields}" + f"&lang={language}",
         )
         request: Request = Request(url, headers=self.headers)
-        result: SupportsRead[str | bytes]
+        result: SupportsRead[Union[str, bytes]]
         try:
             with urlopen(request) as result:
                 if result:
