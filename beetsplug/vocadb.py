@@ -5,7 +5,16 @@ from json import load
 from optparse import Values
 from re import Match, match, search
 from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING
-from typing_extensions import NotRequired, override
+from sys import version_info
+
+if sys.version_info >= (3, 11):
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
+if sys.version_info >= (3, 12):
+    from typing import override
+else:
+    from typing_extensions import override
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
