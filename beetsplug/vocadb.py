@@ -7,11 +7,11 @@ from re import Match, match, search
 from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING, Union
 from sys import version_info
 
-if sys.version_info >= (3, 11):
+if version_info >= (3, 11):
     from typing import NotRequired
 else:
     from typing_extensions import NotRequired
-if sys.version_info >= (3, 12):
+if version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
