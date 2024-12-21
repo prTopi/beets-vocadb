@@ -16,14 +16,17 @@ if TYPE_CHECKING:
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
+from beets.autotag.match import track_distance
 from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
 
 DEFAULT_VA_STRING = "Various artists"
 
+
 class InstanceInfo(NamedTuple):
     """Information about a specific instance of VocaDB"""
+
     name: str
     base_url: str
     api_url: str
@@ -141,6 +144,7 @@ class FindResultDict(APIResultDict):
     term: str
     totalCount: int
 
+
 class SongFindResultDict(FindResultDict):
     items: list[SongDict]
 
@@ -251,7 +255,9 @@ class VocaDBPlugin(BeetsPlugin):
         self.singletons(lib, query, move, pretend, write)
         self.albums(lib, query, move, pretend, write)
 
-    def singletons(self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool) -> None:
+    def singletons(
+        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for items matched by
         query.
         """
@@ -286,7 +292,9 @@ class VocaDBPlugin(BeetsPlugin):
                 show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
-    def albums(self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool) -> None:
+    def albums(
+        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+    ) -> None:
         """Retrieve and apply info from the autotagger for albums matched by
         query and their items.
         """
@@ -298,7 +306,6 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            items: list[Item] = list(album.items())
             if not (
                 album.get("data_source") == self.data_source
                 and album.mb_albumid.isnumeric()
@@ -317,34 +324,28 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            trackid_to_trackinfo: dict[str, TrackInfo] = {
+            items: Sequence[Item] = list(album.items())
+            track_index: dict[str, TrackInfo] = {
                 str(track.track_id): track for track in album_info.tracks
             }
-            library_trackid_to_item: dict[str, Item] = {
-                str(item.mb_trackid): item for item in items
-            }
             mapping: dict[Item, TrackInfo] = {}
-            missing_tracks: list[str | None] = []
-            for track_id, item in library_trackid_to_item.items():
-                if track_id in trackid_to_trackinfo:
-                    mapping[item] = trackid_to_trackinfo[track_id]
-                else:
-                    missing_tracks.append(track_id)
-                    self._log.debug(
-                        "Missing track ID {0} in album info for {1}",
-                        track_id,
+            for item in items:
+                if item.mb_trackid not in track_index:
+                    old_track_id: str = item.mb_trackid
+                    # Unset track id so that it won't affect distance
+                    item.mb_trackid = None
+                    matches: dict[str, Distance] = {
+                        track_info["track_id"]: track_distance(item, track_info)
+                        for track_info in track_index.values()
+                    }
+                    item.mb_trackid = min(matches, key=lambda k: matches[k])
+                    self._log.warning(
+                        "Missing track ID {0} in album info for {1} automatched to ID {2}",
+                        old_track_id,
                         album_formatted,
+                        item.mb_trackid,
                     )
-
-            if missing_tracks:
-                self._log.warning(
-                    "The following track IDs were missing in the {0} album info for {1}: {2}",
-                    self.data_source,
-                    album_formatted,
-                    ", ".join(
-                        str(track) for track in missing_tracks if track is not None
-                    ),
-                )
+                mapping[item] = track_index[item.mb_trackid]
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
@@ -397,7 +398,7 @@ class VocaDBPlugin(BeetsPlugin):
         artist: str,
         album: str,
         va_likely: bool,
-        extra_tags = None,
+        extra_tags=None,
     ) -> tuple[()]:
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
@@ -412,7 +413,9 @@ class VocaDBPlugin(BeetsPlugin):
                     result_dict: AlbumFindResultDict = load(result)
                     # songFields parameter doesn't exist for album search
                     # so we'll get albums by their id
-                    ids: list[str] = [str(item.get("id")) for item in result_dict["items"]]
+                    ids: list[str] = [
+                        str(item.get("id")) for item in result_dict["items"]
+                    ]
                     return tuple(
                         [album for album in map(self.album_for_id, ids) if album]
                     )
@@ -503,7 +506,9 @@ class VocaDBPlugin(BeetsPlugin):
     def album_info(
         self, release: AlbumDict, search_lang: str | None = None
     ) -> AlbumInfo:
-        discs: int = len(set([track["discNumber"] for track in release.get("tracks", [])]))
+        discs: int = len(
+            set([track["discNumber"] for track in release.get("tracks", [])])
+        )
         if not release.get("discs"):
             release["discs"] = [
                 {"discNumber": x + 1, "name": "CD", "mediaType": "Audio"}
@@ -806,7 +811,9 @@ class VocaDBPlugin(BeetsPlugin):
     @staticmethod
     def get_genres(info: InfoDict) -> str:
         genres: list[str] = []
-        for tag_usage in sorted(info.get("tags", {}), reverse=True, key=lambda x: x.get("count")):
+        for tag_usage in sorted(
+            info.get("tags", {}), reverse=True, key=lambda x: x.get("count")
+        ):
             if tag_usage.get("tag", {}).get("categoryName") == "Genres":
                 tag: TagDict | None = tag_usage.get("tag")
                 if tag and (genre_name := tag.get("name")):
