@@ -1,27 +1,27 @@
 [project]
 name = "beets-vocadb"
 version = "0.0.1"
-description = "Plugin for beets to use VocaDB (or similar) as an autotagger source."
+description = "Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources."
 authors = [
-  { name="prTopi", email="17724308+prTopi@users.noreply.github.com" }
+  { name = "prTopi", email = "17724308+prTopi@users.noreply.github.com" },
+  { name = "amogus07", email = "78656278+amogus07@users.noreply.github.com" },
 ]
-license = { text = "MIT" }
-classifiers=[
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
     "Topic :: Multimedia :: Sound/Audio",
     "Topic :: Multimedia :: Sound/Audio :: Players :: MP3",
     "License :: OSI Approved :: MIT License",
     "Environment :: Console",
-    "Environment :: Web Environment",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.5",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
-dynamic = [ "readme", "dependencies" ]
-
-[tool.setuptools.dynamic]
-readme = { file = [ "README.md" ] }
-dependencies = { file = [ "requirements.txt" ] }
+dependencies = [
+  "beets",
+]
 
 [build-system]
 requires = ["setuptools"]
