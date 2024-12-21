@@ -27,6 +27,9 @@ pythonVersion = "3.10"
 readme = { file = ["README.md"] }
 dependencies = { file = ["requirements.txt"] }
 
+[tool.setuptools.packages.find]
+exclude=["typings"]
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"

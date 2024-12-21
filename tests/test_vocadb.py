@@ -1,18 +1,18 @@
-from typing import Any
 from unittest import TestCase
 
-from beetsplug.vocadb import VocaDBPlugin
+from beetsplug.vocadb import InfoDict, LyricsDict, VocaDBPlugin
 
 
 class TestVocaDBPlugin(TestCase):
 
-    plugin: VocaDBPlugin
+    plugin: VocaDBPlugin = VocaDBPlugin()
 
-    def setUp(self) -> None:
-        self.plugin = VocaDBPlugin()
+    def __init_subclass__(cls, plugin: VocaDBPlugin) -> None:
+        super().__init_subclass__()
+        cls.plugin = plugin
 
     def test_get_genres(self) -> None:
-        info: dict[str, list[dict[str, Any]]] = {}
+        info: InfoDict = {}
         self.assertEqual(self.plugin.get_genres(info), "")
         info = {
             "tags": [
@@ -81,7 +81,7 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(self.plugin.get_lang([], prefer_romaji=True), "English")
 
     def test_get_lyrics(self) -> None:
-        lyrics: list[dict[str, Any]] = [
+        lyrics: list[LyricsDict] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
@@ -89,7 +89,10 @@ class TestVocaDBPlugin(TestCase):
             },
             {
                 "cultureCodes": ["en"],
+                "id": 123,
+                "source": "FooBar",
                 "translationType": "Translation",
+                "url": "https://foo.bar",
                 "value": "lyrics2",
             },
             {
@@ -140,7 +143,7 @@ class TestVocaDBPlugin(TestCase):
         )
 
     def test_get_fallback_lyrics(self) -> None:
-        lyrics: list[dict[str, Any]] = [
+        lyrics: list[LyricsDict] = [
             {
                 "cultureCodes": ["ja"],
                 "translationType": "Original",
