@@ -4,7 +4,6 @@ version = "0.0.1"
 description = "Plugin for beets to use VocaDB (or similar) as an autotagger source."
 authors = [
     { name = "prTopi", email = "17724308+prTopi@users.noreply.github.com" },
-    { name = "amogus07", email = "78656278+amogus07@users.noreply.github.com" },
 ]
 license = { text = "MIT" }
 classifiers = [
@@ -28,7 +27,7 @@ readme = { file = ["README.md"] }
 dependencies = { file = ["requirements.txt"] }
 
 [tool.setuptools.packages.find]
-exclude=["typings"]
+exclude = ["typings"]
 
 [build-system]
 requires = ["setuptools"]
