@@ -23,6 +23,7 @@ from beets.ui import show_model_changes, Subcommand
 DEFAULT_VA_STRING = "Various artists"
 
 class InstanceInfo(NamedTuple):
+    """Information about a specific instance of VocaDB"""
     name: str
     base_url: str
     api_url: str
