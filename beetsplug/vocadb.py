@@ -579,7 +579,7 @@ class VocaDBPlugin(BeetsPlugin):
                     break
         albumtype: str = release.get("discType", "").lower()
         albumtypes: Optional[list[str]] = [albumtype] if albumtype else None
-        date: ReleaseDateDict = release.get("releaseDate", {})
+        date: ReleaseDateDict = release.get("releaseDate", ReleaseDateDict())
         year: Optional[int] = date.get("year")
         month: Optional[int] = date.get("month")
         day: Optional[int] = date.get("day")
