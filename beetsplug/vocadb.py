@@ -737,22 +737,65 @@ class VocaDBPlugin(BeetsPlugin):
                 track_info.language = language
         return track_infos, script, language
 
-    @staticmethod
+    @classmethod
     def get_artists(
+        cls,
         artists: list[AlbumArtistDict],
         va_string: str = DEFAULT_VA_STRING,
         include_featured_artists: bool = True,
         comp: bool = False,
     ) -> tuple[dict[str, dict[str, str]], str]:
-        out: dict[str, dict[str, str]] = {
-            "producers": {},
-            "circles": {},
-            "vocalists": {},
-            "arrangers": {},
-            "composers": {},
-            "lyricists": {},
+        artists_by_categories, is_support = cls.get_artists_by_categories(artists)
+
+        artist_string: Optional[str] = None
+        main_artists: Optional[list[str]] = None
+
+        if not comp:
+            main_artists = [
+                name
+                for name, id in chain(
+                    artists_by_categories["producers"].items(),
+                    artists_by_categories["circles"].items(),
+                )
+                if not is_support.get(id)
+            ]
+            if not len(main_artists) > 5:
+                artist_string = ", ".join(main_artists)
+
+        if not artist_string:
+            artist_string = va_string
+
+        if (
+            include_featured_artists
+            and artists_by_categories["vocalists"]
+            and main_artists
+        ):
+            featured_artists: list[str] = [
+                name
+                for name, id in artists_by_categories["vocalists"].items()
+                if not is_support.get(id)
+            ]
+            if featured_artists and not len(main_artists) + len(featured_artists) > 5:
+                artist_string += " feat. " + ", ".join(featured_artists)
+
+        return artists_by_categories, artist_string
+
+    @staticmethod
+    def get_artists_by_categories(
+        artists: list[AlbumArtistDict],
+    ) -> tuple[dict[str, dict[str, str]], dict[str, bool]]:
+        artists_by_categories = {
+            key: dict[str, str]()
+            for key in [
+                "producers",
+                "circles",
+                "vocalists",
+                "arrangers",
+                "composers",
+                "lyricists",
+            ]
         }
-        is_support: list[str] = []
+        is_support: dict[str, bool] = {}
         for artist in artists:
             parent: Optional[ArtistDict]
             name: str
@@ -764,56 +807,36 @@ class VocaDBPlugin(BeetsPlugin):
                 name = artist.get("name", "")
                 id = ""
             if artist["isSupport"]:
-                is_support.append(id)
+                is_support[id] = True
             categories: str = artist["categories"]
             effectiveRoles: str = artist["effectiveRoles"]
             if "Producer" in categories or "Band" in categories:
                 if "Default" in artist["effectiveRoles"]:
                     artist["effectiveRoles"] += ",Arranger,Composer,Lyricist"
                     effectiveRoles = artist["effectiveRoles"]
-                out["producers"][name] = id
+                artists_by_categories["producers"][name] = id
             if "Circle" in categories:
-                out["circles"][name] = id
+                artists_by_categories["circles"][name] = id
             if "Arranger" in effectiveRoles:
-                out["arrangers"][name] = id
+                artists_by_categories["arrangers"][name] = id
             if "Composer" in effectiveRoles:
-                out["composers"][name] = id
+                artists_by_categories["composers"][name] = id
             if "Lyricist" in effectiveRoles:
-                out["lyricists"][name] = id
+                artists_by_categories["lyricists"][name] = id
             if "Vocalist" in categories:
-                out["vocalists"][name] = id
-        if not out["producers"] and out["vocalists"]:
-            out["producers"] = out["vocalists"]
-        if not out["arrangers"]:
-            out["arrangers"] = out["producers"]
-        if not out["composers"]:
-            out["composers"] = out["producers"]
-        if not out["lyricists"]:
-            out["lyricists"] = out["producers"]
-
-        artist_string: Optional[str] = None
-        main_artists: Optional[list[str]] = None
-
-        if not comp:
-            main_artists = [
-                name
-                for name, id in chain(out["producers"].items(), out["circles"].items())
-                if id not in is_support
-            ]
-            if not len(main_artists) > 5:
-                artist_string = ", ".join(main_artists)
-
-        if not artist_string:
-            artist_string = va_string
-
-        if include_featured_artists and out["vocalists"] and main_artists:
-            featured_artists: list[str] = [
-                name for name, id in out["vocalists"].items() if id not in is_support
-            ]
-            if featured_artists and not len(main_artists) + len(featured_artists) > 5:
-                artist_string += " feat. " + ", ".join(featured_artists)
-
-        return out, artist_string
+                artists_by_categories["vocalists"][name] = id
+        if (
+            not artists_by_categories["producers"]
+            and artists_by_categories["vocalists"]
+        ):
+            artists_by_categories["producers"] = artists_by_categories["vocalists"]
+        if not artists_by_categories["arrangers"]:
+            artists_by_categories["arrangers"] = artists_by_categories["producers"]
+        if not artists_by_categories["composers"]:
+            artists_by_categories["composers"] = artists_by_categories["producers"]
+        if not artists_by_categories["lyricists"]:
+            artists_by_categories["lyricists"] = artists_by_categories["producers"]
+        return artists_by_categories, is_support
 
     @staticmethod
     def get_genres(info: InfoDict) -> str:
