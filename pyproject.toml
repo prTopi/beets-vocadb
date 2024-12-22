@@ -3,8 +3,8 @@ name = "beets-vocadb"
 version = "0.0.1"
 description = "Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources."
 authors = [
-  { name = "prTopi", email = "17724308+prTopi@users.noreply.github.com" },
-  { name = "amogus07", email = "78656278+amogus07@users.noreply.github.com" },
+    { name = "prTopi", email = "17724308+prTopi@users.noreply.github.com" },
+    { name = "amogus07", email = "78656278+amogus07@users.noreply.github.com" },
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
@@ -19,9 +19,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = [
-  "beets",
-]
+dependencies = ["beets", "typing_extensions; python_version < '3.12'"]
+
+[tool.basedpyright]
+pythonVersion = "3.9"
+
+[tool.setuptools.packages.find]
+exclude = ["typings"]
 
 [build-system]
 requires = ["setuptools"]
