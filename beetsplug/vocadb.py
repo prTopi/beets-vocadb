@@ -810,8 +810,7 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 name = artist.get("name", "")
                 id = ""
-            if artist["isSupport"]:
-                is_support[id] = True
+            is_support[id] = artist["isSupport"]
             categories: str = artist["categories"]
             effectiveRoles: str = artist["effectiveRoles"]
             if "Producer" in categories or "Band" in categories:
