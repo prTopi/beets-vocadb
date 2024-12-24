@@ -217,7 +217,7 @@ class VocaDBPlugin(BeetsPlugin):
         return str(self.config["va_string"].get())
 
     @override
-    def commands(self) -> tuple[()]:
+    def commands(self) -> tuple[Subcommand, ...]:
         cmd: Subcommand = Subcommand(
             self.instance_info.subcommand,
             help=f"update metadata from {self.data_source}",
@@ -408,7 +408,7 @@ class VocaDBPlugin(BeetsPlugin):
         album: str,
         va_likely: bool,
         extra_tags: Optional[dict] = None,
-    ) -> tuple[()]:
+    ) -> tuple[AlbumInfo, ...]:
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
             self.instance_info.api_url,
@@ -436,7 +436,9 @@ class VocaDBPlugin(BeetsPlugin):
             return ()
 
     @override
-    def item_candidates(self, item: Item, artist: str, title: str) -> tuple[()]:
+    def item_candidates(
+        self, item: Item, artist: str, title: str
+    ) -> tuple[TrackInfo, ...]:
         self._log.debug("Searching for track {0}", item)
         url: str = urljoin(
             self.instance_info.api_url,
