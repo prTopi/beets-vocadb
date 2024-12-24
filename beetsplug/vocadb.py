@@ -467,6 +467,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return ()
 
+    @override
     def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:
         self._log.debug("Searching for album {0}", album_id)
         language: str = self.language
@@ -491,6 +492,7 @@ class VocaDBPlugin(BeetsPlugin):
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return None
 
+    @override
     def track_for_id(self, track_id: str) -> Optional[TrackInfo]:
         self._log.debug("Searching for track {0}", track_id)
         language: str = self.language
