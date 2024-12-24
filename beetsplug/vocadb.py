@@ -847,10 +847,9 @@ class VocaDBPlugin(BeetsPlugin):
         for tag_usage in sorted(
             info.get("tags", {}), reverse=True, key=lambda x: x.get("count")
         ):
-            if tag_usage.get("tag", {}).get("categoryName") == "Genres":
-                tag: Optional[TagDict] = tag_usage.get("tag")
-                if tag and (genre_name := tag.get("name")):
-                    genres.append(genre_name.title())
+            tag: TagDict = tag_usage.get("tag")
+            if tag.get("categoryName") == "Genres":
+                genres.append(tag.get("name").title())
         return "; ".join(genres)
 
     @staticmethod
