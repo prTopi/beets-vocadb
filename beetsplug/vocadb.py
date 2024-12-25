@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from datetime import datetime
 from itertools import chain
 from json import load
@@ -196,7 +196,16 @@ class VocaDBPlugin(BeetsPlugin):
 
     @property
     def language(self) -> str:
-        return self.get_lang(self.languages, self.prefer_romaji)
+        if not self.languages:
+            return "English"
+
+        for lang in self.languages:
+            if lang == "jp":
+                return "Romaji" if self.prefer_romaji else "Japanese"
+            if lang == "en":
+                return "English"
+
+        return "English"  # Default if no matching language found
 
     @property
     def prefer_romaji(self) -> bool:
@@ -849,19 +858,6 @@ class VocaDBPlugin(BeetsPlugin):
             if tag.get("categoryName") == "Genres":
                 genres.append(tag.get("name").title())
         return "; ".join(genres)
-
-    @staticmethod
-    def get_lang(languages: Optional[Iterable[str]], prefer_romaji: bool) -> str:
-        if not languages:
-            return "English"
-
-        for lang in languages:
-            if lang == "jp":
-                return "Romaji" if prefer_romaji else "Japanese"
-            if lang == "en":
-                return "English"
-
-        return "English"  # Default if no matching language found
 
     @classmethod
     def get_lyrics(
