@@ -188,6 +188,8 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
 
+        self.data_source: str = self.instance_info.name
+
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
@@ -195,10 +197,6 @@ class VocaDBPlugin(BeetsPlugin):
     @property
     def language(self) -> str:
         return self.get_lang(self.languages, self.prefer_romaji)
-
-    @property
-    def data_source(self) -> str:
-        return self.instance_info.name
 
     @property
     def prefer_romaji(self) -> bool:
