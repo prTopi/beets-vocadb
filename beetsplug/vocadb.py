@@ -685,11 +685,11 @@ class VocaDBPlugin(BeetsPlugin):
             artists_ids.extend(
                 [id for id in category.values() if id not in artists_ids]
             )
-        artist_id: Optional[str] = None
+        artist_id: Optional[str]
         try:
             artist_id = artists_ids[0]
         except IndexError:
-            pass
+            artist_id = None
         arranger: str = ", ".join(artist_categories["arrangers"])
         composer: str = ", ".join(artist_categories["composers"])
         lyricist: str = ", ".join(artist_categories["lyricists"])
