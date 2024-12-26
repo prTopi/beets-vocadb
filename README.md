@@ -43,6 +43,7 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   translated_lyrics: false # Always get translated lyrics if they're available
   include_featured_album_artists: false # Include featured artists in album artists string
   va_string: "Various artists" # Album artist name to use when artist list contains many artists
+  max_results: 5 # Increase it if a song or album your're looking for doesn't show up in the list of candidates
 ```
 
 The plugins uses beets default import language list to determine which language to use for tags. (English is used as fallback)
