@@ -588,16 +588,16 @@ class VocaDBPlugin(BeetsPlugin):
         script: Optional[str]
         language: Optional[str]
         tracks, script, language = self.get_album_track_infos(
-            release["tracks"], release["discs"], ignored_discs, search_lang
+            release["tracks"], release.get("discs"), ignored_discs, search_lang
         )
         weblink: WebLinkDict
         asin_match: Optional[Match[str]] = None
         asin: Optional[str] = None
         for weblink in release.get("webLinks", []):
             if not weblink["disabled"] and match(
-                "Amazon( \\((LE|RE|JP|US)\\).*)?$", weblink["description"]
+                "Amazon( \\((LE|RE|JP|US)\\).*)?$", weblink.get("description")
             ):
-                asin_match = search("\\/dp\\/(.+?)(\\/|$)", weblink["url"])
+                asin_match = search("\\/dp\\/(.+?)(\\/|$)", weblink.get("url"))
                 if asin_match:
                     asin = asin_match[1]
                     break
@@ -658,7 +658,7 @@ class VocaDBPlugin(BeetsPlugin):
         medium_total: Optional[int] = None,
         search_lang: Optional[str] = None,
     ) -> TrackInfo:
-        title: str = recording.get("name", "")
+        title: str = str(recording.get("name", ""))
         track_id: str = str(recording.get("id", ""))
         artist_categories: dict[str, dict[str, str]]
         artist: str
