@@ -709,8 +709,12 @@ class VocaDBPlugin(BeetsPlugin):
         lyricist: str = ", ".join(artist_categories["lyricists"])
         length: float = recording.get("lengthSeconds", 0)
         data_url: str = urljoin(self.instance_info.base_url, f"S/{track_id}")
-        bpm: str = str(recording.get("maxMilliBpm", 0) // 1000)
+        max_milli_bpm: Optional[int] = recording.get("maxMilliBpm")
+        bpm: Optional[str] = str(max_milli_bpm // 1000) if max_milli_bpm else None
         genre: Optional[str] = self.get_genres(recording)
+        script: Optional[str]
+        language: Optional[str]
+        lyrics: Optional[str]
         script, language, lyrics = self.get_lyrics(
             recording.get("lyrics", []), search_lang, self.translated_lyrics
         )
