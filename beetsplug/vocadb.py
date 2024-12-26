@@ -819,7 +819,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_artists(
         cls,
         artists: list[AlbumArtistDict],
-        va_string: str = default_config["va_string"],
+        va_string: str,
         include_featured_artists: bool = True,
         comp: bool = False,
     ) -> tuple[dict[str, dict[str, str]], str]:
