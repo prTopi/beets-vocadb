@@ -36,6 +36,9 @@ For usage information run `beet [subcommand] -h`.
 
 ## Configuration
 
+
+The other plugins (utaitedb and touhoudb) will use the same settings as vocadb as a fallback, so you don't have to repeat yourself.
+
 ```yaml
 vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
   source_weight: 0.5 # Penalty to be added to all matches when using autotagger (0 disabled, 1 highest)
@@ -46,7 +49,8 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   max_results: 5 # Increase it if a song or album your're looking for doesn't show up in the list of candidates
 ```
 
-The plugins uses beets default import language list to determine which language to use for tags. (English is used as fallback)
+
+The plugins use beets' default import language list to determine which language to use for tags. (English is used as a fallback)
 
 ```yaml
 import:
