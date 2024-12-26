@@ -297,8 +297,8 @@ class VocaDBPlugin(BeetsPlugin):
                     item_formatted,
                 )
                 continue
-            track_info: Optional[TrackInfo]
-            if not (track_info := self.track_for_id(item.mb_trackid)):
+            track_info: Optional[TrackInfo] = self.track_for_id(item.mb_trackid)
+            if not (track_info):
                 self._log.info(
                     "Recording ID not found: {0} for track {1}",
                     item.mb_trackid,
@@ -335,8 +335,8 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            album_info: Optional[AlbumInfo]
-            if not (album_info := self.album_for_id(album.mb_albumid)):
+            album_info: Optional[AlbumInfo] = self.album_for_id(album.mb_albumid)
+            if not (album_info):
                 self._log.info(
                     "Release ID {0} not found for album {1}",
                     album.mb_albumid,
@@ -830,10 +830,10 @@ class VocaDBPlugin(BeetsPlugin):
         is_support: dict[str, bool] = {}
         artist: AlbumArtistDict
         for artist in artists:
-            parent: Optional[ArtistDict]
+            parent: Optional[ArtistDict] = artist.get("artist")
             name: str
             id: str
-            if parent := artist.get("artist"):
+            if parent:
                 name = parent.get("name", "")
                 id = str(parent.get("id", ""))
             else:
