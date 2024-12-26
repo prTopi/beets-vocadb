@@ -432,6 +432,11 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result_dict: AlbumFindResultDict = load(result)
+                    self._log.debug(
+                        "Found {0} result(s) for '{1}'",
+                        len(result_dict["items"]),
+                        album
+                    )
                     # songFields parameter doesn't exist for album search
                     # so we'll get albums by their id
                     ids: list[str] = [
@@ -465,6 +470,11 @@ class VocaDBPlugin(BeetsPlugin):
             with urlopen(request) as result:
                 if result:
                     result_dict: SongFindResultDict = load(result)
+                    self._log.debug(
+                        "Found {0} result(s) for '{1}'",
+                        len(result_dict["items"]),
+                        title
+                    )
                     return tuple(
                         [
                             track
