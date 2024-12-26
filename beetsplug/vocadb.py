@@ -185,6 +185,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "translated_lyrics": False,
                 "include_featured_album_artists": False,
                 "va_string": DEFAULT_VA_STRING,
+                "max_results": 5
             }
         )
 
@@ -223,6 +224,10 @@ class VocaDBPlugin(BeetsPlugin):
     @property
     def va_string(self) -> str:
         return str(self.config["va_string"].get())
+
+    @property
+    def max_results(self) -> str:
+        return str(self.config["max_results"].get())
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
@@ -424,7 +429,7 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
             self.instance_info.api_url,
-            f"albums/?query={quote(album)}&maxResults=5&nameMatchMode=Auto",
+            f"albums/?query={quote(album)}&maxResults={self.max_results}&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
         result: SupportsRead[Union[str, bytes]]
@@ -462,7 +467,8 @@ class VocaDBPlugin(BeetsPlugin):
             f"songs/?query={quote(title)}"
             + f"&fields={self.song_fields}"
             + f"&lang={self.language}"
-            + "&maxResults=5&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
+            + f"&maxResults={self.max_results}"
+            + "&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
         result: SupportsRead[Union[str, bytes]]
