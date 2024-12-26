@@ -491,6 +491,13 @@ class VocaDBPlugin(BeetsPlugin):
 
     @override
     def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:
+        if not album_id.isnumeric():
+            self._log.debug(
+                    "Skipping non-{0} album: {1}",
+                    self.data_source,
+                    album_id,
+                )
+            return None
         self._log.debug("Searching for album {0}", album_id)
         language: str = self.language
         url: str = urljoin(
@@ -516,6 +523,13 @@ class VocaDBPlugin(BeetsPlugin):
 
     @override
     def track_for_id(self, track_id: str) -> Optional[TrackInfo]:
+        if not track_id.isnumeric():
+                self._log.debug(
+                        "Skipping non-{0} singleton: {1}",
+                        self.data_source,
+                        track_id,
+                    )
+                return None
         self._log.debug("Searching for track {0}", track_id)
         language: str = self.language
         url: str = urljoin(
