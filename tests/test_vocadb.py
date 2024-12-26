@@ -13,7 +13,7 @@ class TestVocaDBPlugin(TestCase):
 
     def test_get_genres(self) -> None:
         info: InfoDict = {}
-        self.assertEqual(self.plugin.get_genres(info), "")
+        self.assertEqual(self.plugin.get_genres(info), None)
         info = {
             "tags": [
                 {
@@ -65,20 +65,18 @@ class TestVocaDBPlugin(TestCase):
         }
         self.assertEqual(self.plugin.get_genres(info), "Genre2")
 
-    def test_get_lang(self) -> None:
-        self.assertEqual(
-            self.plugin.get_lang(["en", "jp"], prefer_romaji=False), "English"
-        )
-        self.assertEqual(
-            self.plugin.get_lang(["jp", "en"], prefer_romaji=False), "Japanese"
-        )
-        self.assertEqual(
-            self.plugin.get_lang(["jp", "en"], prefer_romaji=True), "Romaji"
-        )
-        self.assertEqual(
-            self.plugin.get_lang(["en", "jp"], prefer_romaji=True), "English"
-        )
-        self.assertEqual(self.plugin.get_lang([], prefer_romaji=True), "English")
+    def test_language(self) -> None:
+        self.plugin.languages = ["en", "jp"]
+        self.plugin.config["prefer_romaji"] = False
+        self.assertEqual(self.plugin.language, "English")
+        self.plugin.languages = ["jp", "en"]
+        self.assertEqual(self.plugin.language, "Japanese")
+        self.plugin.config["prefer_romaji"] = True
+        self.assertEqual(self.plugin.language, "Romaji")
+        self.plugin.languages = ["en", "jp"]
+        self.assertEqual(self.plugin.language, "English")
+        self.plugin.languages = []
+        self.assertEqual(self.plugin.language, "English")
 
     def test_get_lyrics(self) -> None:
         lyrics: list[LyricsDict] = [

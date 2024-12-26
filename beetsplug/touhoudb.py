@@ -1,9 +1,9 @@
-from beetsplug.vocadb import VocaDBPlugin, InstanceInfo
+from beetsplug import vocadb
 
 
 class TouhouDBPlugin(
-    VocaDBPlugin,
-    instance_info=InstanceInfo(
+    vocadb.VocaDBPlugin,
+    instance_info=vocadb.InstanceInfo(
         name="TouhouDB",
         base_url="https://touhoudb.com/",
         api_url="https://touhoudb.com/api/",
