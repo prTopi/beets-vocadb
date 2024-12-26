@@ -175,7 +175,7 @@ class VocaDBPlugin(BeetsPlugin):
         "translated_lyrics": False,
         "include_featured_album_artists": False,
         "va_string": "Various artists",
-        "max_results": 5
+        "max_results": 5,
     }
 
     user_agent: str = f"beets/{beets.__version__} +https://beets.io/"
@@ -454,7 +454,7 @@ class VocaDBPlugin(BeetsPlugin):
                     self._log.debug(
                         "Found {0} result(s) for '{1}'",
                         len(result_dict["items"]),
-                        album
+                        album,
                     )
                     # songFields parameter doesn't exist for album search
                     # so we'll get albums by their id
@@ -493,7 +493,7 @@ class VocaDBPlugin(BeetsPlugin):
                     self._log.debug(
                         "Found {0} result(s) for '{1}'",
                         len(result_dict["items"]),
-                        title
+                        title,
                     )
                     return tuple(
                         [
@@ -513,10 +513,10 @@ class VocaDBPlugin(BeetsPlugin):
     def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:
         if not album_id.isnumeric():
             self._log.debug(
-                    "Skipping non-{0} album: {1}",
-                    self.data_source,
-                    album_id,
-                )
+                "Skipping non-{0} album: {1}",
+                self.data_source,
+                album_id,
+            )
             return None
         self._log.debug("Searching for album {0}", album_id)
         language: str = self.language
@@ -544,12 +544,12 @@ class VocaDBPlugin(BeetsPlugin):
     @override
     def track_for_id(self, track_id: str) -> Optional[TrackInfo]:
         if not track_id.isnumeric():
-                self._log.debug(
-                        "Skipping non-{0} singleton: {1}",
-                        self.data_source,
-                        track_id,
-                    )
-                return None
+            self._log.debug(
+                "Skipping non-{0} singleton: {1}",
+                self.data_source,
+                track_id,
+            )
+            return None
         self._log.debug("Searching for track {0}", track_id)
         language: str = self.language
         url: str = urljoin(

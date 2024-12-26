@@ -68,21 +68,13 @@ class TestVocaDBPlugin(TestCase):
     def test_language(self) -> None:
         self.plugin.languages = ["en", "jp"]
         self.plugin.config["prefer_romaji"] = False
-        self.assertEqual(
-            self.plugin.language, "English"
-        )
+        self.assertEqual(self.plugin.language, "English")
         self.plugin.languages = ["jp", "en"]
-        self.assertEqual(
-            self.plugin.language, "Japanese"
-        )
+        self.assertEqual(self.plugin.language, "Japanese")
         self.plugin.config["prefer_romaji"] = True
-        self.assertEqual(
-            self.plugin.language, "Romaji"
-        )
+        self.assertEqual(self.plugin.language, "Romaji")
         self.plugin.languages = ["en", "jp"]
-        self.assertEqual(
-            self.plugin.language, "English"
-        )
+        self.assertEqual(self.plugin.language, "English")
         self.plugin.languages = []
         self.assertEqual(self.plugin.language, "English")
 
