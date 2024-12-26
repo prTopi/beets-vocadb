@@ -13,7 +13,7 @@ class TestVocaDBPlugin(TestCase):
 
     def test_get_genres(self) -> None:
         info: InfoDict = {}
-        self.assertEqual(self.plugin.get_genres(info), "")
+        self.assertEqual(self.plugin.get_genres(info), None)
         info = {
             "tags": [
                 {

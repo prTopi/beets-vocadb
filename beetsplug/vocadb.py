@@ -639,7 +639,7 @@ class VocaDBPlugin(BeetsPlugin):
                 break
         mediums: int = len(release["discs"])
         catalognum: Optional[str] = release.get("catalogNumber")
-        genre: str = self.get_genres(release)
+        genre: Optional[str] = self.get_genres(release)
         media: Optional[str]
         try:
             media = release["discs"][0].get("name")
@@ -710,7 +710,7 @@ class VocaDBPlugin(BeetsPlugin):
         length: float = recording.get("lengthSeconds", 0)
         data_url: str = urljoin(self.instance_info.base_url, f"S/{track_id}")
         bpm: str = str(recording.get("maxMilliBpm", 0) // 1000)
-        genre: str = self.get_genres(recording)
+        genre: Optional[str] = self.get_genres(recording)
         script, language, lyrics = self.get_lyrics(
             recording.get("lyrics", []), search_lang, self.translated_lyrics
         )
@@ -895,7 +895,7 @@ class VocaDBPlugin(BeetsPlugin):
         return artists_by_categories, is_support
 
     @staticmethod
-    def get_genres(info: InfoDict) -> str:
+    def get_genres(info: InfoDict) -> Optional[str]:
         genres: list[str] = []
         tag_usage: TagUsageDict
         for tag_usage in sorted(
@@ -904,7 +904,7 @@ class VocaDBPlugin(BeetsPlugin):
             tag: TagDict = tag_usage.get("tag")
             if tag.get("categoryName") == "Genres":
                 genres.append(tag.get("name").title())
-        return "; ".join(genres)
+        return "; ".join(genres) if len(genres) > 0 else None
 
     @classmethod
     def get_lyrics(
