@@ -30,8 +30,6 @@ from beets.library import Album, Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
 
-DEFAULT_VA_STRING = "Various artists"
-
 
 class InstanceInfo(NamedTuple):
     """Information about a specific instance of VocaDB"""
@@ -162,11 +160,27 @@ class AlbumFindResultDict(FindResultDict):
     items: list[AlbumDict]
 
 
+class ConfigDict(TypedDict):
+    prefer_romaji: bool
+    translated_lyrics: bool
+    include_featured_album_artists: bool
+    va_string: str
+    max_results: int
+
+
 class VocaDBPlugin(BeetsPlugin):
+
+    default_config: ConfigDict = {
+        "prefer_romaji": False,
+        "translated_lyrics": False,
+        "include_featured_album_artists": False,
+        "va_string": "Various artists",
+        "max_results": 5
+    }
 
     user_agent: str = f"beets/{beets.__version__} +https://beets.io/"
     headers: dict[str, str] = {"accept": "application/json", "User-Agent": user_agent}
-    languages: Optional[list[str]] = [config["import"]["languages"].as_str_seq()]
+    languages: Optional[Sequence[str]] = config["import"]["languages"].as_str_seq()
     song_fields: str = "Artists,Tags,Bpm,Lyrics"
 
     instance_info: InstanceInfo = InstanceInfo(
@@ -181,19 +195,19 @@ class VocaDBPlugin(BeetsPlugin):
         self.config.add(
             {
                 "source_weight": 0.5,
-                "prefer_romaji": False,
-                "translated_lyrics": False,
-                "include_featured_album_artists": False,
-                "va_string": DEFAULT_VA_STRING,
-                "max_results": 5
             }
         )
+        self.config.add(self.default_config)
 
         self.data_source: str = self.instance_info.name
 
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
+        vocadb_config = config["vocadb"]
+        if vocadb_config.exists():
+            for key in vocadb_config.keys():
+                cls.default_config[key] = vocadb_config[key].get()
 
     @property
     def language(self) -> str:
@@ -223,11 +237,11 @@ class VocaDBPlugin(BeetsPlugin):
 
     @property
     def va_string(self) -> str:
-        return str(self.config["va_string"].get())
+        return self.config["va_string"].as_str()
 
     @property
     def max_results(self) -> str:
-        return str(self.config["max_results"].get())
+        return self.config["max_results"].as_str()
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
@@ -805,7 +819,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_artists(
         cls,
         artists: list[AlbumArtistDict],
-        va_string: str = DEFAULT_VA_STRING,
+        va_string: str = default_config["va_string"],
         include_featured_artists: bool = True,
         comp: bool = False,
     ) -> tuple[dict[str, dict[str, str]], str]:
