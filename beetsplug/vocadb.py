@@ -240,8 +240,8 @@ class VocaDBPlugin(BeetsPlugin):
         return self.config["va_string"].as_str()
 
     @property
-    def max_results(self) -> str:
-        return self.config["max_results"].as_str()
+    def max_results(self) -> int:
+        return self.config["max_results"].as_number()
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
