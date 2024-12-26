@@ -37,7 +37,7 @@ For usage information run `beet [subcommand] -h`.
 ## Configuration
 
 
-The other plugins (utaitedb and touhoudb) will use the same settings as vocadb as a fallback, so you don't have to repeat yourself.
+The other plugins (utaitedb and touhoudb) will use the same settings as vocadb as a fallback, so you don't have to repeat yourself. (except for source_weight)
 
 ```yaml
 vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
