@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from beetsplug.vocadb import InfoDict, LyricsDict, VocaDBPlugin
+from beetsplug.vocadb import LyricsDict, TagUsageDict, VocaDBPlugin
 
 
 class TestVocaDBPlugin(TestCase):
@@ -12,58 +12,52 @@ class TestVocaDBPlugin(TestCase):
         cls.plugin = plugin
 
     def test_get_genres(self) -> None:
-        info: InfoDict = {}
-        self.assertEqual(self.plugin.get_genres(info), None)
-        info = {
-            "tags": [
-                {
-                    "count": 0,
-                    "tag": {
-                        "categoryName": "Genres",
-                        "name": "genre1",
-                    },
+        tags: list[TagUsageDict] = []
+        self.assertEqual(self.plugin.get_genres(tags), None)
+        tags = [
+            {
+                "count": 0,
+                "tag": {
+                    "categoryName": "Genres",
+                    "name": "genre1",
                 },
-            ]
-        }
-        self.assertEqual(self.plugin.get_genres(info), "Genre1")
-        info = {
-            "tags": [
-                {
-                    "count": 2,
-                    "tag": {
-                        "categoryName": "Genres",
-                        "name": "genre1",
-                    },
+            },
+        ]
+        self.assertEqual(self.plugin.get_genres(tags), "Genre1")
+        tags = [
+            {
+                "count": 2,
+                "tag": {
+                    "categoryName": "Genres",
+                    "name": "genre1",
                 },
-                {
-                    "count": 1,
-                    "tag": {
-                        "categoryName": "Genres",
-                        "name": "genre2",
-                    },
+            },
+            {
+                "count": 1,
+                "tag": {
+                    "categoryName": "Genres",
+                    "name": "genre2",
                 },
-            ]
-        }
-        self.assertEqual(self.plugin.get_genres(info), "Genre1; Genre2")
-        info = {
-            "tags": [
-                {
-                    "count": 2,
-                    "tag": {
-                        "categoryName": "Vocalists",
-                        "name": "genre1",
-                    },
+            },
+        ]
+        self.assertEqual(self.plugin.get_genres(tags), "Genre1; Genre2")
+        tags = [
+            {
+                "count": 2,
+                "tag": {
+                    "categoryName": "Vocalists",
+                    "name": "genre1",
                 },
-                {
-                    "count": 1,
-                    "tag": {
-                        "categoryName": "Genres",
-                        "name": "genre2",
-                    },
+            },
+            {
+                "count": 1,
+                "tag": {
+                    "categoryName": "Genres",
+                    "name": "genre2",
                 },
-            ]
-        }
-        self.assertEqual(self.plugin.get_genres(info), "Genre2")
+            },
+        ]
+        self.assertEqual(self.plugin.get_genres(tags), "Genre2")
 
     def test_language(self) -> None:
         self.plugin.languages = ["en", "jp"]
