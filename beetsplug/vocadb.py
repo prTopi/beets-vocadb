@@ -7,6 +7,8 @@ from re import Match, match, search
 from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING, Union
 from sys import version_info
 
+from confuse import AttrDict
+
 if version_info >= (3, 11):
     from typing import NotRequired
 else:
@@ -179,23 +181,35 @@ class ArtistsByCategoriesDict(TypedDict):
     lyricists: dict[str, str]
 
 
-class ConfigDict(TypedDict):
-    prefer_romaji: bool
-    translated_lyrics: bool
-    include_featured_album_artists: bool
-    va_string: str
-    max_results: int
+
+class ConfigDict(AttrDict):
+    """Stores configuration options conveniently"""
+
+    def __init__(
+        self,
+        prefer_romaji: bool,
+        translated_lyrics: bool,
+        include_featured_album_artists: bool,
+        va_name: str,
+        max_results: int,
+    ):
+        super().__init__()
+        self.prefer_romaji: bool = prefer_romaji
+        self.translated_lyrics: bool = translated_lyrics
+        self.include_featured_album_artists: bool = include_featured_album_artists
+        self.va_name: str = va_name
+        self.max_results: int = max_results
 
 
 class VocaDBPlugin(BeetsPlugin):
 
-    default_config: ConfigDict = {
-        "prefer_romaji": False,
-        "translated_lyrics": False,
-        "include_featured_album_artists": False,
-        "va_string": "Various artists",
-        "max_results": 5,
-    }
+    default_config: ConfigDict = ConfigDict(
+        prefer_romaji=False,
+        translated_lyrics=False,
+        include_featured_album_artists=False,
+        va_name="Various artists",
+        max_results=5
+    )
 
     user_agent: str = USER_AGENT
     headers: dict[str, str] = HEADERS
@@ -211,56 +225,40 @@ class VocaDBPlugin(BeetsPlugin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.config.add(
-            {
-                "source_weight": 0.5,
-            }
-        )
-        self.config.add(self.default_config)
-
         self.data_source: str = self.instance_info.name
+        self.config.add({
+                "source_weight": 0.5,
+            })
+        self.config.add(self.default_config)
+        self.instance_config: ConfigDict = ConfigDict(
+            prefer_romaji=self.config["prefer_romaji"].get(bool),
+            translated_lyrics=self.config["translated_lyrics"].get(bool),
+            include_featured_album_artists=self.config["include_featured_album_artists"].get(bool),
+            va_name=self.config["va_name"].as_str(),
+            max_results=self.config["max_results"].get(int)
+        )
+        self.language: str = self._language
 
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
-        vocadb_config = config["vocadb"]
-        if vocadb_config.exists():
-            for key in vocadb_config.keys():
-                cls.default_config[key] = vocadb_config[key].get()
+        for key in set(cls.default_config.keys()).intersection(config["vocadb"].keys()):
+            cls.default_config[key] = config["vocadb"][key].get()
 
     @property
-    def language(self) -> str:
+    def _language(self) -> str:
+        """Used to set the 'language' instance attribute."""
         if not self.languages:
             return "English"
 
         lang: str
         for lang in self.languages:
             if lang == "jp":
-                return "Romaji" if self.prefer_romaji else "Japanese"
+                return "Romaji" if self.instance_config.prefer_romaji else "Japanese"
             if lang == "en":
                 return "English"
 
         return "English"  # Default if no matching language found
-
-    @property
-    def prefer_romaji(self) -> bool:
-        return bool(self.config["prefer_romaji"].get())
-
-    @property
-    def translated_lyrics(self) -> bool:
-        return bool(self.config["translated_lyrics"].get())
-
-    @property
-    def include_featured_album_artists(self) -> bool:
-        return bool(self.config["include_featured_album_artists"].get())
-
-    @property
-    def va_string(self) -> str:
-        return self.config["va_string"].as_str()
-
-    @property
-    def max_results(self) -> int:
-        return self.config["max_results"].as_number()
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
@@ -463,7 +461,7 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
             self.instance_info.api_url,
-            f"albums/?query={quote(album)}&maxResults={self.max_results}&nameMatchMode=Auto",
+            f"albums/?query={quote(album)}&maxResults={self.instance_config.max_results}&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
         result: SupportsRead[Union[str, bytes]]
@@ -500,7 +498,7 @@ class VocaDBPlugin(BeetsPlugin):
             f"songs/?query={quote(title)}"
             + f"&fields={self.song_fields}"
             + f"&lang={self.language}"
-            + f"&maxResults={self.max_results}"
+            + f"&maxResults={self.instance_config.max_results}"
             + "&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
@@ -620,11 +618,11 @@ class VocaDBPlugin(BeetsPlugin):
         artist: str
         artist_categories, artist = self.get_artists(
             release.get("artists", []),
-            self.va_string,
-            include_featured_artists=self.include_featured_album_artists,
+            self.instance_config.va_name,
+            include_featured_artists=self.instance_config.include_featured_album_artists,
             comp=va,
         )
-        if artist == self.va_string:
+        if artist == self.instance_config.va_name:
             va = True
         artists: list[str] = []
         artists_ids: list[str] = []
@@ -727,7 +725,7 @@ class VocaDBPlugin(BeetsPlugin):
         artist_categories: ArtistsByCategoriesDict
         artist: str
         artist_categories, artist = self.get_artists(
-            recording.get("artists", []), self.va_string
+            recording.get("artists", []), self.instance_config.va_name
         )
         category: dict[str, str]
         artists: list[str] = []
@@ -756,7 +754,7 @@ class VocaDBPlugin(BeetsPlugin):
         language: Optional[str]
         lyrics: Optional[str]
         script, language, lyrics = self.get_lyrics(
-            recording.get("lyrics", []), search_lang, self.translated_lyrics
+            recording.get("lyrics", []), search_lang, self.instance_config.translated_lyrics
         )
         original_day: Optional[int] = None
         original_month: Optional[int] = None
@@ -840,7 +838,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_artists(
         cls,
         artists: list[AlbumOrSongArtistDict],
-        va_string: str,
+        va_name: str,
         include_featured_artists: bool = True,
         comp: bool = False,
     ) -> tuple[ArtistsByCategoriesDict, str]:
@@ -864,7 +862,7 @@ class VocaDBPlugin(BeetsPlugin):
                 artist_string = ", ".join(main_artists)
 
         if not artist_string:
-            artist_string = va_string
+            artist_string = va_name
 
         if (
             include_featured_artists
