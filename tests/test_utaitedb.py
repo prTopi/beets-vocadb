@@ -4,5 +4,5 @@ from tests import test_vocadb
 
 class TestUtaiteDBPlugin(
     test_vocadb.TestVocaDBPlugin,
-    plugin=UtaiteDBPlugin()
+    plugin=UtaiteDBPlugin(),
 ): ...

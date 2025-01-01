@@ -4,5 +4,5 @@ from tests import test_vocadb
 
 class TestTouhouDBPlugin(
     test_vocadb.TestVocaDBPlugin,
-    plugin=TouhouDBPlugin()
+    plugin=TouhouDBPlugin(),
 ): ...
