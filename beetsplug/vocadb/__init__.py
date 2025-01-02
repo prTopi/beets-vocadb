@@ -1,25 +1,12 @@
 from collections.abc import Iterable, Sequence
-from confuse import AttrDict
 from datetime import datetime
 from itertools import chain
 from json import load
 from optparse import Values
 from re import Match, match, search
 from sys import version_info
-from typing import (
-    Literal,
-    NamedTuple,
-    Optional,
-    TypedDict,
-    TYPE_CHECKING,
-    Union,
-    get_args,
-)
+from typing import Literal, Optional, TYPE_CHECKING, Union, get_args
 
-if version_info >= (3, 11):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
 if version_info >= (3, 12):
     from typing import override
 else:
@@ -30,7 +17,6 @@ from urllib.request import Request, urlopen
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRead
-import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
 from beets.autotag.match import track_distance
@@ -38,9 +24,8 @@ from beets.dbcore import types
 from beets.library import Album, Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
-
-USER_AGENT: str = f"beets/{beets.__version__} +https://beets.io/"
-HEADERS: dict[str, str] = {"accept": "application/json", "User-Agent": USER_AGENT}
+from .api import *
+from .conf import *
 
 
 ATTRIBUTE_TYPE = Literal["album", "item"]
@@ -62,161 +47,6 @@ class FlexibleAttributesMapping(dict[ATTRIBUTE_TYPE, dict[str, str]]):
     @override
     def __setitem__(self, key: ATTRIBUTE_TYPE, value: dict[str, str]) -> None:
         raise TypeError(f"{self.__class__.__name__} is read-only")
-
-
-class InstanceInfo(NamedTuple):
-    """Information about a specific instance of VocaDB"""
-
-    name: str
-    base_url: str
-    api_url: str
-    subcommand: str
-
-
-class ConfigDict(AttrDict):
-    """Stores configuration options conveniently"""
-
-    def __init__(
-        self,
-        prefer_romaji: bool,
-        translated_lyrics: bool,
-        include_featured_album_artists: bool,
-        va_name: str,
-        max_results: int,
-    ):
-        super().__init__()
-        self.prefer_romaji: bool = prefer_romaji
-        self.translated_lyrics: bool = translated_lyrics
-        self.include_featured_album_artists: bool = include_featured_album_artists
-        self.va_name: str = va_name
-        self.max_results: int = max_results
-
-
-class ArtistDict(TypedDict):
-    additionalNames: str
-    artistType: str
-    deleted: bool
-    id: int
-    name: str
-    pictureMime: str
-    status: str
-    version: int
-
-
-class AlbumOrSongArtistDict(TypedDict):
-    artist: Optional[ArtistDict]
-    categories: str
-    effectiveRoles: str
-    id: NotRequired[int]
-    isCustomName: NotRequired[bool]
-    isSupport: bool
-    name: str
-    roles: str
-
-
-class TagDict(TypedDict):
-    additionalNames: NotRequired[str]
-    categoryName: NotRequired[str]
-    id: NotRequired[int]
-    name: str
-    urlSlug: NotRequired[str]
-
-
-class TagUsageDict(TypedDict):
-    count: int
-    tag: TagDict
-
-
-class InfoDict(TypedDict):
-    artistString: str
-    createDate: str
-    defaultName: str
-    defaultNameLanguage: str
-    id: int
-    name: str
-    status: str
-    tags: list[TagUsageDict]
-
-
-class LyricsDict(TypedDict):
-    cultureCodes: list[str]
-    id: NotRequired[int]
-    source: NotRequired[str]
-    translationType: str
-    url: NotRequired[str]
-    value: str
-
-
-class DiscDict(TypedDict):
-    discNumber: int
-    id: NotRequired[int]
-    mediaType: str
-    name: NotRequired[str]
-    total: NotRequired[int]
-
-
-class ReleaseDateDict(TypedDict):
-    day: NotRequired[int]
-    isEmpty: bool
-    month: NotRequired[int]
-    year: NotRequired[int]
-
-
-class SongDict(InfoDict):
-    artists: list[AlbumOrSongArtistDict]
-    favoritedTimes: int
-    lengthSeconds: int
-    lyrics: list[LyricsDict]
-    maxMilliBpm: int
-    minMilliBpm: int
-    publishDate: str
-    pvServices: str
-    ratingScore: int
-    songType: str
-    version: int
-    cultureCodes: list[str]
-
-
-class SongInAlbumDict(TypedDict):
-    discNumber: int
-    id: NotRequired[int]
-    name: NotRequired[str]
-    song: SongDict
-    trackNumber: int
-    computedCultureCodes: list[str]
-
-
-class WebLinkDict(TypedDict):
-    category: str
-    description: str
-    descriptionOrUrl: str
-    disabled: bool
-    id: NotRequired[int]
-    url: str
-
-
-class AlbumDict(InfoDict):
-    artists: list[AlbumOrSongArtistDict]
-    catalogNumber: NotRequired[str]
-    discs: Sequence[DiscDict]
-    discType: NotRequired[str]
-    releaseDate: ReleaseDateDict
-    tracks: list[SongInAlbumDict]
-    webLinks: list[WebLinkDict]
-
-
-class FindResultDict(TypedDict):
-    id: NotRequired[int]
-    term: str
-    totalCount: int
-
-
-class SongFindResultDict(FindResultDict):
-    items: list[SongDict]
-
-
-class AlbumFindResultDict(FindResultDict):
-    items: list[AlbumDict]
 
 
 ARTIST_CATEGORIES = Literal[
@@ -255,13 +85,7 @@ class VocaDBPlugin(BeetsPlugin):
     languages: Optional[Iterable[str]] = config["import"]["languages"].as_str_seq()
     song_fields: str = "Artists,Tags,Bpm,Lyrics"
 
-    default_config: ConfigDict = ConfigDict(
-        prefer_romaji=False,
-        translated_lyrics=False,
-        include_featured_album_artists=False,
-        va_name="Various artists",
-        max_results=5,
-    )
+    default_config: ConfigDict = DEFAULT_CONFIG
 
     def __init__(self) -> None:
         super().__init__()
@@ -285,15 +109,7 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
         self.config.add(self.default_config)
-        self.instance_config: ConfigDict = ConfigDict(
-            prefer_romaji=self.config["prefer_romaji"].get(bool),
-            translated_lyrics=self.config["translated_lyrics"].get(bool),
-            include_featured_album_artists=self.config[
-                "include_featured_album_artists"
-            ].get(bool),
-            va_name=self.config["va_name"].as_str(),
-            max_results=self.config["max_results"].get(int),
-        )
+        self.instance_config: ConfigDict = get_config(self.config)
         self.language: str = self._language
 
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
