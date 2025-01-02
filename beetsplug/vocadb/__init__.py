@@ -748,7 +748,7 @@ class VocaDBPlugin(BeetsPlugin):
     ) -> tuple[ArtistsByCategoriesDict, str]:
         va_name: str = self.instance_config.va_name
         artists_by_categories: ArtistsByCategoriesDict
-        is_support: dict[str, bool]
+        is_support: set[str]
         artists_by_categories, is_support = self.get_artists_by_categories(artists)
 
         artist_string: Optional[str] = None
@@ -761,7 +761,7 @@ class VocaDBPlugin(BeetsPlugin):
                     artists_by_categories["producers"].items(),
                     artists_by_categories["circles"].items(),
                 )
-                if not is_support.get(id)
+                if not id in is_support
             ]
             if not len(main_artists) > 5:
                 artist_string = ", ".join(main_artists)
@@ -777,7 +777,7 @@ class VocaDBPlugin(BeetsPlugin):
             featured_artists: list[str] = [
                 name
                 for name, id in artists_by_categories["vocalists"].items()
-                if not is_support.get(id)
+                if not id in is_support
             ]
             if featured_artists and not len(main_artists) + len(featured_artists) > 5:
                 artist_string += " feat. " + ", ".join(featured_artists)
@@ -787,9 +787,9 @@ class VocaDBPlugin(BeetsPlugin):
     @staticmethod
     def get_artists_by_categories(
         artists: list[AlbumOrSongArtistDict],
-    ) -> tuple[ArtistsByCategoriesDict, dict[str, bool]]:
+    ) -> tuple[ArtistsByCategoriesDict, set[str]]:
         artists_by_categories: ArtistsByCategoriesDict = ArtistsByCategoriesDict()
-        is_support: dict[str, bool] = {}
+        is_support: set[str] = set()
         artist: AlbumOrSongArtistDict
         for artist in filter(None, artists):
             parent: Optional[ArtistDict] = artist.get("artist")
@@ -801,7 +801,8 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 name = artist.get("name", "")
                 id = ""
-            is_support[id] = artist.get("isSupport", False)
+            if artist.get("isSupport", False):
+                is_support.add(id)
             categories: str = artist.get("categories", "")
             effectiveRoles: str = artist.get("effectiveRoles", "")
             if "Producer" in categories or "Band" in categories:
