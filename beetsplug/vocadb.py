@@ -225,16 +225,20 @@ class VocaDBPlugin(BeetsPlugin):
     def __init__(self) -> None:
         super().__init__()
         self.data_source: str = self.instance_info.name
-        self.config.add({
+        self.config.add(
+            {
                 "source_weight": 0.5,
-            })
+            }
+        )
         self.config.add(self.default_config)
         self.instance_config: ConfigDict = ConfigDict(
             prefer_romaji=self.config["prefer_romaji"].get(bool),
             translated_lyrics=self.config["translated_lyrics"].get(bool),
-            include_featured_album_artists=self.config["include_featured_album_artists"].get(bool),
+            include_featured_album_artists=self.config[
+                "include_featured_album_artists"
+            ].get(bool),
             va_name=self.config["va_name"].as_str(),
-            max_results=self.config["max_results"].get(int)
+            max_results=self.config["max_results"].get(int),
         )
         self.language: str = self._language
 
