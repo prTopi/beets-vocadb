@@ -511,12 +511,17 @@ class VocaDBPlugin(BeetsPlugin):
         for category in artist_categories.values():
             keys: list[str] = list(category.keys())
             values: list[str] = list(category.values())
-            artists_set.update(keys)
-            artists_ids_set.update(values)
-            artists.extend(filter(lambda artist: artist not in artists_set, keys))
-            artists_ids.extend(
-                filter(lambda artist_id: artist_id not in artists_ids_set, values)
-            )
+
+            # Filter keys and values before updating the sets
+            new_artists = list(filter(lambda artist: artist not in artists_set, keys))
+            new_artists_ids = list(filter(lambda artist_id: artist_id not in artists_ids_set, values))
+
+            artists.extend(new_artists)
+            artists_ids.extend(new_artists_ids)
+
+            # Update the sets after filtering
+            artists_set.update(new_artists)
+            artists_ids_set.update(new_artists_ids)
         artist_id: Optional[str]
         try:
             artist_id = artists_ids[0]
@@ -623,12 +628,17 @@ class VocaDBPlugin(BeetsPlugin):
         for category in artist_categories.values():
             keys: list[str] = list(category.keys())
             values: list[str] = list(category.values())
-            artists_set.update(keys)
-            artists_ids_set.update(values)
-            artists.extend(filter(lambda artist: artist not in artists_set, keys))
-            artists_ids.extend(
-                filter(lambda artist_id: artist_id not in artists_ids_set, values)
-            )
+
+            # Filter keys and values before updating the sets
+            new_artists = list(filter(lambda artist: artist not in artists_set, keys))
+            new_artists_ids = list(filter(lambda artist_id: artist_id not in artists_ids_set, values))
+
+            artists.extend(new_artists)
+            artists_ids.extend(new_artists_ids)
+
+            # Update the sets after filtering
+            artists_set.update(new_artists)
+            artists_ids_set.update(new_artists_ids)
         artist_id: Optional[str]
         try:
             artist_id = artists_ids[0]
