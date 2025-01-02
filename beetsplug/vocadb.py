@@ -245,8 +245,14 @@ class VocaDBPlugin(BeetsPlugin):
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
-        for key in set(cls.default_config.keys()).intersection(config["vocadb"].keys()):
-            cls.default_config[key] = config["vocadb"][key].get()
+        cls.default_config.update(
+            {
+                key: config["vocadb"][key].get()
+                for key in set(cls.default_config.keys()).intersection(
+                    config["vocadb"].keys()
+                )
+            }
+        )
 
     @property
     def _language(self) -> str:
