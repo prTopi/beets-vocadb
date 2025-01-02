@@ -30,18 +30,39 @@ from urllib.request import Request, urlopen
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRead
-
 import beets
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
 from beets.autotag.match import track_distance
+from beets.dbcore import types
 from beets.library import Album, Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
 
-
 USER_AGENT: str = f"beets/{beets.__version__} +https://beets.io/"
 HEADERS: dict[str, str] = {"accept": "application/json", "User-Agent": USER_AGENT}
+
+
+ATTRIBUTE_TYPE = Literal["album", "item"]
+
+
+class FlexibleAttributesDict(dict[ATTRIBUTE_TYPE, list[str]]): ...
+
+
+class FlexibleAttributesMapping(dict[ATTRIBUTE_TYPE, dict[str, str]]):
+    """Maps flexible attributes to their corresponding beets attributes"""
+
+    def __init__(self, prefix: str, attributes: FlexibleAttributesDict) -> None:
+        super().__init__()
+        for key, value in attributes.items():
+            super().__setitem__(
+                key, {attribute: f"{prefix}_{attribute}" for attribute in value}
+            )
+
+    @override
+    def __setitem__(self, key: ATTRIBUTE_TYPE, value: dict[str, str]) -> None:
+        raise TypeError(f"{self.__class__.__name__} is read-only")
+
 
 class InstanceInfo(NamedTuple):
     """Information about a specific instance of VocaDB"""
@@ -215,18 +236,12 @@ class ArtistsByCategoriesDict(dict[ARTIST_CATEGORIES, dict[str, str]]):
 
 class VocaDBPlugin(BeetsPlugin):
 
-    default_config: ConfigDict = ConfigDict(
-        prefer_romaji=False,
-        translated_lyrics=False,
-        include_featured_album_artists=False,
-        va_name="Various artists",
-        max_results=5
+    _flexible_attributes: FlexibleAttributesDict = FlexibleAttributesDict(
+        {
+            "album": ["album_id", "artist_id"],
+            "item": ["track_id", "artist_id"],
+        }
     )
-
-    user_agent: str = USER_AGENT
-    headers: dict[str, str] = HEADERS
-    languages: Optional[Iterable[str]] = config["import"]["languages"].as_str_seq()
-    song_fields: str = "Artists,Tags,Bpm,Lyrics"
 
     instance_info: InstanceInfo = InstanceInfo(
         name="VocaDB",
@@ -235,8 +250,34 @@ class VocaDBPlugin(BeetsPlugin):
         subcommand="vdbsync",
     )
 
+    user_agent: str = USER_AGENT
+    headers: dict[str, str] = HEADERS
+    languages: Optional[Iterable[str]] = config["import"]["languages"].as_str_seq()
+    song_fields: str = "Artists,Tags,Bpm,Lyrics"
+
+    default_config: ConfigDict = ConfigDict(
+        prefer_romaji=False,
+        translated_lyrics=False,
+        include_featured_album_artists=False,
+        va_name="Various artists",
+        max_results=5,
+    )
+
     def __init__(self) -> None:
         super().__init__()
+        self._flex_attr_map: FlexibleAttributesMapping = FlexibleAttributesMapping(
+            self.name.lower(), self._flexible_attributes
+        )
+        key: ATTRIBUTE_TYPE
+        for key in self._flex_attr_map.keys():
+            setattr(
+                self,
+                f"{key}_types",
+                {
+                    prefix_attribute: types.INTEGER
+                    for prefix_attribute in self._flex_attr_map[key].values()
+                },
+            )
         self.data_source: str = self.instance_info.name
         self.config.add(
             {
