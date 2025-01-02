@@ -45,6 +45,25 @@ class InstanceInfo(NamedTuple):
     subcommand: str
 
 
+class ConfigDict(AttrDict):
+    """Stores configuration options conveniently"""
+
+    def __init__(
+        self,
+        prefer_romaji: bool,
+        translated_lyrics: bool,
+        include_featured_album_artists: bool,
+        va_name: str,
+        max_results: int,
+    ):
+        super().__init__()
+        self.prefer_romaji: bool = prefer_romaji
+        self.translated_lyrics: bool = translated_lyrics
+        self.include_featured_album_artists: bool = include_featured_album_artists
+        self.va_name: str = va_name
+        self.max_results: int = max_results
+
+
 class ArtistDict(TypedDict):
     additionalNames: str
     artistType: str
@@ -179,26 +198,6 @@ class ArtistsByCategoriesDict(TypedDict):
     arrangers: dict[str, str]
     composers: dict[str, str]
     lyricists: dict[str, str]
-
-
-
-class ConfigDict(AttrDict):
-    """Stores configuration options conveniently"""
-
-    def __init__(
-        self,
-        prefer_romaji: bool,
-        translated_lyrics: bool,
-        include_featured_album_artists: bool,
-        va_name: str,
-        max_results: int,
-    ):
-        super().__init__()
-        self.prefer_romaji: bool = prefer_romaji
-        self.translated_lyrics: bool = translated_lyrics
-        self.include_featured_album_artists: bool = include_featured_album_artists
-        self.va_name: str = va_name
-        self.max_results: int = max_results
 
 
 class VocaDBPlugin(BeetsPlugin):
