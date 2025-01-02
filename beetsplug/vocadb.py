@@ -1,13 +1,20 @@
 from collections.abc import Iterable, Sequence
+from confuse import AttrDict
 from datetime import datetime
 from itertools import chain
 from json import load
 from optparse import Values
 from re import Match, match, search
-from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING, Union
 from sys import version_info
-
-from confuse import AttrDict
+from typing import (
+    Literal,
+    NamedTuple,
+    Optional,
+    TypedDict,
+    TYPE_CHECKING,
+    Union,
+    get_args,
+)
 
 if version_info >= (3, 11):
     from typing import NotRequired
@@ -191,13 +198,19 @@ class AlbumFindResultDict(FindResultDict):
     items: list[AlbumDict]
 
 
-class ArtistsByCategoriesDict(TypedDict):
-    producers: dict[str, str]
-    circles: dict[str, str]
-    vocalists: dict[str, str]
-    arrangers: dict[str, str]
-    composers: dict[str, str]
-    lyricists: dict[str, str]
+ARTIST_CATEGORIES = Literal[
+    "producers",
+    "circles",
+    "vocalists",
+    "arrangers",
+    "composers",
+    "lyricists",
+]
+
+
+class ArtistsByCategoriesDict(dict[ARTIST_CATEGORIES, dict[str, str]]):
+    def __init__(self) -> None:
+        super().__init__({category: {} for category in get_args(ARTIST_CATEGORIES)})
 
 
 class VocaDBPlugin(BeetsPlugin):
@@ -908,14 +921,7 @@ class VocaDBPlugin(BeetsPlugin):
     def get_artists_by_categories(
         artists: list[AlbumOrSongArtistDict],
     ) -> tuple[ArtistsByCategoriesDict, dict[str, bool]]:
-        artists_by_categories: ArtistsByCategoriesDict = ArtistsByCategoriesDict(
-            producers={},
-            circles={},
-            vocalists={},
-            arrangers={},
-            composers={},
-            lyricists={}
-        )
+        artists_by_categories: ArtistsByCategoriesDict = ArtistsByCategoriesDict()
         is_support: dict[str, bool] = {}
         artist: AlbumOrSongArtistDict
         for artist in filter(None, artists):
