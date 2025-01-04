@@ -1,3 +1,4 @@
+from dataclasses import replace
 from unittest import TestCase
 
 from beetsplug.vocadb import LyricsDict, TagUsageDict, VocaDBPlugin
@@ -61,11 +62,11 @@ class TestVocaDBPlugin(TestCase):
 
     def test__language(self) -> None:
         self.plugin.languages = ["en", "jp"]
-        self.plugin.instance_config.prefer_romaji = False
+        self.plugin.instance_config = replace(self.plugin.instance_config, prefer_romaji=False)
         self.assertEqual(self.plugin._language, "English")
         self.plugin.languages = ["jp", "en"]
         self.assertEqual(self.plugin._language, "Japanese")
-        self.plugin.instance_config.prefer_romaji = True
+        self.plugin.instance_config = replace(self.plugin.instance_config, prefer_romaji=True)
         self.assertEqual(self.plugin._language, "Romaji")
         self.plugin.languages = ["en", "jp"]
         self.assertEqual(self.plugin._language, "English")

@@ -25,7 +25,7 @@ from beets.library import Album, Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
 from .api import *
-from .conf import *
+from .conf import InstanceConfig
 
 
 ATTRIBUTE_TYPE = Literal["album", "item"]
@@ -85,7 +85,7 @@ class VocaDBPlugin(BeetsPlugin):
     languages: Optional[Iterable[str]] = config["import"]["languages"].as_str_seq()
     song_fields: str = "Artists,Tags,Bpm,Lyrics"
 
-    default_config: ConfigDict = DEFAULT_CONFIG
+    default_config: InstanceConfig = InstanceConfig()
 
     def __init__(self) -> None:
         super().__init__()
@@ -109,20 +109,15 @@ class VocaDBPlugin(BeetsPlugin):
             }
         )
         self.config.add(self.default_config)
-        self.instance_config: ConfigDict = get_config(self.config)
+        self.instance_config: InstanceConfig = InstanceConfig.from_config_subview(
+            self.config, self.default_config
+        )
         self.language: str = self._language
 
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
-        cls.default_config.update(
-            {
-                key: config["vocadb"][key].get()
-                for key in set(cls.default_config.keys()).intersection(
-                    config["vocadb"].keys()
-                )
-            }
-        )
+        cls.default_config = InstanceConfig.from_config_subview(config["vocadb"])
 
     @property
     def _language(self) -> str:
