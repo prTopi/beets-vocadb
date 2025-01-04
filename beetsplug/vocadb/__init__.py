@@ -108,31 +108,15 @@ class VocaDBPlugin(BeetsPlugin):
                 "source_weight": 0.5,
             }
         )
-        self.config.add(self.default_config)
         self.instance_config: InstanceConfig = InstanceConfig.from_config_subview(
             self.config, self.default_config
         )
-        self.language: str = self._language
+        self.language: str = self.get_lang()
 
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
         cls.default_config = InstanceConfig.from_config_subview(config["vocadb"])
-
-    @property
-    def _language(self) -> str:
-        """Used to set the 'language' instance attribute."""
-        if not self.languages:
-            return "English"
-
-        lang: str
-        for lang in self.languages:
-            if lang == "jp":
-                return "Romaji" if self.instance_config.prefer_romaji else "Japanese"
-            if lang == "en":
-                return "English"
-
-        return "English"  # Default if no matching language found
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
@@ -390,6 +374,20 @@ class VocaDBPlugin(BeetsPlugin):
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
             return ()
+
+    def get_lang(self) -> str:
+        """Used to set the 'language' instance attribute."""
+        if not self.languages:
+            return "English"
+
+        lang: str
+        for lang in self.languages:
+            if lang == "jp":
+                return "Romaji" if self.instance_config.prefer_romaji else "Japanese"
+            if lang == "en":
+                return "English"
+
+        return "English"  # Default if no matching language found
 
     @override
     def album_for_id(self, album_id: str) -> Optional[AlbumInfo]:

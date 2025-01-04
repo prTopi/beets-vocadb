@@ -63,15 +63,15 @@ class TestVocaDBPlugin(TestCase):
     def test__language(self) -> None:
         self.plugin.languages = ["en", "jp"]
         self.plugin.instance_config = replace(self.plugin.instance_config, prefer_romaji=False)
-        self.assertEqual(self.plugin._language, "English")
+        self.assertEqual(self.plugin.get_lang(), "English")
         self.plugin.languages = ["jp", "en"]
-        self.assertEqual(self.plugin._language, "Japanese")
+        self.assertEqual(self.plugin.get_lang(), "Japanese")
         self.plugin.instance_config = replace(self.plugin.instance_config, prefer_romaji=True)
-        self.assertEqual(self.plugin._language, "Romaji")
+        self.assertEqual(self.plugin.get_lang(), "Romaji")
         self.plugin.languages = ["en", "jp"]
-        self.assertEqual(self.plugin._language, "English")
+        self.assertEqual(self.plugin.get_lang(), "English")
         self.plugin.languages = []
-        self.assertEqual(self.plugin._language, "English")
+        self.assertEqual(self.plugin.get_lang(), "English")
 
     def test_get_lyrics(self) -> None:
         lyrics: list[LyricsDict] = [
