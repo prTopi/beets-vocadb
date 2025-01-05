@@ -37,8 +37,9 @@ class FlexibleAttributes:
         prefixed_attributes: dict[str, frozenset[str]] = {}
         field: Field[frozenset[str]]
         for field in fields(self):
+            attributes: frozenset[str] = getattr(self, field.name)
             prefixed_attributes[field.name] = frozenset(
-                f"{prefix}_{attribute}" for attribute in getattr(self, field.name)
+                f"{prefix}_{attribute}" for attribute in attributes
             )
         return FlexibleAttributes(**prefixed_attributes)
 
@@ -82,14 +83,15 @@ class VocaDBPlugin(BeetsPlugin):
         self.album_types: dict[str, types.Integer] = {}
         self.item_types: dict[str, types.Integer] = {}
         for field in fields(_prefixed_flex_attributes):
+            prefixed_attributes: str = getattr(
+                _prefixed_flex_attributes, field.name
+            )
             setattr(
                 self,
                 f"{field.name}_types",
                 {
                     prefix_attribute: types.INTEGER
-                    for prefix_attribute in getattr(
-                        _prefixed_flex_attributes, field.name
-                    )
+                    for prefix_attribute in prefixed_attributes
                 },
             )
         self.data_source: str = self.instance_info.name
@@ -357,7 +359,7 @@ class VocaDBPlugin(BeetsPlugin):
                 len(items),
                 title,
             )
-            return tuple(filter(None, map(self.track_info, items)))
+            return tuple(map(self.track_info, items))
         else:
             self._log.debug("API Error: {0} (query: {1})", response.status_code, url)
             return ()
