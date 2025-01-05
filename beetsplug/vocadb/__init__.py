@@ -322,7 +322,7 @@ class VocaDBPlugin(BeetsPlugin):
             )
             # songFields parameter doesn't exist for album search
             # so we'll get albums by their id
-            ids: set[str] = {str(album.id) for album in albums}
+            ids: list[str] = [str(album.id) for album in albums]
             return tuple(map(self.album_for_id, ids))
         else:
             self._log.debug(
