@@ -316,9 +316,7 @@ class VocaDBPlugin(BeetsPlugin):
         response: Response = requests.get(url, params=params, headers=self.headers)
         if response.status_code == 200:
             candidates_dict: JSONObject = response.json()
-            candidates: CandidatesFromAPI = fromdict(CandidatesFromAPI,
-                candidates_dict
-            )
+            candidates: CandidatesFromAPI = fromdict(CandidatesFromAPI, candidates_dict)
             albums: list[AlbumCandidate] = candidates.items
             self._log.debug(
                 "Found {0} result(s) for '{1}'",
@@ -330,7 +328,9 @@ class VocaDBPlugin(BeetsPlugin):
             ids: set[str] = {str(album.id) for album in albums}
             return tuple(map(self.album_for_id, ids))
         else:
-            self._log.debug("API Error: {0} (query: {1})", response.status_code, response.url)
+            self._log.debug(
+                "API Error: {0} (query: {1})", response.status_code, response.url
+            )
             return ()
 
     @override
@@ -352,8 +352,8 @@ class VocaDBPlugin(BeetsPlugin):
         response: Response = requests.get(url, params=params, headers=self.headers)
         if response.status_code == 200:
             candidates_dict: JSONObject = response.json()
-            result_dict: ItemCandidatesFromAPI = fromdict(ItemCandidatesFromAPI,
-                candidates_dict
+            result_dict: ItemCandidatesFromAPI = fromdict(
+                ItemCandidatesFromAPI, candidates_dict
             )
             items: list[SongFromAPI] = result_dict.items
             self._log.debug(
@@ -440,7 +440,7 @@ class VocaDBPlugin(BeetsPlugin):
                 discs=[
                     DiscInResponse(discNumber=i + 1, name="CD", mediaType="Audio")
                     for i in range(max(track.discNumber for track in release.tracks))
-                ]
+                ],
             )
         ignored_discs: set[int] = set()
         disc: DiscInResponse
@@ -485,7 +485,9 @@ class VocaDBPlugin(BeetsPlugin):
             values: list[str] = list(category.values())
 
             # Filter keys and values before updating the sets
-            new_artists: list[str] = list(filter(lambda artist: artist not in artists_set, keys))
+            new_artists: list[str] = list(
+                filter(lambda artist: artist not in artists_set, keys)
+            )
             new_artists_ids: list[str] = list(
                 filter(lambda artist_id: artist_id not in artists_ids_set, values)
             )
@@ -516,7 +518,9 @@ class VocaDBPlugin(BeetsPlugin):
             if not weblink.disabled and match(
                 "Amazon( \\((LE|RE|JP|US)\\).*)?$", weblink.description
             ):
-                asin_match: Optional[Match[str]] = search("\\/dp\\/(.+?)(\\/|$)", weblink.url)
+                asin_match: Optional[Match[str]] = search(
+                    "\\/dp\\/(.+?)(\\/|$)", weblink.url
+                )
                 if asin_match:
                     asin = asin_match[1]
                     break
@@ -605,7 +609,9 @@ class VocaDBPlugin(BeetsPlugin):
             values: list[str] = list(category.values())
 
             # Filter keys and values before updating the sets
-            new_artists: list[str] = list(filter(lambda artist: artist not in artists_set, keys))
+            new_artists: list[str] = list(
+                filter(lambda artist: artist not in artists_set, keys)
+            )
             new_artists_ids: list[str] = list(
                 filter(lambda artist_id: artist_id not in artists_ids_set, values)
             )
@@ -739,7 +745,9 @@ class VocaDBPlugin(BeetsPlugin):
             ]
         )
 
-        artist_string: str = ", ".join(main_artists) if not len(main_artists) > 5 else va_name
+        artist_string: str = (
+            ", ".join(main_artists) if not len(main_artists) > 5 else va_name
+        )
 
         if (
             include_featured_artists
