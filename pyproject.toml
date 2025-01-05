@@ -19,7 +19,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = ["beets", "typing_extensions; python_version < '3.12'"]
+dependencies = [
+    "beets",
+    "dataclass_wizard",
+    "typing_extensions; python_version < '3.12'",
+]
 
 [tool.basedpyright]
 pythonVersion = "3.9"
