@@ -2,12 +2,13 @@
 
 from dataclasses import dataclass
 from typing import Optional
+from typing_extensions import LiteralString
 
 import beets
 
 USER_AGENT: str = f"beets/{beets.__version__} +https://beets.io/"
 HEADERS: dict[str, str] = {"accept": "application/json", "User-Agent": USER_AGENT}
-SONG_FIELDS = "Artists,CultureCodes,Tags,Bpm,Lyrics"
+SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
 @dataclass(frozen=True)
