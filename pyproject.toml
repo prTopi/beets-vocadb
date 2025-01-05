@@ -22,6 +22,7 @@ classifiers = [
 dependencies = [
     "beets",
     "dataclass_wizard",
+    "requests",
     "typing_extensions; python_version < '3.12'",
 ]
 
