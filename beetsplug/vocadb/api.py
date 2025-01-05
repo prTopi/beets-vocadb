@@ -1,20 +1,17 @@
 """Things related to API requests"""
 
-from sys import version_info
-from typing import NamedTuple, Optional, Sequence, TypedDict
-
-if version_info >= (3, 11):
-    from typing import NotRequired
-else:
-    from typing_extensions import NotRequired
+from dataclasses import dataclass
+from typing import Optional
 
 import beets
 
 USER_AGENT: str = f"beets/{beets.__version__} +https://beets.io/"
 HEADERS: dict[str, str] = {"accept": "application/json", "User-Agent": USER_AGENT}
+SONG_FIELDS = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
-class InstanceInfo(NamedTuple):
+@dataclass(frozen=True)
+class InstanceInfo:
     """Information about a specific instance of VocaDB"""
 
     name: str
@@ -23,42 +20,52 @@ class InstanceInfo(NamedTuple):
     subcommand: str
 
 
-class ArtistDict(TypedDict):
+@dataclass(frozen=True)
+class ArtistInResponse:
+
     additionalNames: str
     artistType: str
     deleted: bool
     id: int
     name: str
-    pictureMime: str
     status: str
     version: int
+    pictureMime: Optional[str] = None
 
 
-class AlbumOrSongArtistDict(TypedDict):
-    artist: Optional[ArtistDict]
+@dataclass
+class AlbumOrSongArtistInResponse:
+
     categories: str
     effectiveRoles: str
-    id: NotRequired[int]
-    isCustomName: NotRequired[bool]
     isSupport: bool
     name: str
     roles: str
+    artist: Optional[ArtistInResponse] = None
+    id: Optional[int] = None
+    isCustomName: Optional[bool] = None
 
 
-class TagDict(TypedDict):
-    additionalNames: NotRequired[str]
-    categoryName: NotRequired[str]
-    id: NotRequired[int]
+@dataclass(frozen=True)
+class TagFromAPI:
+
     name: str
-    urlSlug: NotRequired[str]
+    additionalNames: Optional[str] = None
+    categoryName: Optional[str] = None
+    id: Optional[int] = None
+    urlSlug: Optional[str] = None
 
 
-class TagUsageDict(TypedDict):
+@dataclass(frozen=True)
+class TagUsageInResponse:
+
     count: int
-    tag: TagDict
+    tag: TagFromAPI
 
 
-class InfoDict(TypedDict):
+@dataclass(frozen=True)
+class BaseInfoFromAPI:
+
     artistString: str
     createDate: str
     defaultName: str
@@ -66,85 +73,110 @@ class InfoDict(TypedDict):
     id: int
     name: str
     status: str
-    tags: list[TagUsageDict]
 
 
-class LyricsDict(TypedDict):
-    cultureCodes: list[str]
-    id: NotRequired[int]
-    source: NotRequired[str]
+@dataclass(frozen=True)
+class LyricsFromAPI:
+
     translationType: str
-    url: NotRequired[str]
     value: str
+    cultureCodes: list[str]
+    id: Optional[int] = None
+    source: Optional[str] = None
+    url: Optional[str] = None
 
 
-class DiscDict(TypedDict):
+@dataclass
+class DiscInResponse:
+
     discNumber: int
-    id: NotRequired[int]
     mediaType: str
-    name: NotRequired[str]
-    total: NotRequired[int]
+    id: Optional[int] = None
+    name: Optional[str] = None
+    total: Optional[int] = None
 
 
-class ReleaseDateDict(TypedDict):
-    day: NotRequired[int]
+@dataclass(frozen=True)
+class ReleaseDateInResponse:
+
     isEmpty: bool
-    month: NotRequired[int]
-    year: NotRequired[int]
+    day: Optional[int] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
 
 
-class SongDict(InfoDict):
-    artists: list[AlbumOrSongArtistDict]
+@dataclass(frozen=True)
+class SongFromAPI(BaseInfoFromAPI):
+
+    artists: list[AlbumOrSongArtistInResponse]
+    cultureCodes: list[str]
     favoritedTimes: int
-    lengthSeconds: int
-    lyrics: list[LyricsDict]
-    maxMilliBpm: int
-    minMilliBpm: int
-    publishDate: str
+    lengthSeconds: float
+    lyrics: list[LyricsFromAPI]
     pvServices: str
     ratingScore: int
     songType: str
+    tags: list[TagUsageInResponse]
     version: int
-    cultureCodes: list[str]
+    maxMilliBpm: Optional[int] = None
+    minMilliBpm: Optional[int] = None
+    publishDate: Optional[str] = None
 
 
-class SongInAlbumDict(TypedDict):
+@dataclass(frozen=True)
+class SongInAlbumInResponse:
+
     discNumber: int
-    id: NotRequired[int]
-    name: NotRequired[str]
-    song: SongDict
     trackNumber: int
     computedCultureCodes: list[str]
+    id: Optional[int] = None
+    name: Optional[str] = None
+    song: Optional[SongFromAPI] = None
 
 
-class WebLinkDict(TypedDict):
+@dataclass(frozen=True)
+class WebLinkInResponse:
+
     category: str
     description: str
-    descriptionOrUrl: str
     disabled: bool
-    id: NotRequired[int]
     url: str
+    descriptionOrUrl: Optional[str] = None
+    id: Optional[int] = None
 
 
-class AlbumDict(InfoDict):
-    artists: list[AlbumOrSongArtistDict]
-    catalogNumber: NotRequired[str]
-    discs: Sequence[DiscDict]
-    discType: NotRequired[str]
-    releaseDate: ReleaseDateDict
-    tracks: list[SongInAlbumDict]
-    webLinks: list[WebLinkDict]
+@dataclass(frozen=True)
+class AlbumCandidate(BaseInfoFromAPI):
+
+    releaseDate: ReleaseDateInResponse
+    discType: str
 
 
-class FindResultDict(TypedDict):
-    id: NotRequired[int]
+@dataclass(frozen=True)
+class AlbumFromAPI(AlbumCandidate):
+
+    artists: list[AlbumOrSongArtistInResponse]
+    tags: list[TagUsageInResponse]
+    tracks: list[SongInAlbumInResponse]
+    webLinks: list[WebLinkInResponse]
+    discs: list[DiscInResponse]
+    catalogNumber: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class BaseFindResultFromAPI:
+
     term: str
     totalCount: int
 
 
-class SongFindResultDict(FindResultDict):
-    items: list[SongDict]
+@dataclass(frozen=True)
+class ItemCandidatesFromAPI(BaseFindResultFromAPI):
+
+    items: list[SongFromAPI]
 
 
-class AlbumFindResultDict(FindResultDict):
-    items: list[AlbumDict]
+@dataclass(frozen=True)
+class CandidatesFromAPI(BaseFindResultFromAPI):
+
+    items: list[AlbumCandidate]

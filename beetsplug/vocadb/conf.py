@@ -19,6 +19,17 @@ class InstanceConfig:
     def from_config_subview(
         cls, config: Subview, default: Optional["InstanceConfig"] = None
     ) -> "InstanceConfig":
+        """Creates an InstanceConfig from a configuration subview.
+
+            Args:
+                config: A Subview object containing configuration values
+                default: Optional default InstanceConfig to use as base values.
+                        If None, creates a new default instance.
+
+            Returns:
+                A new InstanceConfig instance populated with values from the config,
+                falling back to defaults when values are missing.
+        """
 
         if default is None:
             default = cls()
