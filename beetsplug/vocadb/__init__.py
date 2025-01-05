@@ -9,13 +9,12 @@ import requests
 from requests import Response
 from re import Match, match, search
 from sys import version_info
-from typing import Literal, Optional, Union
+from typing import Optional, Union
 
 if version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
-from typing_extensions import TypeAlias
 from urllib.parse import urljoin
 from beets import autotag, config, library, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
