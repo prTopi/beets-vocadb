@@ -12,7 +12,6 @@ class InstanceConfig:
     prefer_romaji: bool = False
     translated_lyrics: bool = False
     include_featured_album_artists: bool = False
-    va_name: str = "Various artists"
     max_results: int = 5
 
     @classmethod
@@ -41,6 +40,5 @@ class InstanceConfig:
             include_featured_album_artists=config["include_featured_album_artists"].get(
                 bool
             ),
-            va_name=config["va_name"].as_str(),
             max_results=config["max_results"].get(int),
         )

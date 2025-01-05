@@ -25,10 +25,7 @@ from beets.library import Album, Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import show_model_changes, Subcommand
 from .api import *
-from .conf import InstanceConfig
-
-
-ATTRIBUTE_TYPE: TypeAlias = Literal["album", "item"]
+from .plugin_config import InstanceConfig
 
 
 @dataclass(frozen=True)
