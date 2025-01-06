@@ -1,13 +1,17 @@
 from . import vocadb
-from .vocadb.api import InstanceInfo
+from .vocadb.requests_handler import RequestsHandler
+
+
+class UtaiteDBRequestsHandler(
+    RequestsHandler,
+    base_url="https://utaitedb.net/",
+    api_url="https://utaitedb.net/api/",
+): ...
 
 
 class UtaiteDBPlugin(
     vocadb.VocaDBPlugin,
-    instance_info=InstanceInfo(
-        name="UtaiteDB",
-        base_url="https://utaiteadb.net/",
-        api_url="https://utaitedb.net/api/",
-        subcommand="udbsync",
-    ),
+    requests_handler=UtaiteDBRequestsHandler,
+    data_source="UtaiteDB",
+    subcommand="udbsync",
 ): ...

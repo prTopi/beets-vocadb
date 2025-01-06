@@ -45,7 +45,6 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   prefer_romaji: false # Prefer romanized if they exist rather than Japanese
   translated_lyrics: false # Always get translated lyrics if they're available
   include_featured_album_artists: false # Include featured artists in album artists string
-  va_name: "Various artists" # Album artist name to use when artist list contains many artists
   max_results: 5 # Number of results to get from source. Consider increasing if correct song or album doesn't show up in the list of candidates
 ```
 

@@ -1,10 +1,9 @@
-from dataclasses import replace
 from unittest import TestCase
 
-from dataclass_wizard import fromlist
+from cattrs import structure
 
 from beetsplug.vocadb import VocaDBPlugin
-from beetsplug.vocadb.api import LyricsFromAPI, TagUsageInResponse
+from beetsplug.vocadb.requests_handler.models import Lyrics, TagUsage
 
 
 class TestVocaDBPlugin(TestCase):
@@ -16,10 +15,9 @@ class TestVocaDBPlugin(TestCase):
         cls.plugin = plugin
 
     def test_get_genres(self) -> None:
-        tags: list[TagUsageInResponse] = []
+        tags: list[TagUsage] = []
         self.assertEqual(self.plugin.get_genres(tags), None)
-        tags = fromlist(
-            TagUsageInResponse,
+        tags = structure(
             [
                 {
                     "count": 0,
@@ -29,10 +27,10 @@ class TestVocaDBPlugin(TestCase):
                     },
                 },
             ],
+            list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre1")
-        tags = fromlist(
-            TagUsageInResponse,
+        tags = structure(
             [
                 {
                     "count": 2,
@@ -49,10 +47,10 @@ class TestVocaDBPlugin(TestCase):
                     },
                 },
             ],
+            list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre1; Genre2")
-        tags = fromlist(
-            TagUsageInResponse,
+        tags = structure(
             [
                 {
                     "count": 2,
@@ -69,20 +67,17 @@ class TestVocaDBPlugin(TestCase):
                     },
                 },
             ],
+            list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre2")
 
     def test_get_lang(self) -> None:
         self.plugin.languages = ["en", "jp"]
-        self.plugin.instance_config = replace(
-            self.plugin.instance_config, prefer_romaji=False
-        )
+        self.plugin.instance_config.prefer_romaji = False
         self.assertEqual(self.plugin.get_lang(), "English")
         self.plugin.languages = ["jp", "en"]
         self.assertEqual(self.plugin.get_lang(), "Japanese")
-        self.plugin.instance_config = replace(
-            self.plugin.instance_config, prefer_romaji=True
-        )
+        self.plugin.instance_config.prefer_romaji = True
         self.assertEqual(self.plugin.get_lang(), "Romaji")
         self.plugin.languages = ["en", "jp"]
         self.assertEqual(self.plugin.get_lang(), "English")
@@ -90,8 +85,7 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(self.plugin.get_lang(), "English")
 
     def test_get_lyrics(self) -> None:
-        lyrics: list[LyricsFromAPI] = fromlist(
-            LyricsFromAPI,
+        lyrics: list[Lyrics] = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -112,6 +106,7 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics3",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "Japanese"), ("Jpan", "jpn", "lyrics1")
@@ -125,8 +120,7 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, None), ("Jpan", "jpn", "lyrics1")
         )
-        lyrics = fromlist(
-            LyricsFromAPI,
+        lyrics = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -139,6 +133,7 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics2",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "Japanese"), ("Latn", "eng", "lyrics1")
@@ -146,8 +141,7 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "English"), ("Latn", "eng", "lyrics2")
         )
-        lyrics = fromlist(
-            LyricsFromAPI,
+        lyrics = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -155,14 +149,14 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics1",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics1")
         )
 
     def test_get_fallback_lyrics(self) -> None:
-        lyrics: list[LyricsFromAPI] = fromlist(
-            LyricsFromAPI,
+        lyrics: list[Lyrics] = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -180,6 +174,7 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics3",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "Japanese"),
@@ -194,8 +189,7 @@ class TestVocaDBPlugin(TestCase):
             "lyrics3",
         )
         self.assertEqual(self.plugin.get_fallback_lyrics(lyrics, None), "lyrics1")
-        lyrics = fromlist(
-            LyricsFromAPI,
+        lyrics = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -208,6 +202,7 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics2",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "Japanese"),
@@ -217,8 +212,7 @@ class TestVocaDBPlugin(TestCase):
             self.plugin.get_fallback_lyrics(lyrics, "English"),
             "lyrics2",
         )
-        lyrics = fromlist(
-            LyricsFromAPI,
+        lyrics = structure(
             [
                 {
                     "cultureCodes": ["ja"],
@@ -226,6 +220,7 @@ class TestVocaDBPlugin(TestCase):
                     "value": "lyrics1",
                 },
             ],
+            list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "English"),

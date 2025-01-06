@@ -1,11 +1,12 @@
 """Things related to configuration management"""
 
-from dataclasses import asdict, dataclass
 from typing import Optional
+
+from attrs import asdict, define
 from confuse.core import Subview
 
 
-@dataclass(frozen=True)
+@define
 class InstanceConfig:
     """Stores the configuration of the plugin conveniently"""
 
@@ -30,10 +31,8 @@ class InstanceConfig:
             falling back to defaults when values are missing.
         """
 
-        if default is None:
-            default = cls()
+        config.add(asdict(default or cls()))
 
-        config.add(asdict(default))
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),
             translated_lyrics=config["translated_lyrics"].get(bool),

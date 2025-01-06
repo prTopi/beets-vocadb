@@ -1,13 +1,17 @@
 from . import vocadb
-from .vocadb.api import InstanceInfo
+from .vocadb.requests_handler import RequestsHandler
+
+
+class UtaiteDBRequestsHandler(
+    RequestsHandler,
+    base_url="https://touhoudb.com/",
+    api_url="https://touhoudb.com/api/",
+): ...
 
 
 class TouhouDBPlugin(
     vocadb.VocaDBPlugin,
-    instance_info=InstanceInfo(
-        name="TouhouDB",
-        base_url="https://touhoudb.com/",
-        api_url="https://touhoudb.com/api/",
-        subcommand="tdbsync",
-    ),
+    requests_handler=UtaiteDBRequestsHandler,
+    data_source="TouhouDB",
+    subcommand="tdbsync",
 ): ...
