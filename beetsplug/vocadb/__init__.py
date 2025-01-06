@@ -1,16 +1,13 @@
 from collections.abc import Iterable, Sequence
-from dataclasses import Field
 from datetime import datetime
 from itertools import chain
 from optparse import Values
 from re import Match, match, search
 from sys import version_info
 from typing import Optional, Union
-import httpx
-from typing_extensions import TypeAlias
 
-from attrs import Factory, define, fields
-from cattrs import structure
+from attrs import Attribute, Factory, define, fields
+from typing_extensions import TypeAlias
 
 if version_info >= (3, 12):
     from typing import override
@@ -26,26 +23,25 @@ from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import Subcommand, show_model_changes
 
+from .plugin_config import InstanceConfig
+from .requests_handler import SONG_FIELDS, RequestsHandler
 from .requests_handler.models import (
-    AlbumFromQuery,
     Album,
     AlbumArtist,
-    APIObjectT,
-    Artist,
+    AlbumFromQuery,
     AlbumQueryResult,
+    Artist,
     Disc,
-    SongArtist,
-    SongQueryResult,
     Lyrics,
     ReleaseDate,
     Song,
+    SongArtist,
     SongInAlbum,
+    SongQueryResult,
     Tag,
     TagUsage,
     WebLink,
 )
-from .requests_handler import HEADERS, SONG_FIELDS, RequestsHandler
-from .plugin_config import InstanceConfig
 
 SongOrAlbumArtists: TypeAlias = Union[list[AlbumArtist], list[SongArtist]]
 
@@ -59,7 +55,7 @@ class FlexibleAttributes:
 
     def prefix(self, prefix: str) -> "FlexibleAttributes":
         prefixed_attributes: dict[str, frozenset[str]] = {}
-        field: Field[frozenset[str]]
+        field: Attribute[frozenset[str]]
         for field in fields(self.__class__):
             attributes: frozenset[str] = getattr(self, field.name)
             prefixed_attributes[field.name] = frozenset(
@@ -98,7 +94,7 @@ class VocaDBPlugin(BeetsPlugin):
         _prefixed_flex_attributes: FlexibleAttributes = (
             self._flexible_attributes.prefix(self.name)
         )
-        field: Field[set[str]]
+        field: Attribute[set[str]]
         self.album_types: dict[str, types.Integer] = {}
         self.item_types: dict[str, types.Integer] = {}
         for field in fields(_prefixed_flex_attributes.__class__):
@@ -477,7 +473,7 @@ class VocaDBPlugin(BeetsPlugin):
         artists_ids_set: set[str] = set()
         artists: list[str] = []
         artists_ids: list[str] = []
-        field: Field[dict[str, str]]
+        field: Attribute[dict[str, str]]
         for field in fields(artist_categories.__class__):
             category: dict[str, str] = getattr(artist_categories, field.name)
             keys: list[str] = list(category.keys())
@@ -600,7 +596,7 @@ class VocaDBPlugin(BeetsPlugin):
         artists_ids_set: set[str] = set()
         artists: list[str] = []
         artists_ids: list[str] = []
-        field: Field[dict[str, str]]
+        field: Attribute[dict[str, str]]
         category: dict[str, str]
         for field in fields(artist_categories.__class__):
             category = getattr(artist_categories, field.name)
