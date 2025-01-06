@@ -9,7 +9,6 @@ from typing import Optional, Union
 import httpx
 from typing_extensions import TypeAlias
 
-import requests
 from attrs import Factory, define, fields
 from cattrs import structure
 
@@ -315,24 +314,6 @@ class VocaDBPlugin(BeetsPlugin):
         return get_distance(
             data_source=self.data_source, info=album_info, config=self.config
         )
-
-    def fetch_to_structure(
-        self, path: str, params: dict[str, str], structure_type: type[APIObjectT]
-    ) -> Optional[APIObjectT]:
-        try:
-            response = httpx.get(
-                urljoin(self.client.api_base_url, path),
-                params=params,
-                headers=HEADERS,
-                timeout=10,
-            )
-            response.raise_for_status()
-
-            return structure(response.json(), cl=structure_type)
-        except httpx.HTTPError as e:
-            self._log.error("Error fetching data from {}\n - {}", e.request.url, e)
-
-        return None
 
     @override
     def candidates(
