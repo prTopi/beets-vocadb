@@ -1,9 +1,10 @@
 """Attrs classes related to API requests"""
+
 from __future__ import annotations
 
 from attrs import define
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 
 
 @define
@@ -15,7 +16,7 @@ class Artist:
     name: str
     status: str
     version: int
-    pictureMime: str | None = None
+    pictureMime: Optional[str] = None
 
 
 @define(kw_only=True)
@@ -25,7 +26,7 @@ class AlbumArtist:
     isSupport: bool
     name: str
     roles: str
-    artist: Artist | None = None
+    artist: Optional[Artist] = None
 
 
 @define
@@ -37,10 +38,10 @@ class SongArtist(AlbumArtist):
 @define
 class Tag:
     name: str
-    additionalNames: str | None = None
-    categoryName: str | None = None
-    id: int | None = None
-    urlSlug: str | None = None
+    additionalNames: Optional[str] = None
+    categoryName: Optional[str] = None
+    id: Optional[int] = None
+    urlSlug: Optional[str] = None
 
 
 @define
@@ -67,26 +68,26 @@ class Lyrics:
     translationType: str
     value: str
     cultureCodes: list[str]
-    id: int | None = None
-    source: str | None = None
-    url: str | None = None
+    id: Optional[int] = None
+    source: Optional[str] = None
+    url: Optional[str] = None
 
 
 @define
 class Disc:
     discNumber: int
     mediaType: str
-    id: int | None = None
-    name: str | None = None
-    total: int | None = None
+    id: Optional[int] = None
+    name: Optional[str] = None
+    total: Optional[int] = None
 
 
 @define
 class ReleaseDate:
     isEmpty: bool
-    day: int | None = None
-    month: int | None = None
-    year: int | None = None
+    day: Optional[int] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
 
 
 @define
@@ -101,9 +102,9 @@ class Song(AlbumOrSong):
     songType: str
     tags: list[TagUsage]
     version: int
-    maxMilliBpm: int | None = None
-    minMilliBpm: int | None = None
-    publishDate: str | None = None
+    maxMilliBpm: Optional[int] = None
+    minMilliBpm: Optional[int] = None
+    publishDate: Optional[str] = None
 
 
 @define
@@ -111,9 +112,9 @@ class SongInAlbum:
     discNumber: int
     trackNumber: int
     computedCultureCodes: list[str]
-    id: int | None = None
-    name: str | None = None
-    song: Song | None = None
+    id: Optional[int] = None
+    name: Optional[str] = None
+    song: Optional[Song] = None
 
 
 @define
@@ -122,8 +123,8 @@ class WebLink:
     description: str
     disabled: bool
     url: str
-    descriptionOrUrl: str | None = None
-    id: int | None = None
+    descriptionOrUrl: Optional[str] = None
+    id: Optional[int] = None
 
 
 @define
@@ -139,7 +140,7 @@ class Album(AlbumFromQuery):
     tracks: list[SongInAlbum]
     webLinks: list[WebLink]
     discs: list[Disc]
-    catalogNumber: str | None = None
+    catalogNumber: Optional[str] = None
 
 
 @define

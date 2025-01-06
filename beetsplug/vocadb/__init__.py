@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
 from datetime import datetime
 from itertools import chain
-from optparse import Values
-from re import Match, match, search
+from re import match, search
 from sys import version_info
+from typing import TYPE_CHECKING
 
-from attrs import Attribute, Factory, define, fields
-from typing_extensions import TypeAlias
+from attrs import Factory, define, fields
 
 if version_info >= (3, 12):
     from typing import override
@@ -16,37 +14,46 @@ else:
     from typing_extensions import override
 from urllib.parse import urljoin
 
-from beets import autotag, config, library, ui, util
-from beets.autotag.hooks import AlbumInfo, Distance, TrackInfo
+from beets import __version__ as beets_version
+from beets import autotag, config, dbcore, library, ui, util
+from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.autotag.match import track_distance
-from beets.dbcore import types
-from beets.library import Item, Library
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import Subcommand, show_model_changes
 
 from .plugin_config import InstanceConfig
-from .requests_handler import SONG_FIELDS, RequestsHandler
-from .requests_handler.models import (
-    Album,
-    AlbumArtist,
-    AlbumFromQuery,
-    AlbumQueryResult,
-    Artist,
-    Disc,
-    Lyrics,
-    ReleaseDate,
-    Song,
-    SongArtist,
-    SongInAlbum,
-    SongQueryResult,
-    Tag,
-    TagUsage,
-    WebLink,
-)
+from .requests_handler import RequestsHandler
+from .requests_handler.models import Album, AlbumQueryResult, Disc, Song, SongQueryResult
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Sequence
+    from optparse import Values
+    from re import Match
+
+    from attrs import Attribute
+    from beets.autotag.hooks import Distance
+    from beets.library import Library
+    from typing_extensions import LiteralString, TypeAlias
+
+    from .requests_handler.models import (
+        AlbumArtist,
+        AlbumFromQuery,
+        Artist,
+        Lyrics,
+        ReleaseDate,
+        SongArtist,
+        SongInAlbum,
+        Tag,
+        TagUsage,
+        WebLink,
+    )
+
 
 SongOrAlbumArtists: TypeAlias = "list[AlbumArtist] | list[SongArtist]"
 
 NAME: str = __name__
+USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
+SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
 @define
@@ -91,12 +98,12 @@ class VocaDBPlugin(BeetsPlugin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.client: RequestsHandler = self._requests_handler(self._log)
+        self.client: RequestsHandler = self._requests_handler(USER_AGENT, self._log)
         _prefixed_flex_attributes: FlexibleAttributes = (
             self._flexible_attributes.prefix(self.name)
         )
-        self.album_types: dict[str, types.Integer] = {}
-        self.item_types: dict[str, types.Integer] = {}
+        self.album_types: dict[str, dbcore.types.Integer] = {}
+        self.item_types: dict[str, dbcore.types.Integer] = {}
         field: Attribute[set[str]]
         for field in fields(_prefixed_flex_attributes.__class__):
             prefixed_attributes: str = getattr(_prefixed_flex_attributes, field.name)
@@ -104,7 +111,7 @@ class VocaDBPlugin(BeetsPlugin):
                 self,
                 f"{field.name}_types",
                 {
-                    prefix_attribute: types.INTEGER
+                    prefix_attribute: dbcore.types.INTEGER
                     for prefix_attribute in prefixed_attributes
                 },
             )
@@ -181,7 +188,7 @@ class VocaDBPlugin(BeetsPlugin):
         """Retrieve and apply info from the autotagger for items matched by
         query.
         """
-        item: Item
+        item: library.Item
         for item in lib.items(query + ["singleton:true"]):
             item_formatted: str = format(item)
             track_id: str | None = item.get("mb_trackid")
@@ -242,12 +249,12 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            items: Sequence[Item] = album.items()
-            item: Item
+            items: Sequence[library.Item] = album.items()
+            item: library.Item
             track_index: dict[str, TrackInfo] = {
                 track.track_id: track for track in album_info.tracks if track.track_id
             }
-            mapping: dict[Item, TrackInfo] = {}
+            mapping: dict[library.Item, TrackInfo] = {}
             for item in items:
                 if item.mb_trackid not in track_index:
                     old_track_id: str = item.mb_trackid
@@ -271,7 +278,7 @@ class VocaDBPlugin(BeetsPlugin):
             with lib.transaction():
                 autotag.apply_metadata(album_info, mapping)
                 changed: bool = False
-                any_changed_item: Item = items[0]
+                any_changed_item: library.Item = items[0]
                 for item in items:
                     item_changed: bool = show_model_changes(item)
                     changed |= item_changed
@@ -296,16 +303,16 @@ class VocaDBPlugin(BeetsPlugin):
                         album.move()
 
     @override
-    def track_distance(self, item: Item, info: TrackInfo) -> Distance:
+    def track_distance(self, item: library.Item, info: TrackInfo) -> Distance:
         """Returns the track distance."""
         return get_distance(data_source=self.data_source, info=info, config=self.config)
 
     @override
     def album_distance(
         self,
-        items: Iterable[Item],
+        items: Iterable[library.Item],
         album_info: AlbumInfo,
-        mapping: dict[Item, TrackInfo],
+        mapping: dict[library.Item, TrackInfo],
     ) -> Distance:
         """Returns the album distance."""
         return get_distance(
@@ -315,7 +322,7 @@ class VocaDBPlugin(BeetsPlugin):
     @override
     def candidates(
         self,
-        items: Iterable[Item],
+        items: Iterable[library.Item],
         artist: str,
         album: str,
         va_likely: bool,
@@ -347,7 +354,7 @@ class VocaDBPlugin(BeetsPlugin):
 
     @override
     def item_candidates(
-        self, item: Item, artist: str, title: str
+        self, item: library.Item, artist: str, title: str
     ) -> tuple[TrackInfo, ...]:
         self._log.debug("Searching for track {0}", item)
         item_candidates_container: SongQueryResult | None = self.client._get(
@@ -430,9 +437,7 @@ class VocaDBPlugin(BeetsPlugin):
         )
         return self.track_info(track, search_lang=self.language) if track else None
 
-    def album_info(
-        self, release: Album, search_lang: str | None = None
-    ) -> AlbumInfo:
+    def album_info(self, release: Album, search_lang: str | None = None) -> AlbumInfo:
         if not release.discs:
             release.discs = [
                 Disc(discNumber=i + 1, name="CD", mediaType="Audio")
@@ -854,9 +859,7 @@ class VocaDBPlugin(BeetsPlugin):
         return out_script, out_language, out_lyrics
 
     @staticmethod
-    def get_fallback_lyrics(
-        lyrics: list[Lyrics], language: str | None
-    ) -> str | None:
+    def get_fallback_lyrics(lyrics: list[Lyrics], language: str | None) -> str | None:
         lyric: Lyrics
         if language == "English":
             for lyric in lyrics:

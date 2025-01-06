@@ -1,21 +1,17 @@
 from __future__ import annotations
 
-from logging import Logger
 import weakref
 from cattrs import structure
-from typing_extensions import LiteralString, TypeAlias
+from typing import TYPE_CHECKING
 
 import httpx
 
-from beets import __version__ as beets_version
-
-from .models import APIObjectT
+if TYPE_CHECKING:
+    from logging import Logger
+    from typing_extensions import TypeAlias
+    from .models import APIObjectT
 
 ParamsT: TypeAlias = dict[str, str]
-
-USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
-HEADERS: dict[str, str] = {"accept": "application/json", "User-Agent": USER_AGENT}
-SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
 class RequestsHandler:
@@ -26,9 +22,11 @@ class RequestsHandler:
 
     base_url: str = "https://vocadb.net/"
     api_base_url: str = "https://vocadb.net/api/"
-    user_agent: str = USER_AGENT
 
-    def __init__(self, logger: Logger) -> None:
+    user_agent: str
+
+    def __init__(self, user_agent: str, logger: Logger) -> None:
+        self.user_agent = user_agent
         self._log: Logger = logger
         self.client: httpx.Client = httpx.Client(
             base_url=self.api_base_url,
@@ -39,12 +37,10 @@ class RequestsHandler:
         _ = weakref.finalize(self, self.client.close)
 
     def __init_subclass__(
-        cls, base_url: str, api_url: str, user_agent: str | None = None
+        cls, base_url: str, api_url: str
     ) -> None:
         cls.base_url = base_url
         cls.api_base_url = api_url
-        if user_agent:
-            cls.user_agent = user_agent
 
     def _get(
         self, relative_path: str, params: ParamsT, cl: type[APIObjectT]

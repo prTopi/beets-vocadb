@@ -1,5 +1,7 @@
 """Things related to configuration management"""
 
+from __future__ import annotations
+
 from attrs import asdict, define
 from confuse.core import Subview
 
@@ -15,8 +17,8 @@ class InstanceConfig:
 
     @classmethod
     def from_config_subview(
-        cls, config: Subview, default: "InstanceConfig | None" = None
-    ) -> "InstanceConfig":
+        cls, config: Subview, default: InstanceConfig | None = None
+    ) -> InstanceConfig:
         """Creates an InstanceConfig from a configuration subview.
 
         Args:
