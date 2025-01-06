@@ -1,8 +1,9 @@
 """Attrs classes related to API requests"""
-
-from typing import Optional, TypeVar
+from __future__ import annotations
 
 from attrs import define
+
+from typing import TypeVar
 
 
 @define
@@ -14,7 +15,7 @@ class Artist:
     name: str
     status: str
     version: int
-    pictureMime: Optional[str] = None
+    pictureMime: str | None = None
 
 
 @define(kw_only=True)
@@ -24,7 +25,7 @@ class AlbumArtist:
     isSupport: bool
     name: str
     roles: str
-    artist: Optional[Artist] = None
+    artist: Artist | None = None
 
 
 @define
@@ -36,10 +37,10 @@ class SongArtist(AlbumArtist):
 @define
 class Tag:
     name: str
-    additionalNames: Optional[str] = None
-    categoryName: Optional[str] = None
-    id: Optional[int] = None
-    urlSlug: Optional[str] = None
+    additionalNames: str | None = None
+    categoryName: str | None = None
+    id: int | None = None
+    urlSlug: str | None = None
 
 
 @define
@@ -66,26 +67,26 @@ class Lyrics:
     translationType: str
     value: str
     cultureCodes: list[str]
-    id: Optional[int] = None
-    source: Optional[str] = None
-    url: Optional[str] = None
+    id: int | None = None
+    source: str | None = None
+    url: str | None = None
 
 
 @define
 class Disc:
     discNumber: int
     mediaType: str
-    id: Optional[int] = None
-    name: Optional[str] = None
-    total: Optional[int] = None
+    id: int | None = None
+    name: str | None = None
+    total: int | None = None
 
 
 @define
 class ReleaseDate:
     isEmpty: bool
-    day: Optional[int] = None
-    month: Optional[int] = None
-    year: Optional[int] = None
+    day: int | None = None
+    month: int | None = None
+    year: int | None = None
 
 
 @define
@@ -100,9 +101,9 @@ class Song(AlbumOrSong):
     songType: str
     tags: list[TagUsage]
     version: int
-    maxMilliBpm: Optional[int] = None
-    minMilliBpm: Optional[int] = None
-    publishDate: Optional[str] = None
+    maxMilliBpm: int | None = None
+    minMilliBpm: int | None = None
+    publishDate: str | None = None
 
 
 @define
@@ -110,9 +111,9 @@ class SongInAlbum:
     discNumber: int
     trackNumber: int
     computedCultureCodes: list[str]
-    id: Optional[int] = None
-    name: Optional[str] = None
-    song: Optional[Song] = None
+    id: int | None = None
+    name: str | None = None
+    song: Song | None = None
 
 
 @define
@@ -121,8 +122,8 @@ class WebLink:
     description: str
     disabled: bool
     url: str
-    descriptionOrUrl: Optional[str] = None
-    id: Optional[int] = None
+    descriptionOrUrl: str | None = None
+    id: int | None = None
 
 
 @define
@@ -138,7 +139,7 @@ class Album(AlbumFromQuery):
     tracks: list[SongInAlbum]
     webLinks: list[WebLink]
     discs: list[Disc]
-    catalogNumber: Optional[str] = None
+    catalogNumber: str | None = None
 
 
 @define

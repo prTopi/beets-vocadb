@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 from logging import Logger
 import weakref
 from cattrs import structure
-from typing import Optional
 from typing_extensions import LiteralString, TypeAlias
 
 import httpx
@@ -38,7 +39,7 @@ class RequestsHandler:
         _ = weakref.finalize(self, self.client.close)
 
     def __init_subclass__(
-        cls, base_url: str, api_url: str, user_agent: Optional[str] = None
+        cls, base_url: str, api_url: str, user_agent: str | None = None
     ) -> None:
         cls.base_url = base_url
         cls.api_base_url = api_url
@@ -47,7 +48,7 @@ class RequestsHandler:
 
     def _get(
         self, relative_path: str, params: ParamsT, cl: type[APIObjectT]
-    ) -> Optional[APIObjectT]:
+    ) -> APIObjectT | None:
         """Makes a GET request to the API and returns structured response data.
 
         Args:
