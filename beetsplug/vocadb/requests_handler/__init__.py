@@ -65,6 +65,8 @@ class RequestsHandler:
             return structure(response.json(), cl=cl)
 
         except httpx.HTTPError as e:
-            self._log.error("Error fetching data from {}\n - {}", e.request.url, e)
+            self._log.error("Error fetching data - {}", e)
 
         return None
+
+    # TODO: more specific methods with better error handling
