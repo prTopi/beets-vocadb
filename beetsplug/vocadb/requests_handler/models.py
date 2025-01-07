@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from attrs import define
+import msgspec
 
-from typing import Optional, TypeVar
+from typing import Optional
 
 
-@define
-class Artist:
+class Artist(msgspec.Struct):
     additionalNames: str
     artistType: str
     deleted: bool
@@ -19,8 +18,7 @@ class Artist:
     pictureMime: Optional[str] = None
 
 
-@define(kw_only=True)
-class AlbumArtist:
+class AlbumArtist(msgspec.Struct, kw_only=True):
     categories: str
     effectiveRoles: str
     isSupport: bool
@@ -29,14 +27,12 @@ class AlbumArtist:
     artist: Optional[Artist] = None
 
 
-@define
 class SongArtist(AlbumArtist):
     id: int
     isCustomName: bool
 
 
-@define
-class Tag:
+class Tag(msgspec.Struct):
     name: str
     additionalNames: Optional[str] = None
     categoryName: Optional[str] = None
@@ -44,14 +40,12 @@ class Tag:
     urlSlug: Optional[str] = None
 
 
-@define
-class TagUsage:
+class TagUsage(msgspec.Struct):
     count: int
     tag: Tag
 
 
-@define
-class AlbumOrSong:
+class AlbumOrSong(msgspec.Struct):
     """Base class with attributes shared by Album and Song"""
 
     artistString: str
@@ -63,8 +57,7 @@ class AlbumOrSong:
     status: str
 
 
-@define
-class Lyrics:
+class Lyrics(msgspec.Struct):
     translationType: str
     value: str
     cultureCodes: list[str]
@@ -73,8 +66,7 @@ class Lyrics:
     url: Optional[str] = None
 
 
-@define
-class Disc:
+class Disc(msgspec.Struct):
     discNumber: int
     mediaType: str
     id: Optional[int] = None
@@ -82,15 +74,13 @@ class Disc:
     total: Optional[int] = None
 
 
-@define
-class ReleaseDate:
+class ReleaseDate(msgspec.Struct):
     isEmpty: bool
     day: Optional[int] = None
     month: Optional[int] = None
     year: Optional[int] = None
 
 
-@define
 class Song(AlbumOrSong):
     artists: list[SongArtist]
     cultureCodes: list[str]
@@ -107,8 +97,7 @@ class Song(AlbumOrSong):
     publishDate: Optional[str] = None
 
 
-@define
-class SongInAlbum:
+class SongInAlbum(msgspec.Struct):
     discNumber: int
     trackNumber: int
     computedCultureCodes: list[str]
@@ -117,8 +106,7 @@ class SongInAlbum:
     song: Optional[Song] = None
 
 
-@define
-class WebLink:
+class WebLink(msgspec.Struct):
     category: str
     description: str
     disabled: bool
@@ -127,13 +115,11 @@ class WebLink:
     id: Optional[int] = None
 
 
-@define
 class AlbumFromQuery(AlbumOrSong):
     releaseDate: ReleaseDate
     discType: str
 
 
-@define
 class Album(AlbumFromQuery):
     artists: list[AlbumArtist]
     tags: list[TagUsage]
@@ -143,20 +129,14 @@ class Album(AlbumFromQuery):
     catalogNumber: Optional[str] = None
 
 
-@define
-class BaseQueryResult:
+class BaseQueryResult(msgspec.Struct):
     term: str
     totalCount: int
 
 
-@define
 class SongQueryResult(BaseQueryResult):
     items: list[Song]
 
 
-@define
 class AlbumQueryResult(BaseQueryResult):
     items: list[AlbumFromQuery]
-
-
-APIObjectT = TypeVar("APIObjectT", Album, AlbumQueryResult, Song, SongQueryResult)

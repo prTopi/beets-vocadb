@@ -20,10 +20,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "attrs",
-    "cattrs",
     "beets",
     "httpx[http2]",
+    "msgspec",
     "typing_extensions; python_version < '3.12'",
 ]
 

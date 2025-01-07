@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from attrs import asdict, define
-from confuse.core import Subview
+import msgspec
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from confuse.core import Subview
 
 
-@define
-class InstanceConfig:
+class InstanceConfig(msgspec.Struct):
     """Stores the configuration of the plugin conveniently"""
 
     prefer_romaji: bool = False
@@ -31,7 +33,7 @@ class InstanceConfig:
             falling back to defaults when values are missing.
         """
 
-        config.add(asdict(default or cls()))
+        config.add(msgspec.structs.asdict(default or cls()))
 
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),

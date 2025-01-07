@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from cattrs import structure
+import msgspec
 
 from beetsplug.vocadb import VocaDBPlugin
 from beetsplug.vocadb.requests_handler.models import Lyrics, TagUsage
@@ -17,57 +17,57 @@ class TestVocaDBPlugin(TestCase):
     def test_get_genres(self) -> None:
         tags: list[TagUsage] = []
         self.assertEqual(self.plugin.get_genres(tags), None)
-        tags = structure(
-            [
+        tags = msgspec.json.decode(
+            b"""[
                 {
                     "count": 0,
                     "tag": {
                         "categoryName": "Genres",
-                        "name": "genre1",
-                    },
-                },
-            ],
-            list[TagUsage],
+                        "name": "genre1"
+                    }
+                }
+            ]""",
+            type=list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre1")
-        tags = structure(
-            [
+        tags = msgspec.json.decode(
+            b"""[
                 {
                     "count": 2,
                     "tag": {
                         "categoryName": "Genres",
-                        "name": "genre1",
-                    },
+                        "name": "genre1"
+                    }
                 },
                 {
                     "count": 1,
                     "tag": {
                         "categoryName": "Genres",
-                        "name": "genre2",
-                    },
-                },
-            ],
-            list[TagUsage],
+                        "name": "genre2"
+                    }
+                }
+            ]""",
+            type=list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre1; Genre2")
-        tags = structure(
-            [
+        tags = msgspec.json.decode(
+            b"""[
                 {
                     "count": 2,
                     "tag": {
                         "categoryName": "Vocalists",
-                        "name": "genre1",
-                    },
+                        "name": "genre1"
+                    }
                 },
                 {
                     "count": 1,
                     "tag": {
                         "categoryName": "Genres",
-                        "name": "genre2",
-                    },
-                },
-            ],
-            list[TagUsage],
+                        "name": "genre2"
+                    }
+                }
+            ]""",
+            type=list[TagUsage],
         )
         self.assertEqual(self.plugin.get_genres(tags), "Genre2")
 
@@ -85,12 +85,12 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(self.plugin.get_lang(), "English")
 
     def test_get_lyrics(self) -> None:
-        lyrics: list[Lyrics] = structure(
-            [
+        lyrics: list[Lyrics] = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Original",
-                    "value": "lyrics1",
+                    "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
@@ -98,15 +98,15 @@ class TestVocaDBPlugin(TestCase):
                     "source": "FooBar",
                     "translationType": "Translation",
                     "url": "https://foo.bar",
-                    "value": "lyrics2",
+                    "value": "lyrics2"
                 },
                 {
                     "cultureCodes": [""],
                     "translationType": "Romanized",
-                    "value": "lyrics3",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics3"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "Japanese"), ("Jpan", "jpn", "lyrics1")
@@ -120,20 +120,20 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, None), ("Jpan", "jpn", "lyrics1")
         )
-        lyrics = structure(
-            [
+        lyrics = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Translation",
-                    "value": "lyrics1",
+                    "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
                     "translationType": "Original",
-                    "value": "lyrics2",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics2"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "Japanese"), ("Latn", "eng", "lyrics1")
@@ -141,40 +141,40 @@ class TestVocaDBPlugin(TestCase):
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "English"), ("Latn", "eng", "lyrics2")
         )
-        lyrics = structure(
-            [
+        lyrics = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Original",
-                    "value": "lyrics1",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics1"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics1")
         )
 
     def test_get_fallback_lyrics(self) -> None:
-        lyrics: list[Lyrics] = structure(
-            [
+        lyrics: list[Lyrics] = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Original",
-                    "value": "lyrics1",
+                    "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
                     "translationType": "Translation",
-                    "value": "lyrics2",
+                    "value": "lyrics2"
                 },
                 {
                     "cultureCodes": [""],
                     "translationType": "Romanized",
-                    "value": "lyrics3",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics3"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "Japanese"),
@@ -189,20 +189,20 @@ class TestVocaDBPlugin(TestCase):
             "lyrics3",
         )
         self.assertEqual(self.plugin.get_fallback_lyrics(lyrics, None), "lyrics1")
-        lyrics = structure(
-            [
+        lyrics = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Translation",
-                    "value": "lyrics1",
+                    "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
                     "translationType": "Original",
-                    "value": "lyrics2",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics2"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "Japanese"),
@@ -212,15 +212,15 @@ class TestVocaDBPlugin(TestCase):
             self.plugin.get_fallback_lyrics(lyrics, "English"),
             "lyrics2",
         )
-        lyrics = structure(
-            [
+        lyrics = msgspec.json.decode(
+            b"""[
                 {
                     "cultureCodes": ["ja"],
                     "translationType": "Original",
-                    "value": "lyrics1",
-                },
-            ],
-            list[Lyrics],
+                    "value": "lyrics1"
+                }
+            ]""",
+            type=list[Lyrics],
         )
         self.assertEqual(
             self.plugin.get_fallback_lyrics(lyrics, "English"),

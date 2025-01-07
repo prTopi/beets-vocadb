@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from collections import OrderedDict
 from datetime import datetime
 from itertools import chain
 from re import match, search
 from sys import version_info
 from typing import TYPE_CHECKING
 
-from attrs import Factory, define, fields
+import msgspec
 
 if version_info >= (3, 12):
     from typing import override
@@ -23,14 +24,19 @@ from beets.ui import Subcommand, show_model_changes
 
 from .plugin_config import InstanceConfig
 from .requests_handler import RequestsHandler
-from .requests_handler.models import Album, AlbumQueryResult, Disc, Song, SongQueryResult
+from .requests_handler.models import (
+    Album,
+    AlbumQueryResult,
+    Disc,
+    Song,
+    SongQueryResult,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from optparse import Values
     from re import Match
 
-    from attrs import Attribute
     from beets.autotag.hooks import Distance
     from beets.library import Library
     from typing_extensions import LiteralString, TypeAlias
@@ -56,30 +62,35 @@ USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
-@define
-class FlexibleAttributes:
+class FlexibleAttributes(msgspec.Struct):
     album: frozenset[str]
     item: frozenset[str]
 
-    def prefix(self, prefix: str) -> "FlexibleAttributes":
-        prefixed_attributes: dict[str, frozenset[str]] = {}
-        field: Attribute[frozenset[str]]
-        for field in fields(self.__class__):
-            attributes: frozenset[str] = getattr(self, field.name)
-            prefixed_attributes[field.name] = frozenset(
-                f"{prefix}_{attribute}" for attribute in attributes
-            )
-        return FlexibleAttributes(**prefixed_attributes)
+    def with_prefix(self, prefix: str) -> "FlexibleAttributes":
+        """Add prefix to all attributes in each field.
+
+        Args:
+            prefix: String prefix to add to attribute names
+
+        Returns:
+            New FlexibleAttributes instance with prefixed attributes
+        """
+
+        def add_prefix(attrs: frozenset[str]):
+            return frozenset(f"{prefix}_{attr}" for attr in attrs)
+
+        return FlexibleAttributes(
+            album=add_prefix(self.album), item=add_prefix(self.item)
+        )
 
 
-@define
-class ArtistsByCategories:
-    producers: dict[str, str] = Factory(dict)
-    circles: dict[str, str] = Factory(dict)
-    vocalists: dict[str, str] = Factory(dict)
-    arrangers: dict[str, str] = Factory(dict)
-    composers: dict[str, str] = Factory(dict)
-    lyricists: dict[str, str] = Factory(dict)
+class ArtistsByCategories(msgspec.Struct):
+    producers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    circles: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    vocalists: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    arrangers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    composers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    lyricists: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
 
 
 class VocaDBPlugin(BeetsPlugin):
@@ -100,21 +111,16 @@ class VocaDBPlugin(BeetsPlugin):
         super().__init__()
         self.client: RequestsHandler = self._requests_handler(USER_AGENT, self._log)
         _prefixed_flex_attributes: FlexibleAttributes = (
-            self._flexible_attributes.prefix(self.name)
+            self._flexible_attributes.with_prefix(self.name)
         )
-        self.album_types: dict[str, dbcore.types.Integer] = {}
-        self.item_types: dict[str, dbcore.types.Integer] = {}
-        field: Attribute[set[str]]
-        for field in fields(_prefixed_flex_attributes.__class__):
-            prefixed_attributes: str = getattr(_prefixed_flex_attributes, field.name)
-            setattr(
-                self,
-                f"{field.name}_types",
-                {
-                    prefix_attribute: dbcore.types.INTEGER
-                    for prefix_attribute in prefixed_attributes
-                },
-            )
+        self.album_types: dict[str, dbcore.types.Integer] = {
+            prefix_attribute: dbcore.types.INTEGER
+            for prefix_attribute in _prefixed_flex_attributes.album
+        }
+        self.item_types: dict[str, dbcore.types.Integer] = {
+            prefix_attribute: dbcore.types.INTEGER
+            for prefix_attribute in _prefixed_flex_attributes.item
+        }
         self.config.add(
             {
                 "source_weight": 0.5,
@@ -256,7 +262,9 @@ class VocaDBPlugin(BeetsPlugin):
             }
             mapping: dict[library.Item, TrackInfo] = {}
             for item in items:
-                if item.mb_trackid not in track_index:
+                try:
+                    mapping[item] = track_index[item.mb_trackid]
+                except IndexError:
                     old_track_id: str = item.mb_trackid
                     # Unset track id so that it won't affect distance
                     item.mb_trackid = None
@@ -272,7 +280,6 @@ class VocaDBPlugin(BeetsPlugin):
                         album_formatted,
                         item.mb_trackid,
                     )
-                mapping[item] = track_index[item.mb_trackid]
 
             self._log.debug("applying changes to {0}", album_formatted)
             with lib.transaction():
@@ -336,7 +343,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "maxResults": str(self.instance_config.max_results),
                 "nameMatchMode": "Auto",
             },
-            cl=AlbumQueryResult,
+            type=AlbumQueryResult,
         )
         if candidates_container:
             candidates: list[AlbumFromQuery] = candidates_container.items
@@ -369,7 +376,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "preferAccurateMatches": "True",
                 "sort": "SongType",
             },
-            cl=SongQueryResult,
+            type=SongQueryResult,
         )
         if item_candidates_container:
             items: list[Song] = item_candidates_container.items
@@ -413,7 +420,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "fields": "Artists,Discs,Tags,Tracks,WebLinks",
                 "songFields": SONG_FIELDS,
             },
-            cl=Album,
+            type=Album,
         )
         return self.album_info(album, search_lang=self.language) if album else None
 
@@ -433,7 +440,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "lang": self.language,
                 "fields": SONG_FIELDS,
             },
-            cl=Song,
+            type=Song,
         )
         return self.track_info(track, search_lang=self.language) if track else None
 
@@ -474,36 +481,11 @@ class VocaDBPlugin(BeetsPlugin):
         )
         if artist == config["va_name"].as_str():
             va = True
-        # for membership checks in constant time
-        artists_set: set[str] = set()
-        artists_ids_set: set[str] = set()
-        artists: list[str] = []
-        artists_ids: list[str] = []
-        field: Attribute[dict[str, str]]
-        for field in fields(artist_categories.__class__):
-            category: dict[str, str] = getattr(artist_categories, field.name)
-            keys: list[str] = list(category.keys())
-            values: list[str] = list(category.values())
 
-            # Filter keys and values before updating the sets
-            new_artists: list[str] = list(
-                filter(lambda artist: artist not in artists_set, keys)
-            )
-            new_artists_ids: list[str] = list(
-                filter(lambda artist_id: artist_id not in artists_ids_set, values)
-            )
+        artists, artists_ids, artist_id = self.extract_artists_from_categories(
+            artist_categories
+        )
 
-            artists.extend(new_artists)
-            artists_ids.extend(new_artists_ids)
-
-            # Update the sets after filtering
-            artists_set.update(new_artists)
-            artists_ids_set.update(new_artists_ids)
-        artist_id: str | None
-        try:
-            artist_id = artists_ids[0]
-        except IndexError:
-            artist_id = None
         tracks: list[TrackInfo]
         script: str | None
         language: str | None
@@ -597,37 +579,11 @@ class VocaDBPlugin(BeetsPlugin):
         artist_categories: ArtistsByCategories
         artist: str
         artist_categories, artist = self.get_artists(recording.artists)
-        # for membership checks in constant time
-        artists_set: set[str] = set()
-        artists_ids_set: set[str] = set()
-        artists: list[str] = []
-        artists_ids: list[str] = []
-        field: Attribute[dict[str, str]]
-        category: dict[str, str]
-        for field in fields(artist_categories.__class__):
-            category = getattr(artist_categories, field.name)
-            keys: list[str] = list(category.keys())
-            values: list[str] = list(category.values())
 
-            # Filter keys and values before updating the sets
-            new_artists: list[str] = list(
-                filter(lambda artist: artist not in artists_set, keys)
-            )
-            new_artists_ids: list[str] = list(
-                filter(lambda artist_id: artist_id not in artists_ids_set, values)
-            )
+        artists, artists_ids, artist_id = self.extract_artists_from_categories(
+            artist_categories
+        )
 
-            artists.extend(new_artists)
-            artists_ids.extend(new_artists_ids)
-
-            # Update the sets after filtering
-            artists_set.update(new_artists)
-            artists_ids_set.update(new_artists_ids)
-        artist_id: str | None
-        try:
-            artist_id = artists_ids[0]
-        except IndexError:
-            artist_id = None
         arranger: str = ", ".join(artist_categories.arrangers)
         composer: str = ", ".join(artist_categories.composers)
         lyricist: str = ", ".join(artist_categories.lyricists)
@@ -769,6 +725,20 @@ class VocaDBPlugin(BeetsPlugin):
     def get_artists_by_categories(
         artists: SongOrAlbumArtists,
     ) -> tuple[ArtistsByCategories, set[str]]:
+        """Categorizes artists by their roles and identifies support artists.
+
+        Takes a list of artists and organizes them into categories like producers,
+        circles, vocalists, etc. based on their roles and categories. Also identifies
+        which artists are marked as support artists.
+
+        Args:
+            artists: List of either AlbumArtist or SongArtist objects to categorize
+
+        Returns:
+            Tuple containing:
+            - ArtistsByCategories object with artists sorted into role categories
+            - Set of artist names that are marked as support artists
+        """
         artists_by_categories: ArtistsByCategories = ArtistsByCategories()
         support_artists: set[str] = set()
         artist: AlbumArtist | SongArtist
@@ -807,6 +777,42 @@ class VocaDBPlugin(BeetsPlugin):
         if not artists_by_categories.lyricists:
             artists_by_categories.lyricists = artists_by_categories.producers
         return artists_by_categories, support_artists
+
+    def extract_artists_from_categories(
+        self, artist_categories: ArtistsByCategories
+    ) -> tuple[list[str], list[str], str | None]:
+        """
+        Extracts relevant artists and their IDs.
+
+        Args:
+            artist_categories: ArtistsByCategories object containing categorized artists
+
+        Returns:
+            Tuple containing:
+            - List of unique artist names in order of first appearance
+            - List of corresponding artist IDs in same order as artist names
+            - First artist ID from the list or None if no artists exist
+        """
+
+        category: dict[str, str]
+        artists_dict: OrderedDict[str, str] = OrderedDict()
+
+        for category in msgspec.structs.astuple(artist_categories):
+            # Merge each category's artists into the OrderedDict while preserving order
+            # and preventing duplicates
+            artists_dict |= category
+
+        # Convert OrderedDict to separate lists of artists and IDs
+        artists: list[str] = list(artists_dict.keys())
+        artists_ids: list[str] = list(artists_dict.values())
+
+        artist_id: str | None
+        try:
+            artist_id = artists_ids[0]
+        except IndexError:
+            artist_id = None
+
+        return artists, artists_ids, artist_id
 
     @staticmethod
     def get_genres(tags: list[TagUsage]) -> str | None:
