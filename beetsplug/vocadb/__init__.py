@@ -447,15 +447,15 @@ class VocaDBPlugin(BeetsPlugin):
     def album_info(self, release: Album, search_lang: str | None = None) -> AlbumInfo:
         if not release.discs:
             release.discs = [
-                Disc(discNumber=i + 1, name="CD", mediaType="Audio")
-                for i in range(max(track.discNumber for track in release.tracks))
+                Disc(disc_number=i + 1, name="CD", media_type="Audio")
+                for i in range(max(track.disc_number for track in release.tracks))
             ]
         ignored_discs: set[int] = set()
         disc: Disc
         for disc in release.discs:
-            disc_number: int = disc.discNumber
+            disc_number: int = disc.disc_number
             if (
-                disc.mediaType == "Video"
+                disc.media_type == "Video"
                 and config["match"]["ignore_video_tracks"].get(bool)
                 or not release.tracks
             ):
@@ -463,13 +463,13 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 disc.total = max(
                     {
-                        track.trackNumber
+                        track.track_number
                         for track in release.tracks
-                        if track.discNumber == disc_number
+                        if track.disc_number == disc_number
                     }
                 )
 
-        va: bool = release.discType == "Compilation"
+        va: bool = release.disc_type == "Compilation"
         album: str | None = release.name
         album_id: str | None = str(release.id)
         artist_categories: ArtistsByCategories
@@ -497,7 +497,7 @@ class VocaDBPlugin(BeetsPlugin):
         )
         weblink: WebLink
         asin: str | None = None
-        for weblink in release.webLinks:
+        for weblink in release.web_links:
             if not weblink.disabled and match(
                 "Amazon( \\((LE|RE|JP|US)\\).*)?$", weblink.description
             ):
@@ -507,16 +507,16 @@ class VocaDBPlugin(BeetsPlugin):
                 if asin_match:
                     asin = asin_match[1]
                     break
-        albumtype: str | None = release.discType
+        albumtype: str | None = release.disc_type
         albumtypes: list[str] | None = None
         if albumtype:
             albumtype = albumtype.lower()
             albumtypes = [albumtype]
-        date: ReleaseDate | None = release.releaseDate
+        date: ReleaseDate | None = release.release_date
         year: int | None
         month: int | None
         day: int | None
-        if date and not date.isEmpty:
+        if date and not date.is_empty:
             year = date.year
             month = date.month
             day = date.day
@@ -530,7 +530,7 @@ class VocaDBPlugin(BeetsPlugin):
                 break
         discs: Sequence[Disc] = release.discs
         mediums: int = len(discs)
-        catalognum: str | None = release.catalogNumber
+        catalognum: str | None = release.catalog_number
         genre: str | None = self.get_genres(release.tags)
         media: str | None
         try:
@@ -587,9 +587,9 @@ class VocaDBPlugin(BeetsPlugin):
         arranger: str = ", ".join(artist_categories.arrangers)
         composer: str = ", ".join(artist_categories.composers)
         lyricist: str = ", ".join(artist_categories.lyricists)
-        length: float = recording.lengthSeconds
+        length: float = recording.length_seconds
         data_url: str = urljoin(self.client.base_url, f"S/{track_id}")
-        max_milli_bpm: int | None = recording.maxMilliBpm
+        max_milli_bpm: int | None = recording.max_milli_bpm
         bpm: str | None = str(max_milli_bpm // 1000) if max_milli_bpm else None
         genre: str | None = self.get_genres(recording.tags)
         script: str | None
@@ -602,8 +602,8 @@ class VocaDBPlugin(BeetsPlugin):
         original_day: int | None = None
         original_month: int | None = None
         original_year: int | None = None
-        if recording.publishDate:
-            date: datetime = datetime.fromisoformat(recording.publishDate[:-1])
+        if recording.publish_date:
+            date: datetime = datetime.fromisoformat(recording.publish_date[:-1])
             original_day = date.day
             original_month = date.month
             original_year = date.year
@@ -649,7 +649,7 @@ class VocaDBPlugin(BeetsPlugin):
         index: int
         track: SongInAlbum
         for index, track in enumerate(tracks):
-            disc_number: int | None = track.discNumber
+            disc_number: int | None = track.disc_number
             if disc_number in ignored_discs or not track.song:
                 continue
             format: str | None = discs[disc_number - 1].name
@@ -659,7 +659,7 @@ class VocaDBPlugin(BeetsPlugin):
                 index=index + 1,
                 media=format,
                 medium=disc_number,
-                medium_index=track.trackNumber,
+                medium_index=track.track_number,
                 medium_total=total,
                 search_lang=search_lang,
             )
@@ -752,19 +752,19 @@ class VocaDBPlugin(BeetsPlugin):
             else:
                 name = artist.name
                 id = ""
-            if artist.isSupport:
+            if artist.is_support:
                 support_artists.add(name)
             if "Producer" in artist.categories or "Band" in artist.categories:
-                if "Default" in artist.effectiveRoles:
-                    artist.effectiveRoles += ",Arranger,Composer,Lyricist"
+                if "Default" in artist.effective_roles:
+                    artist.effective_roles += ",Arranger,Composer,Lyricist"
                 artists_by_categories.producers[name] = id
             if "Circle" in artist.categories:
                 artists_by_categories.circles[name] = id
-            if "Arranger" in artist.effectiveRoles:
+            if "Arranger" in artist.effective_roles:
                 artists_by_categories.arrangers[name] = id
-            if "Composer" in artist.effectiveRoles:
+            if "Composer" in artist.effective_roles:
                 artists_by_categories.composers[name] = id
-            if "Lyricist" in artist.effectiveRoles:
+            if "Lyricist" in artist.effective_roles:
                 artists_by_categories.lyricists[name] = id
             if "Vocalist" in artist.categories:
                 artists_by_categories.vocalists[name] = id
@@ -820,7 +820,7 @@ class VocaDBPlugin(BeetsPlugin):
         tag_usage: TagUsage
         for tag_usage in sorted(tags, reverse=True, key=lambda x: x.count):
             tag: Tag = tag_usage.tag
-            if tag.categoryName == "Genres":
+            if tag.category_name == "Genres":
                 tag_name: str | None = tag.name
                 if tag_name:
                     genres.append(tag_name.title())
@@ -838,9 +838,9 @@ class VocaDBPlugin(BeetsPlugin):
         out_lyrics: str | None = None
         lyric: Lyrics
         for lyric in lyrics:
-            translation_type: str = lyric.translationType
+            translation_type: str = lyric.translation_type
             value: str = lyric.value
-            culture_codes: set[str] = set(lyric.cultureCodes) & {"en", "ja"}
+            culture_codes: set[str] = set(lyric.culture_codes) & {"en", "ja"}
             if culture_codes:
                 if "en" in culture_codes:
                     if translation_type == "Original":
@@ -869,11 +869,11 @@ class VocaDBPlugin(BeetsPlugin):
         lyric: Lyrics
         if language == "English":
             for lyric in lyrics:
-                if "en" in lyric.cultureCodes:
+                if "en" in lyric.culture_codes:
                     return lyric.value
             language = "Romaji"
         if language == "Romaji":
             for lyric in lyrics:
-                if lyric.translationType == "Romanized":
+                if lyric.translation_type == "Romanized":
                     return lyric.value
         return lyrics[0].value if lyrics else None

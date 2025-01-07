@@ -6,22 +6,23 @@ import msgspec
 
 from typing import Optional
 
+class TaggedBase(msgspec.Struct, rename="camel"): ...
 
-class Artist(msgspec.Struct):
-    additionalNames: str
-    artistType: str
+class Artist(TaggedBase):
+    additional_names: str
+    artist_type: str
     deleted: bool
     id: int
     name: str
     status: str
     version: int
-    pictureMime: Optional[str] = None
+    picture_mime: Optional[str] = None
 
 
-class AlbumArtist(msgspec.Struct, kw_only=True):
+class AlbumArtist(TaggedBase, kw_only=True):
     categories: str
-    effectiveRoles: str
-    isSupport: bool
+    effective_roles: str
+    is_support: bool
     name: str
     roles: str
     artist: Optional[Artist] = None
@@ -29,53 +30,53 @@ class AlbumArtist(msgspec.Struct, kw_only=True):
 
 class SongArtist(AlbumArtist):
     id: int
-    isCustomName: bool
+    is_custom_name: bool
 
 
-class Tag(msgspec.Struct):
+class Tag(TaggedBase):
     name: str
-    additionalNames: Optional[str] = None
-    categoryName: Optional[str] = None
+    additional_names: Optional[str] = None
+    category_name: Optional[str] = None
     id: Optional[int] = None
-    urlSlug: Optional[str] = None
+    url_slug: Optional[str] = None
 
 
-class TagUsage(msgspec.Struct):
+class TagUsage(TaggedBase):
     count: int
     tag: Tag
 
 
-class AlbumOrSong(msgspec.Struct):
+class AlbumOrSong(TaggedBase):
     """Base class with attributes shared by Album and Song"""
 
-    artistString: str
-    createDate: str
-    defaultName: str
-    defaultNameLanguage: str
+    artist_string: str
+    create_date: str
+    default_name: str
+    default_name_language: str
     id: int
     name: str
     status: str
 
 
-class Lyrics(msgspec.Struct):
-    translationType: str
+class Lyrics(TaggedBase):
+    translation_type: str
     value: str
-    cultureCodes: list[str]
+    culture_codes: list[str]
     id: Optional[int] = None
     source: Optional[str] = None
     url: Optional[str] = None
 
 
-class Disc(msgspec.Struct):
-    discNumber: int
-    mediaType: str
+class Disc(TaggedBase):
+    disc_number: int
+    media_type: str
     id: Optional[int] = None
     name: Optional[str] = None
     total: Optional[int] = None
 
 
-class ReleaseDate(msgspec.Struct):
-    isEmpty: bool
+class ReleaseDate(TaggedBase):
+    is_empty: bool
     day: Optional[int] = None
     month: Optional[int] = None
     year: Optional[int] = None
@@ -83,55 +84,55 @@ class ReleaseDate(msgspec.Struct):
 
 class Song(AlbumOrSong):
     artists: list[SongArtist]
-    cultureCodes: list[str]
-    favoritedTimes: int
-    lengthSeconds: float
+    culture_codes: list[str]
+    favorited_times: int
+    length_seconds: float
     lyrics: list[Lyrics]
-    pvServices: str
-    ratingScore: int
-    songType: str
+    pv_services: str
+    rating_score: int
+    song_type: str
     tags: list[TagUsage]
     version: int
-    maxMilliBpm: Optional[int] = None
-    minMilliBpm: Optional[int] = None
-    publishDate: Optional[str] = None
+    max_milli_bpm: Optional[int] = None
+    min_milli_bpm: Optional[int] = None
+    publish_date: Optional[str] = None
 
 
-class SongInAlbum(msgspec.Struct):
-    discNumber: int
-    trackNumber: int
-    computedCultureCodes: list[str]
+class SongInAlbum(TaggedBase):
+    disc_number: int
+    track_number: int
+    computed_culture_codes: list[str]
     id: Optional[int] = None
     name: Optional[str] = None
     song: Optional[Song] = None
 
 
-class WebLink(msgspec.Struct):
+class WebLink(TaggedBase):
     category: str
     description: str
     disabled: bool
     url: str
-    descriptionOrUrl: Optional[str] = None
+    description_or_url: Optional[str] = None
     id: Optional[int] = None
 
 
 class AlbumFromQuery(AlbumOrSong):
-    releaseDate: ReleaseDate
-    discType: str
+    release_date: ReleaseDate
+    disc_type: str
 
 
 class Album(AlbumFromQuery):
     artists: list[AlbumArtist]
     tags: list[TagUsage]
     tracks: list[SongInAlbum]
-    webLinks: list[WebLink]
+    web_links: list[WebLink]
     discs: list[Disc]
-    catalogNumber: Optional[str] = None
+    catalog_number: Optional[str] = None
 
 
-class BaseQueryResult(msgspec.Struct):
+class BaseQueryResult(TaggedBase):
     term: str
-    totalCount: int
+    total_count: int
 
 
 class SongQueryResult(BaseQueryResult):
