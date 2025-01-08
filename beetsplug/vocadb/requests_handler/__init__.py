@@ -9,9 +9,10 @@ import httpx
 import msgspec
 
 if not sys.version_info < (3, 11):
-    from enum import StrEnum
+    from enum import StrEnum  # pyright: ignore[reportUnreachable]
 else:
     from enum import Enum
+
     class StrEnum(str, Enum):
         pass
 
@@ -25,24 +26,13 @@ APIObjectT = TypeVar("APIObjectT", bound=msgspec.Struct)
 ParamsT: TypeAlias = dict[str, str]
 
 
-def dec_hook(type: type, obj: object) -> object:
-    if type is StrEnum and isinstance(obj, str):
-        if not obj:
-            return []
-        return [StrEnum(val.strip()) for val in obj.split(",") if val.strip()]
-    else:
-        # Raise a NotImplementedError for other types
-        raise NotImplementedError(f"Objects of type {type} are not supported")
-
-
 class RequestsHandler:
     """
     An interface to the VocaDB API.
     Can be subclassed to use a different instance.
     """
 
-    base_url: str = "https://vocadb.net/"
-    api_base_url: str = "https://vocadb.net/api/"
+    base_url: str = "https://vocadb.net/api/"
 
     _decoders: ClassVar[
         dict[type[msgspec.Struct], msgspec.json.Decoder[msgspec.Struct]]
@@ -51,22 +41,20 @@ class RequestsHandler:
     def __init__(self, user_agent: str, logger: Logger) -> None:
         self._log: Logger = logger
         self._client: httpx.Client = httpx.Client(
-            base_url=self.api_base_url,
+            base_url=httpx.URL(self.base_url),
             headers={"accept": "application/json", "User-Agent": user_agent},
             http2=True,
             timeout=10,
         )
-        self._client.base_url = self.api_base_url
         _ = weakref.finalize(self, self.close)
 
-    def __init_subclass__(cls, base_url: str, api_url: str) -> None:
+    def __init_subclass__(cls, base_url: str) -> None:
         cls.base_url = base_url
-        cls.api_base_url = api_url
 
     @classmethod
     def get_decoder(cls, type: type[APIObjectT]) -> msgspec.json.Decoder[APIObjectT]:
         """Caches and returns a decoder for the specified type"""
-        decoder = msgspec.json.Decoder[APIObjectT](type=type, dec_hook=dec_hook)
+        decoder = msgspec.json.Decoder[APIObjectT](type=type)
         cls._decoders[type] = cast(msgspec.json.Decoder[msgspec.Struct], decoder)
         return decoder
 
@@ -100,6 +88,6 @@ class RequestsHandler:
 
     # TODO: more specific methods with better error handling
 
-    def close(self):
+    def close(self) -> None:
         self._log.debug("Closing {}", self._client)
         self._client.close()

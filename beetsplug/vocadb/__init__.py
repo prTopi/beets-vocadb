@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import sys
 from collections import OrderedDict
 from datetime import datetime
 from re import match, search
-import sys
 from typing import TYPE_CHECKING
 
 import msgspec
 
 if not sys.version_info < (3, 12):
-    from typing import override
+    from typing import override  # pyright: ignore[reportUnreachable]
 else:
     from typing_extensions import override
 from urllib.parse import urljoin
@@ -70,7 +70,7 @@ class FlexibleAttributes(msgspec.Struct):
     album: frozenset[str]
     item: frozenset[str]
 
-    def with_prefix(self, prefix: str) -> "FlexibleAttributes":
+    def with_prefix(self, prefix: str) -> FlexibleAttributes:
         """Add prefix to all attributes in each field.
 
         Args:
@@ -80,7 +80,7 @@ class FlexibleAttributes(msgspec.Struct):
             New FlexibleAttributes instance with prefixed attributes
         """
 
-        def add_prefix(attrs: frozenset[str]):
+        def add_prefix(attrs: frozenset[str]) -> frozenset[str]:
             return frozenset(f"{prefix}_{attr}" for attr in attrs)
 
         return FlexibleAttributes(
@@ -107,6 +107,7 @@ class VocaDBPlugin(BeetsPlugin):
     _default_config: InstanceConfig = InstanceConfig()
 
     data_source: str = "VocaDB"
+    base_url: str = "https://vocadb.net/"
     subcommand: str = "vdbsync"
 
     languages: Iterable[str] | None = config["import"]["languages"].as_str_seq()
@@ -136,12 +137,17 @@ class VocaDBPlugin(BeetsPlugin):
         self.language: str = self.get_lang()
 
     def __init_subclass__(
-        cls, requests_handler: type[RequestsHandler], data_source: str, subcommand: str
+        cls,
+        requests_handler: type[RequestsHandler],
+        data_source: str,
+        base_url: str,
+        subcommand: str,
     ) -> None:
         super().__init_subclass__()
         cls._requests_handler = requests_handler
         cls._default_config = InstanceConfig.from_config_subview(config[NAME])
         cls.data_source = data_source
+        cls.base_url = base_url
         cls.subcommand = subcommand
 
     @override
@@ -215,7 +221,7 @@ class VocaDBPlugin(BeetsPlugin):
                     item_formatted,
                 )
                 continue
-            self._log.debug("Searching for track {0}", item.formatted())
+            self._log.debug("Searching for track {0}", item_formatted)
             track_info: TrackInfo | None = self.track_for_id(track_id)
             if not (track_info):
                 self._log.info(
@@ -262,7 +268,9 @@ class VocaDBPlugin(BeetsPlugin):
             items: Sequence[library.Item] = album.items()
             item: library.Item
             track_index: dict[str, TrackInfo] = {
-                track.track_id: track for track in album_info.tracks if track.track_id
+                track_id: track
+                for track in album_info.tracks
+                if (track_id := track.track_id)
             }
             mapping: dict[library.Item, TrackInfo] = {}
             for item in items:
@@ -273,9 +281,9 @@ class VocaDBPlugin(BeetsPlugin):
                     # Unset track id so that it won't affect distance
                     item.mb_trackid = None
                     matches: dict[str, Distance] = {
-                        track_info.track_id: track_distance(item, track_info)
+                        track_id: track_distance(item, track_info)
                         for track_info in track_index.values()
-                        if track_info.track_id
+                        if (track_id := track_info.track_id)
                     }
                     item.mb_trackid = min(matches, key=lambda k: matches[k])
                     self._log.warning(
@@ -296,22 +304,21 @@ class VocaDBPlugin(BeetsPlugin):
                     if item_changed:
                         any_changed_item = item
                         apply_item_changes(lib, item, move, pretend, write)
-                if not changed:
+                if pretend or not changed:
                     continue
-                if not pretend:
-                    key: str
-                    for key in library.Album.item_keys:
-                        if key not in {
-                            "original_day",
-                            "original_month",
-                            "original_year",
-                            "genre",
-                        }:
-                            album[key] = any_changed_item[key]
-                    album.store()
-                    if move and lib.directory in util.ancestry(items[0].path):
-                        self._log.debug("moving album {0}", album_formatted)
-                        album.move()
+                key: str
+                for key in library.Album.item_keys:
+                    if key not in {
+                        "original_day",
+                        "original_month",
+                        "original_year",
+                        "genre",
+                    }:
+                        album[key] = any_changed_item[key]
+                album.store()
+                if move and lib.directory in util.ancestry(items[0].path):
+                    self._log.debug("moving album {0}", album_formatted)
+                    album.move()
 
     @override
     def track_distance(self, item: library.Item, info: TrackInfo) -> Distance:
@@ -349,19 +356,21 @@ class VocaDBPlugin(BeetsPlugin):
             },
             type=AlbumQueryResult,
         )
-        if candidates_container:
-            candidates: list[AlbumFromQuery] = candidates_container.items
-            self._log.debug(
-                "Found {0} result(s) for '{1}'",
-                len(candidates),
-                album,
-            )
-            # songFields parameter doesn't exist for album search
-            # so we'll get albums by their id
-            ids: list[str] = [str(album.id) for album in candidates]
-            return tuple(map(self.album_for_id, ids))
-
-        return ()
+        if not candidates_container:
+            return ()
+        candidates: list[AlbumFromQuery] = candidates_container.items
+        self._log.debug(
+            "Found {0} result(s) for '{1}'",
+            len(candidates),
+            album,
+        )
+        # songFields parameter doesn't exist for album search
+        # so we'll get albums by their id
+        return tuple(
+            info
+            for id in [str(album.id) for album in candidates]
+            if (info := self.album_for_id(id))
+        )
 
     @override
     def item_candidates(
@@ -464,14 +473,14 @@ class VocaDBPlugin(BeetsPlugin):
                 or not release.tracks
             ):
                 ignored_discs.add(disc_number)
-            else:
-                disc.total = max(
-                    {
-                        track.track_number
-                        for track in release.tracks
-                        if track.disc_number == disc_number
-                    }
-                )
+                continue
+            disc.total = max(
+                {
+                    track.track_number
+                    for track in release.tracks
+                    if track.disc_number == disc_number
+                }
+            )
 
         va: bool = release.disc_type == DiscTypes.COMPILATION
         album: str | None = release.name
@@ -541,7 +550,7 @@ class VocaDBPlugin(BeetsPlugin):
             media = discs[0].name
         except IndexError:
             media = None
-        data_url: str = urljoin(self.client.base_url, f"Al/{album_id}")
+        data_url: str = urljoin(self.base_url, f"Al/{album_id}")
         return AlbumInfo(
             album=album,
             album_id=album_id,
@@ -592,7 +601,7 @@ class VocaDBPlugin(BeetsPlugin):
         composer: str = ", ".join(artist_categories.composers)
         lyricist: str = ", ".join(artist_categories.lyricists)
         length: float = recording.length_seconds
-        data_url: str = urljoin(self.client.base_url, f"S/{track_id}")
+        data_url: str = urljoin(self.base_url, f"S/{track_id}")
         max_milli_bpm: int | None = recording.max_milli_bpm
         bpm: str | None = str(max_milli_bpm // 1000) if max_milli_bpm else None
         genre: str | None = self.get_genres(recording.tags)
@@ -653,10 +662,10 @@ class VocaDBPlugin(BeetsPlugin):
         index: int
         track: SongInAlbum
         for index, track in enumerate(tracks):
-            disc_number: int | None = track.disc_number
+            disc_number: int = track.disc_number
             if disc_number in ignored_discs or not track.song:
                 continue
-            format: str | None = discs[disc_number - 1].name
+            format: str = discs[disc_number - 1].name
             total: int | None = discs[disc_number - 1].total
             track_info: TrackInfo = self.track_info(
                 recording=track.song,
@@ -747,38 +756,42 @@ class VocaDBPlugin(BeetsPlugin):
         support_artists: set[str] = set()
         artist: AlbumArtist | SongArtist
         for artist in artists:
-            parent: Artist | None = artist.artist
-            name: str
-            id: str
-            if parent:
-                name = parent.name
-                id = str(parent.id)
-            else:
-                name = artist.name
-                id = ""
+            # Get artist name and ID from parent if exists
+            name: str = artist.artist.name if artist.artist else artist.name
+            id: str = str(artist.artist.id) if artist.artist else ""
+
+            # Track support artists
             if artist.is_support:
                 support_artists.add(name)
-            if {
-                ArtistCategories.PRODUCER,
-                ArtistCategories.BAND,
-            } & artist.categories:
+
+            # Handle producer/band roles
+            if {ArtistCategories.PRODUCER, ArtistCategories.BAND} & artist.categories:
                 if ArtistRoles.DEFAULT in artist.effective_roles:
+                    # Default producers get all roles
                     artist.effective_roles |= {
                         ArtistRoles.ARRANGER,
                         ArtistRoles.COMPOSER,
                         ArtistRoles.LYRICIST,
                     }
                 artists_by_categories.producers[name] = id
-            if ArtistCategories.CIRCLE in artist.categories:
-                artists_by_categories.circles[name] = id
-            if ArtistRoles.ARRANGER in artist.effective_roles:
-                artists_by_categories.arrangers[name] = id
-            if ArtistRoles.COMPOSER in artist.effective_roles:
-                artists_by_categories.composers[name] = id
-            if ArtistRoles.LYRICIST in artist.effective_roles:
-                artists_by_categories.lyricists[name] = id
-            if any("Vocalist" in v for v in artist.categories):
-                artists_by_categories.vocalists[name] = id
+
+            # Categorize artist based on roles/categories
+            role_category_map = {
+                ArtistCategories.CIRCLE: artists_by_categories.circles,
+                ArtistRoles.ARRANGER: artists_by_categories.arrangers,
+                ArtistRoles.COMPOSER: artists_by_categories.composers,
+                ArtistRoles.LYRICIST: artists_by_categories.lyricists,
+                ArtistCategories.VOCALIST: artists_by_categories.vocalists,
+            }
+
+            for role, category in role_category_map.items():
+                if isinstance(role, ArtistCategories):
+                    if role in artist.categories:
+                        category[name] = id
+                else:
+                    if role in artist.effective_roles:
+                        category[name] = id
+
         if not artists_by_categories.producers and artists_by_categories.vocalists:
             artists_by_categories.producers = artists_by_categories.vocalists
         if not artists_by_categories.arrangers:
@@ -831,10 +844,11 @@ class VocaDBPlugin(BeetsPlugin):
         tag_usage: TagUsage
         for tag_usage in sorted(tags, reverse=True, key=lambda x: x.count):
             tag: Tag = tag_usage.tag
-            if tag.category_name == "Genres":
-                tag_name: str | None = tag.name
-                if tag_name:
-                    genres.append(tag_name.title())
+            if not tag.category_name == "Genres":
+                continue
+            tag_name: str | None = tag.name
+            if tag_name:
+                genres.append(tag_name.title())
         return "; ".join(genres) if genres else None
 
     @classmethod
@@ -847,32 +861,41 @@ class VocaDBPlugin(BeetsPlugin):
         out_script: str | None = None
         out_language: str | None = None
         out_lyrics: str | None = None
+
         lyric: Lyrics
         for lyric in lyrics:
             translation_type: TranslationType = lyric.translation_type
             value: str = lyric.value
-            culture_codes: set[str] = set(lyric.culture_codes) & {"en", "ja"}
-            if culture_codes:
-                if "en" in culture_codes:
-                    if translation_type == TranslationType.ORIGINAL:
-                        out_script = "Latn"
-                        out_language = "eng"
-                    if translated_lyrics or language == "English":
-                        out_lyrics = value
-                elif "ja" in culture_codes:
-                    if translation_type == TranslationType.ORIGINAL:
-                        out_script = "Jpan"
-                        out_language = "jpn"
-                    if not translated_lyrics and language == "Japanese":
-                        out_lyrics = value
-            if (
-                not translated_lyrics
-                and language == "Romaji"
-                and translation_type == TranslationType.ROMANIZED
-            ):
-                out_lyrics = value
+            # get the intersection
+            culture_codes: set[str] = lyric.culture_codes & {"en", "ja"}
+
+            if not culture_codes:
+                if (
+                    not translated_lyrics
+                    and language == "Romaji"
+                    and translation_type == TranslationType.ROMANIZED
+                ):
+                    out_lyrics = value
+                continue
+
+            if "en" in culture_codes:
+                if translation_type == TranslationType.ORIGINAL:
+                    out_script = "Latn"
+                    out_language = "eng"
+                if translated_lyrics or language == "English":
+                    out_lyrics = value
+                continue
+
+            if "ja" in culture_codes:
+                if translation_type == TranslationType.ORIGINAL:
+                    out_script = "Jpan"
+                    out_language = "jpn"
+                if not translated_lyrics and language == "Japanese":
+                    out_lyrics = value
+
         if not out_lyrics and lyrics:
             out_lyrics = cls.get_fallback_lyrics(lyrics, language)
+
         return out_script, out_language, out_lyrics
 
     @staticmethod

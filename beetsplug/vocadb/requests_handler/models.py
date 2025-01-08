@@ -10,7 +10,18 @@ import msgspec
 from . import StrEnum
 
 
-class TaggedBase(msgspec.Struct, rename="camel"): ...
+class TaggedBase(
+    msgspec.Struct, omit_defaults=True, rename="camel"
+): ...
+
+
+class FrozenBase(
+    msgspec.Struct,
+    frozen=True,
+    forbid_unknown_fields=True,
+    omit_defaults=True,
+    rename="camel",
+): ...
 
 
 class ArtistType(StrEnum):
@@ -72,6 +83,7 @@ class Artist(TaggedBase):
     name: str
     status: EntryStatus
     version: int
+    release_date: Optional[datetime] = None
     picture_mime: Optional[str] = None
 
 
@@ -123,10 +135,14 @@ class AlbumArtist(TaggedBase, kw_only=True):
     name: str
     roles: str
     artist: Optional[Artist] = None
-    categories: set[ArtistCategories] = msgspec.field(default_factory=set, name="dummy1")
-    effective_roles: set[ArtistRoles] = msgspec.field(default_factory=set, name="dummy2")
+    categories: set[ArtistCategories] = msgspec.field(
+        default_factory=set, name="dummy1"
+    )
+    effective_roles: set[ArtistRoles] = msgspec.field(
+        default_factory=set, name="dummy2"
+    )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.categories = {
             ArtistCategories(c) for c in SPLIT_PATTERN.split(self._categories) if c
         }
@@ -140,7 +156,7 @@ class SongArtist(AlbumArtist):
     is_custom_name: bool
 
 
-class Tag(TaggedBase):
+class Tag(FrozenBase, frozen=True):
     name: str
     additional_names: Optional[str] = None
     category_name: Optional[str] = None
@@ -181,7 +197,7 @@ class TranslationType(StrEnum):
 class Lyrics(TaggedBase):
     translation_type: TranslationType
     value: str
-    culture_codes: list[str]
+    culture_codes: set[str]
     id: Optional[int] = None
     source: Optional[str] = None
     url: Optional[str] = None
@@ -195,9 +211,9 @@ class DiscMediaType(StrEnum):
 class Disc(TaggedBase):
     disc_number: int
     media_type: DiscMediaType
-    id: Optional[int] = None
-    name: Optional[str] = None
+    name: str
     total: Optional[int] = None
+    id: Optional[int] = None
 
 
 class ReleaseDate(TaggedBase):
@@ -242,7 +258,7 @@ class SongType(StrEnum):
 
 class Song(AlbumOrSong):
     artists: list[SongArtist]
-    culture_codes: list[str]
+    culture_codes: set[str]
     favorited_times: int
     length_seconds: float
     lyrics: list[Lyrics]
@@ -251,6 +267,7 @@ class Song(AlbumOrSong):
     song_type: SongType
     tags: list[TagUsage]
     version: int
+    original_version_id: Optional[int] = None
     max_milli_bpm: Optional[int] = None
     min_milli_bpm: Optional[int] = None
     publish_date: Optional[datetime] = None
@@ -259,7 +276,7 @@ class Song(AlbumOrSong):
 class SongInAlbum(TaggedBase):
     disc_number: int
     track_number: int
-    computed_culture_codes: list[str]
+    computed_culture_codes: set[str]
     id: Optional[int] = None
     name: Optional[str] = None
     song: Optional[Song] = None
@@ -283,7 +300,7 @@ class WebLink(TaggedBase):
 
 class DiscTypes(StrEnum):
     UNKNOWN = "Unknown"
-    Album = "Album"
+    ALBUM = "Album"
     SINGLE = "Single"
     EP = "EP"
     SPLITALBUM = "SplitAlbum"
@@ -303,8 +320,11 @@ class AlbumFromQuery(AlbumOrSong):
 
 class Album(AlbumFromQuery):
     artists: list[AlbumArtist]
+    rating_average: float
+    rating_count: int
     tags: list[TagUsage]
     tracks: list[SongInAlbum]
+    version: int
     web_links: list[WebLink]
     discs: list[Disc]
     catalog_number: Optional[str] = None

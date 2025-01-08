@@ -33,7 +33,9 @@ class InstanceConfig(msgspec.Struct):
             falling back to defaults when values are missing.
         """
 
-        config.add(msgspec.structs.asdict(default or cls()))
+        fallback: dict[str, bool | int] = msgspec.structs.asdict(default or cls())
+
+        config.add(fallback)
 
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),
