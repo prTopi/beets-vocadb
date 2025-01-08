@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 import weakref
+
+import sys
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import httpx
 import msgspec
+
+if not sys.version_info < (3, 11):
+    from enum import StrEnum
+else:
+    from enum import Enum
+    class StrEnum(str, Enum):
+        pass
+
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -13,6 +23,16 @@ if TYPE_CHECKING:
 
 APIObjectT = TypeVar("APIObjectT", bound=msgspec.Struct)
 ParamsT: TypeAlias = dict[str, str]
+
+
+def dec_hook(type: type, obj: object) -> object:
+    if type is StrEnum and isinstance(obj, str):
+        if not obj:
+            return []
+        return [StrEnum(val.strip()) for val in obj.split(",") if val.strip()]
+    else:
+        # Raise a NotImplementedError for other types
+        raise NotImplementedError(f"Objects of type {type} are not supported")
 
 
 class RequestsHandler:
@@ -46,7 +66,7 @@ class RequestsHandler:
     @classmethod
     def get_decoder(cls, type: type[APIObjectT]) -> msgspec.json.Decoder[APIObjectT]:
         """Caches and returns a decoder for the specified type"""
-        decoder = msgspec.json.Decoder[APIObjectT](type=type)
+        decoder = msgspec.json.Decoder[APIObjectT](type=type, dec_hook=dec_hook)
         cls._decoders[type] = cast(msgspec.json.Decoder[msgspec.Struct], decoder)
         return decoder
 

@@ -1,31 +1,138 @@
 """Attrs classes related to API requests"""
 
 from __future__ import annotations
+from datetime import datetime
+import re
+from typing import Optional
 
 import msgspec
 
-from typing import Optional
+from . import StrEnum
+
 
 class TaggedBase(msgspec.Struct, rename="camel"): ...
 
+
+class ArtistType(StrEnum):
+
+    # Vocalist
+    VOCALOID = "Vocaloid"
+    UTAU = "UTAU"
+    CEVIO = "CeVIO"
+    SYNTHESIZERV = "SynthesizerV"
+    NEUTRINO = "NEUTRINO"
+    VOISONA = "VoiSona"
+    NEWTYPE = "NewType"
+    VOICEROID = "Voiceroid"
+    VOICEVOX = "VOICEVOX"
+    AIVOICE = "AIVOICE"
+    ACEVIRTUALSINGER = "ACEVirtualSinger"
+    OTHERVOICESYNTHESIZER = "OtherVoiceSynthesizer"
+    OTHERVOCALIST = "OtherVocalist"
+
+    # Producer
+    MUSICPRODUCER = "Producer"
+    COVERARTIST = "CoverArtist"
+    ANIMATIONPRODUCER = "Animator"
+    ILLUSTRATOR = "Illustrator"
+
+    # Group
+    CIRCLE = "Circle"
+    LABEL = "Label"
+    OTHERGROUP = "OtherGroup"
+
+    # UtaiteDB-specific
+    BAND = "Band"
+    UTAITE = "Utaite"
+    UNKNOWN = "Unknown"
+
+    # TouhouDB-specific
+    VOCALIST = "Vocalist"
+    CHARACTER = "Character"
+    DESIGNER = "Designer"
+
+    # Other
+    LYRICIST = "Lyricist"
+    INSTRUMENTALIST = "Instrumentalist"
+    OTHERINDIVIDUAL = "OtherIndividual"
+
+
+class EntryStatus(StrEnum):
+    DRAFT = "Draft"
+    FINISHED = "Finished"
+    APPROVED = "Approved"
+    LOCKED = "Locked"
+
+
 class Artist(TaggedBase):
     additional_names: str
-    artist_type: str
+    artist_type: ArtistType
     deleted: bool
     id: int
     name: str
-    status: str
+    status: EntryStatus
     version: int
     picture_mime: Optional[str] = None
 
 
+class ArtistCategories(StrEnum):
+    VOCALIST = "Vocalist"
+    NOTHING = "Nothing"
+    PRODUCER = "Producer"
+    ANIMATOR = "Animator"
+    LABEL = "Label"
+    CIRCLE = "Circle"
+    OTHER = "Other"
+    BAND = "Band"
+    ILLUSTRATOR = "Illustrator"
+    SUBJECT = "Subject"
+
+
+class ArtistRoles(StrEnum):
+    DEFAULT = "Default"
+    ANIMATOR = "Animator"
+    ARRANGER = "Arranger"
+    COMPOSER = "Composer"
+    DISTRIBUTOR = "Distributor"
+    ILLUSTRATOR = "Illustrator"
+    INSTRUMENTALIST = "Instrumentalist"
+    LYRICIST = "Lyricist"
+    MASTERING = "Mastering"
+    MIXER = "Mixer"
+    OTHER = "Other"
+    PUBLISHER = "Publisher"
+    VOCALDATAPROVIDER = "VocalDataProvider"
+    VOCALIST = "Vocalist"
+    VOICEMANIPULATOR = "VoiceManipulator"
+
+    # UtaiteDB- and TouhouDB-specific
+    CHORUS = "Chorus"
+
+    # UtaiteDB-specific
+    ENCODER = "Encoder"
+
+
+# to avoid extra whitespace
+SPLIT_PATTERN: re.Pattern[str] = re.compile(r"\s*,\s*")
+
+
 class AlbumArtist(TaggedBase, kw_only=True):
-    categories: str
-    effective_roles: str
+    _categories: str = msgspec.field(name="categories")
+    _effective_roles: str = msgspec.field(name="effectiveRoles")
     is_support: bool
     name: str
     roles: str
     artist: Optional[Artist] = None
+    categories: set[ArtistCategories] = msgspec.field(default_factory=set, name="dummy1")
+    effective_roles: set[ArtistRoles] = msgspec.field(default_factory=set, name="dummy2")
+
+    def __post_init__(self):
+        self.categories = {
+            ArtistCategories(c) for c in SPLIT_PATTERN.split(self._categories) if c
+        }
+        self.effective_roles = {
+            ArtistRoles(r) for r in SPLIT_PATTERN.split(self._effective_roles) if r
+        }
 
 
 class SongArtist(AlbumArtist):
@@ -46,20 +153,33 @@ class TagUsage(TaggedBase):
     tag: Tag
 
 
+class ContentLanguageSelection(StrEnum):
+    UNSPECIFIED = "Unspecified"
+    JAPANESE = "Japanese"
+    ROMAJI = "Romaji"
+    ENGLISH = "English"
+
+
 class AlbumOrSong(TaggedBase):
     """Base class with attributes shared by Album and Song"""
 
     artist_string: str
     create_date: str
     default_name: str
-    default_name_language: str
+    default_name_language: ContentLanguageSelection
     id: int
     name: str
-    status: str
+    status: EntryStatus
+
+
+class TranslationType(StrEnum):
+    ORIGINAL = "Original"
+    ROMANIZED = "Romanized"
+    TRANSLATION = "Translation"
 
 
 class Lyrics(TaggedBase):
-    translation_type: str
+    translation_type: TranslationType
     value: str
     culture_codes: list[str]
     id: Optional[int] = None
@@ -67,9 +187,14 @@ class Lyrics(TaggedBase):
     url: Optional[str] = None
 
 
+class DiscMediaType(StrEnum):
+    AUDIO = "Audio"
+    VIDEO = "Video"
+
+
 class Disc(TaggedBase):
     disc_number: int
-    media_type: str
+    media_type: DiscMediaType
     id: Optional[int] = None
     name: Optional[str] = None
     total: Optional[int] = None
@@ -82,6 +207,39 @@ class ReleaseDate(TaggedBase):
     year: Optional[int] = None
 
 
+class PVServices(StrEnum):
+    NOTHING = "Nothing"
+    NICONICODOUGA = "NicoNicoDouga"
+    YOUTUBE = "Youtube"
+    SOUNDCLOUD = "SoundCloud"
+    VIMEO = "Vimeo"
+    PIAPRO = "Piapro"
+    BILIBILI = "Bilibili"
+    FILE = "File"
+    LOCALFILE = "LocalFile"
+    CREOFUGA = "Creofuga"
+    BANDCAMP = "Bandcamp"
+
+
+class SongType(StrEnum):
+    UNSPECIFIED = "Unspecified"
+    ORIGINAL = "Original"
+    REMASTER = "Remaster"
+    REMIX = "Remix"
+    COVER = "Cover"
+    ARRANGEMENT = "Arrangement"
+    INSTRUMENTAL = "Instrumental"
+    MASHUP = "Mashup"
+    MUSICPV = "MusicPV"
+    DRAMAPV = "DramaPV"
+    LIVE = "Live"
+    ILLUSTRATION = "Illustration"
+    OTHER = "Other"
+
+    # TouhouDB-specific
+    REARRANGEMENT = "Rearrangement"
+
+
 class Song(AlbumOrSong):
     artists: list[SongArtist]
     culture_codes: list[str]
@@ -90,12 +248,12 @@ class Song(AlbumOrSong):
     lyrics: list[Lyrics]
     pv_services: str
     rating_score: int
-    song_type: str
+    song_type: SongType
     tags: list[TagUsage]
     version: int
     max_milli_bpm: Optional[int] = None
     min_milli_bpm: Optional[int] = None
-    publish_date: Optional[str] = None
+    publish_date: Optional[datetime] = None
 
 
 class SongInAlbum(TaggedBase):
@@ -107,8 +265,15 @@ class SongInAlbum(TaggedBase):
     song: Optional[Song] = None
 
 
+class WebLinkCategory(StrEnum):
+    OFFICIAL = "Official"
+    COMMERCIAL = "Commercial"
+    REFERENCE = "Reference"
+    OTHER = "Other"
+
+
 class WebLink(TaggedBase):
-    category: str
+    category: WebLinkCategory
     description: str
     disabled: bool
     url: str
@@ -116,9 +281,24 @@ class WebLink(TaggedBase):
     id: Optional[int] = None
 
 
+class DiscTypes(StrEnum):
+    UNKNOWN = "Unknown"
+    Album = "Album"
+    SINGLE = "Single"
+    EP = "EP"
+    SPLITALBUM = "SplitAlbum"
+    COMPILATION = "Compilation"
+    VIDEO = "Video"
+    ARTBOOK = "Artbook"
+    GAME = "Game"
+    FANMADE = "Fanmade"
+    INSTRUMENTAL = "Instrumental"
+    OTHER = "Other"
+
+
 class AlbumFromQuery(AlbumOrSong):
     release_date: ReleaseDate
-    disc_type: str
+    disc_type: DiscTypes
 
 
 class Album(AlbumFromQuery):
