@@ -38,13 +38,13 @@ class RequestsHandler:
         dict[type[msgspec.Struct], msgspec.json.Decoder[msgspec.Struct]]
     ] = {}
 
-    def __init__(self, user_agent: str, logger: Logger) -> None:
+    def __init__(self, user_agent: str, logger: Logger, timeout: float = 10) -> None:
         self._log: Logger = logger
         self._client: httpx.Client = httpx.Client(
             base_url=httpx.URL(self.base_url),
             headers={"accept": "application/json", "User-Agent": user_agent},
             http2=True,
-            timeout=10,
+            timeout=timeout,
         )
         _ = weakref.finalize(self, self.close)
 
