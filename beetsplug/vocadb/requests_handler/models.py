@@ -1,4 +1,4 @@
-"""Attrs classes related to API requests"""
+"""Classes related to API requests"""
 
 from __future__ import annotations
 from datetime import datetime
@@ -10,9 +10,7 @@ import msgspec
 from . import StrEnum
 
 
-class TaggedBase(
-    msgspec.Struct, omit_defaults=True, rename="camel"
-): ...
+class TaggedBase(msgspec.Struct, omit_defaults=True, rename="camel"): ...
 
 
 class FrozenBase(

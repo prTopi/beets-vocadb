@@ -754,52 +754,58 @@ class VocaDBPlugin(BeetsPlugin):
         """
         artists_by_categories: ArtistsByCategories = ArtistsByCategories()
         support_artists: set[str] = set()
+
+        role_category_map = {
+            ArtistCategories.CIRCLE: artists_by_categories.circles,
+            ArtistRoles.ARRANGER: artists_by_categories.arrangers,
+            ArtistRoles.COMPOSER: artists_by_categories.composers,
+            ArtistRoles.LYRICIST: artists_by_categories.lyricists,
+            ArtistCategories.VOCALIST: artists_by_categories.vocalists,
+        }
+
+        producer_roles = {
+            ArtistRoles.ARRANGER,
+            ArtistRoles.COMPOSER,
+            ArtistRoles.LYRICIST,
+        }
+
         artist: AlbumArtist | SongArtist
         for artist in artists:
-            # Get artist name and ID from parent if exists
-            name: str = artist.artist.name if artist.artist else artist.name
-            id: str = str(artist.artist.id) if artist.artist else ""
+            name, id = (
+                (artist.artist.name, str(artist.artist.id))
+                if artist.artist
+                else (artist.name, "")
+            )
 
-            # Track support artists
             if artist.is_support:
                 support_artists.add(name)
 
-            # Handle producer/band roles
+            # Handle producers/bands first
             if {ArtistCategories.PRODUCER, ArtistCategories.BAND} & artist.categories:
                 if ArtistRoles.DEFAULT in artist.effective_roles:
-                    # Default producers get all roles
-                    artist.effective_roles |= {
-                        ArtistRoles.ARRANGER,
-                        ArtistRoles.COMPOSER,
-                        ArtistRoles.LYRICIST,
-                    }
+                    artist.effective_roles |= producer_roles
                 artists_by_categories.producers[name] = id
 
-            # Categorize artist based on roles/categories
-            role_category_map = {
-                ArtistCategories.CIRCLE: artists_by_categories.circles,
-                ArtistRoles.ARRANGER: artists_by_categories.arrangers,
-                ArtistRoles.COMPOSER: artists_by_categories.composers,
-                ArtistRoles.LYRICIST: artists_by_categories.lyricists,
-                ArtistCategories.VOCALIST: artists_by_categories.vocalists,
-            }
-
+            # Apply role/category mappings
             for role, category in role_category_map.items():
-                if isinstance(role, ArtistCategories):
-                    if role in artist.categories:
-                        category[name] = id
-                else:
-                    if role in artist.effective_roles:
-                        category[name] = id
+                if isinstance(role, ArtistCategories) and role in artist.categories:
+                    category[name] = id
+                elif role in artist.effective_roles:
+                    category[name] = id
 
+        # Set producer fallbacks if needed
         if not artists_by_categories.producers and artists_by_categories.vocalists:
             artists_by_categories.producers = artists_by_categories.vocalists
-        if not artists_by_categories.arrangers:
-            artists_by_categories.arrangers = artists_by_categories.producers
-        if not artists_by_categories.composers:
-            artists_by_categories.composers = artists_by_categories.producers
-        if not artists_by_categories.lyricists:
-            artists_by_categories.lyricists = artists_by_categories.producers
+
+        # Set other role fallbacks
+        for category in (
+            artists_by_categories.arrangers,
+            artists_by_categories.composers,
+            artists_by_categories.lyricists,
+        ):
+            if not category:
+                category |= artists_by_categories.producers
+
         return artists_by_categories, support_artists
 
     def extract_artists_from_categories(
