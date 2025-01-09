@@ -1,13 +1,16 @@
 """Classes related to API requests"""
 
 from __future__ import annotations
-from datetime import datetime
+
 import re
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import msgspec
 
 from . import StrEnum
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class TaggedBase(msgspec.Struct, omit_defaults=True, rename="camel"): ...
@@ -23,7 +26,6 @@ class FrozenBase(
 
 
 class ArtistType(StrEnum):
-
     # Vocalist
     VOCALOID = "Vocaloid"
     UTAU = "UTAU"
@@ -142,10 +144,14 @@ class AlbumArtist(TaggedBase, kw_only=True):
 
     def __post_init__(self) -> None:
         self.categories = {
-            ArtistCategories(c) for c in SPLIT_PATTERN.split(self._categories) if c
+            ArtistCategories(c)
+            for c in SPLIT_PATTERN.split(self._categories)
+            if c
         }
         self.effective_roles = {
-            ArtistRoles(r) for r in SPLIT_PATTERN.split(self._effective_roles) if r
+            ArtistRoles(r)
+            for r in SPLIT_PATTERN.split(self._effective_roles)
+            if r
         }
 
 

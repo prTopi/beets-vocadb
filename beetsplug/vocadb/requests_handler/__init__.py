@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import weakref
-
 import sys
+import weakref
 from typing import TYPE_CHECKING, TypeVar, cast
 
 import httpx
@@ -20,6 +19,7 @@ else:
 if TYPE_CHECKING:
     from logging import Logger
     from typing import ClassVar
+
     from typing_extensions import TypeAlias
 
 APIObjectT = TypeVar("APIObjectT", bound=msgspec.Struct)
@@ -38,7 +38,9 @@ class RequestsHandler:
         dict[type[msgspec.Struct], msgspec.json.Decoder[msgspec.Struct]]
     ] = {}
 
-    def __init__(self, user_agent: str, logger: Logger, timeout: float = 10) -> None:
+    def __init__(
+        self, user_agent: str, logger: Logger, timeout: float = 10
+    ) -> None:
         self._log: Logger = logger
         self._client: httpx.Client = httpx.Client(
             base_url=httpx.URL(self.base_url),
@@ -52,10 +54,14 @@ class RequestsHandler:
         cls.base_url = base_url
 
     @classmethod
-    def get_decoder(cls, type: type[APIObjectT]) -> msgspec.json.Decoder[APIObjectT]:
+    def get_decoder(
+        cls, type: type[APIObjectT]
+    ) -> msgspec.json.Decoder[APIObjectT]:
         """Caches and returns a decoder for the specified type"""
         decoder = msgspec.json.Decoder[APIObjectT](type=type)
-        cls._decoders[type] = cast(msgspec.json.Decoder[msgspec.Struct], decoder)
+        cls._decoders[type] = cast(
+            msgspec.json.Decoder[msgspec.Struct], decoder
+        )
         return decoder
 
     def _get(
@@ -72,7 +78,9 @@ class RequestsHandler:
         """
 
         try:
-            response: httpx.Response = self._client.get(relative_path, params=params)
+            response: httpx.Response = self._client.get(
+                relative_path, params=params
+            )
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
             self._log.error("Error fetching data - {}", e)
@@ -80,7 +88,9 @@ class RequestsHandler:
 
         decoder: msgspec.json.Decoder[APIObjectT]
         try:
-            decoder = cast(msgspec.json.Decoder[APIObjectT], self._decoders[type])
+            decoder = cast(
+                msgspec.json.Decoder[APIObjectT], self._decoders[type]
+            )
         except KeyError:
             self._log.debug("Getting decoder for {}", type)
             decoder = self.get_decoder(type)

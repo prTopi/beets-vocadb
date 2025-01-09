@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import msgspec
 from typing import TYPE_CHECKING
+
+import msgspec
 
 if TYPE_CHECKING:
     from confuse.core import Subview
@@ -29,19 +30,21 @@ class InstanceConfig(msgspec.Struct):
                     If None, creates a new default instance.
 
         Returns:
-            A new InstanceConfig instance populated with values from the config,
-            falling back to defaults when values are missing.
+            A new InstanceConfig instance populated with values from the config, falling
+            back to defaults when values are missing.
         """
 
-        fallback: dict[str, bool | int] = msgspec.structs.asdict(default or cls())
+        fallback: dict[str, bool | int] = msgspec.structs.asdict(
+            default or cls()
+        )
 
         config.add(fallback)
 
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),
             translated_lyrics=config["translated_lyrics"].get(bool),
-            include_featured_album_artists=config["include_featured_album_artists"].get(
-                bool
-            ),
+            include_featured_album_artists=config[
+                "include_featured_album_artists"
+            ].get(bool),
             max_results=config["max_results"].get(int),
         )

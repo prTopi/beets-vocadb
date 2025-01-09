@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 from collections import OrderedDict
-from datetime import datetime
 from re import match, search
 from typing import TYPE_CHECKING
 
@@ -38,6 +37,7 @@ from .requests_handler.models import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
+    from datetime import datetime
     from optparse import Values
     from re import Match
 
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from .requests_handler.models import (
         AlbumArtist,
         AlbumFromQuery,
-        Artist,
         Lyrics,
         ReleaseDate,
         SongArtist,
@@ -66,7 +65,9 @@ USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
 
 
-class FlexibleAttributes(msgspec.Struct):
+class FlexibleAttributes(
+    msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True
+):
     album: frozenset[str]
     item: frozenset[str]
 
@@ -88,17 +89,28 @@ class FlexibleAttributes(msgspec.Struct):
         )
 
 
-class ArtistsByCategories(msgspec.Struct):
-    producers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+class ArtistsByCategories(
+    msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True
+):
+    producers: OrderedDict[str, str] = msgspec.field(
+        default_factory=OrderedDict
+    )
     circles: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
-    vocalists: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
-    arrangers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
-    composers: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
-    lyricists: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
+    vocalists: OrderedDict[str, str] = msgspec.field(
+        default_factory=OrderedDict
+    )
+    arrangers: OrderedDict[str, str] = msgspec.field(
+        default_factory=OrderedDict
+    )
+    composers: OrderedDict[str, str] = msgspec.field(
+        default_factory=OrderedDict
+    )
+    lyricists: OrderedDict[str, str] = msgspec.field(
+        default_factory=OrderedDict
+    )
 
 
 class VocaDBPlugin(BeetsPlugin):
-
     _requests_handler: type[RequestsHandler] = RequestsHandler
     _flexible_attributes: FlexibleAttributes = FlexibleAttributes(
         album=frozenset({"album_id", "artist_id"}),
@@ -114,7 +126,9 @@ class VocaDBPlugin(BeetsPlugin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.client: RequestsHandler = self._requests_handler(USER_AGENT, self._log)
+        self.client: RequestsHandler = self._requests_handler(
+            USER_AGENT, self._log
+        )
         _prefixed_flex_attributes: FlexibleAttributes = (
             self._flexible_attributes.with_prefix(self.name)
         )
@@ -131,8 +145,10 @@ class VocaDBPlugin(BeetsPlugin):
                 "source_weight": 0.5,
             }
         )
-        self.instance_config: InstanceConfig = InstanceConfig.from_config_subview(
-            self.config, self._default_config
+        self.instance_config: InstanceConfig = (
+            InstanceConfig.from_config_subview(
+                self.config, self._default_config
+            )
         )
         self.language: str = self.get_lang()
 
@@ -199,7 +215,12 @@ class VocaDBPlugin(BeetsPlugin):
         self.albums(lib, query, move, pretend, write)
 
     def singletons(
-        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+        self,
+        lib: Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
     ) -> None:
         """Retrieve and apply info from the autotagger for items matched by
         query.
@@ -236,7 +257,12 @@ class VocaDBPlugin(BeetsPlugin):
                 apply_item_changes(lib, item, move, pretend, write)
 
     def albums(
-        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+        self,
+        lib: Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
     ) -> None:
         """Retrieve and apply info from the autotagger for albums matched by
         query and their items.
@@ -287,7 +313,8 @@ class VocaDBPlugin(BeetsPlugin):
                     }
                     item.mb_trackid = min(matches, key=lambda k: matches[k])
                     self._log.warning(
-                        "Missing track ID {0} in album info for {1} automatched to ID {2}",
+                        "Missing track ID {0} in album info for {1} "
+                        "automatched to ID {2}",
                         old_track_id,
                         album_formatted,
                         item.mb_trackid,
@@ -323,7 +350,9 @@ class VocaDBPlugin(BeetsPlugin):
     @override
     def track_distance(self, item: library.Item, info: TrackInfo) -> Distance:
         """Returns the track distance."""
-        return get_distance(data_source=self.data_source, info=info, config=self.config)
+        return get_distance(
+            data_source=self.data_source, info=info, config=self.config
+        )
 
     @override
     def album_distance(
@@ -410,7 +439,11 @@ class VocaDBPlugin(BeetsPlugin):
         lang: str
         for lang in self.languages:
             if lang == "jp":
-                return "Romaji" if self.instance_config.prefer_romaji else "Japanese"
+                return (
+                    "Romaji"
+                    if self.instance_config.prefer_romaji
+                    else "Japanese"
+                )
             if lang == "en":
                 return "English"
 
@@ -435,7 +468,9 @@ class VocaDBPlugin(BeetsPlugin):
             },
             type=Album,
         )
-        return self.album_info(album, search_lang=self.language) if album else None
+        return (
+            self.album_info(album, search_lang=self.language) if album else None
+        )
 
     @override
     def track_for_id(self, track_id: str) -> TrackInfo | None:
@@ -455,13 +490,21 @@ class VocaDBPlugin(BeetsPlugin):
             },
             type=Song,
         )
-        return self.track_info(track, search_lang=self.language) if track else None
+        return (
+            self.track_info(track, search_lang=self.language) if track else None
+        )
 
-    def album_info(self, release: Album, search_lang: str | None = None) -> AlbumInfo:
+    def album_info(
+        self, release: Album, search_lang: str | None = None
+    ) -> AlbumInfo:
         if not release.discs:
             release.discs = [
-                Disc(disc_number=i + 1, name="CD", media_type=DiscMediaType.AUDIO)
-                for i in range(max(track.disc_number for track in release.tracks))
+                Disc(
+                    disc_number=i + 1, name="CD", media_type=DiscMediaType.AUDIO
+                )
+                for i in range(
+                    max(track.disc_number for track in release.tracks)
+                )
             ]
         ignored_discs: set[int] = set()
         disc: Disc
@@ -699,7 +742,9 @@ class VocaDBPlugin(BeetsPlugin):
         artists_by_categories: ArtistsByCategories
         support_artists: set[str]
 
-        artists_by_categories, support_artists = self.get_artists_by_categories(artists)
+        artists_by_categories, support_artists = self.get_artists_by_categories(
+            artists
+        )
         va_name: str = config["va_name"].as_str()
 
         main_artists: list[str] = (
@@ -729,7 +774,10 @@ class VocaDBPlugin(BeetsPlugin):
                 for name in artists_by_categories.vocalists.keys()
                 if name not in support_artists
             ]
-            if featured_artists and not len(main_artists) + len(featured_artists) > 5:
+            if (
+                featured_artists
+                and not len(main_artists) + len(featured_artists) > 5
+            ):
                 artist_string += " feat. " + ", ".join(featured_artists)
 
         return artists_by_categories, artist_string
@@ -781,20 +829,29 @@ class VocaDBPlugin(BeetsPlugin):
                 support_artists.add(name)
 
             # Handle producers/bands first
-            if {ArtistCategories.PRODUCER, ArtistCategories.BAND} & artist.categories:
+            if {
+                ArtistCategories.PRODUCER,
+                ArtistCategories.BAND,
+            } & artist.categories:
                 if ArtistRoles.DEFAULT in artist.effective_roles:
                     artist.effective_roles |= producer_roles
                 artists_by_categories.producers[name] = id
 
             # Apply role/category mappings
             for role, category in role_category_map.items():
-                if isinstance(role, ArtistCategories) and role in artist.categories:
+                if (
+                    isinstance(role, ArtistCategories)
+                    and role in artist.categories
+                ):
                     category[name] = id
                 elif role in artist.effective_roles:
                     category[name] = id
 
         # Set producer fallbacks if needed
-        if not artists_by_categories.producers and artists_by_categories.vocalists:
+        if (
+            not artists_by_categories.producers
+            and artists_by_categories.vocalists
+        ):
             artists_by_categories.producers = artists_by_categories.vocalists
 
         # Set other role fallbacks
@@ -905,7 +962,9 @@ class VocaDBPlugin(BeetsPlugin):
         return out_script, out_language, out_lyrics
 
     @staticmethod
-    def get_fallback_lyrics(lyrics: list[Lyrics], language: str | None) -> str | None:
+    def get_fallback_lyrics(
+        lyrics: list[Lyrics], language: str | None
+    ) -> str | None:
         lyric: Lyrics
         if language == "English":
             for lyric in lyrics:
