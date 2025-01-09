@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Optional
+from datetime import datetime  # noqa: TC003
+from typing import Optional
 
 import msgspec
 
 from . import StrEnum
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class TaggedBase(msgspec.Struct, omit_defaults=True, rename="camel"): ...
