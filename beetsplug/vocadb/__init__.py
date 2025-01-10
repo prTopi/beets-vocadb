@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-from collections import OrderedDict
 from re import match, search
 from typing import TYPE_CHECKING
 
@@ -92,22 +91,12 @@ class FlexibleAttributes(
 class ArtistsByCategories(
     msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True
 ):
-    producers: OrderedDict[str, str] = msgspec.field(
-        default_factory=OrderedDict
-    )
-    circles: OrderedDict[str, str] = msgspec.field(default_factory=OrderedDict)
-    vocalists: OrderedDict[str, str] = msgspec.field(
-        default_factory=OrderedDict
-    )
-    arrangers: OrderedDict[str, str] = msgspec.field(
-        default_factory=OrderedDict
-    )
-    composers: OrderedDict[str, str] = msgspec.field(
-        default_factory=OrderedDict
-    )
-    lyricists: OrderedDict[str, str] = msgspec.field(
-        default_factory=OrderedDict
-    )
+    producers: dict[str, str] = {}
+    circles: dict[str, str] = {}
+    vocalists: dict[str, str] = {}
+    arrangers: dict[str, str] = {}
+    composers: dict[str, str] = {}
+    lyricists: dict[str, str] = {}
 
 
 class VocaDBPlugin(BeetsPlugin):
@@ -882,14 +871,14 @@ class VocaDBPlugin(BeetsPlugin):
         """
 
         category: dict[str, str]
-        artists_dict: OrderedDict[str, str] = OrderedDict()
+        artists_dict: dict[str, str] = {}
 
         for category in msgspec.structs.astuple(artist_categories):
-            # Merge each category's artists into the OrderedDict while preserving order
+            # Merge each category's artists into the dict while preserving order
             # and preventing duplicates
             artists_dict |= category
 
-        # Convert OrderedDict to separate lists of artists and IDs
+        # Convert dict to separate lists of artists and IDs
         artists: list[str] = list(artists_dict.keys())
         artists_ids: list[str] = list(artists_dict.values())
 
