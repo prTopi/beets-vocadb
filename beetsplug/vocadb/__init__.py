@@ -19,7 +19,7 @@ from beets.autotag.match import track_distance
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import Subcommand, show_model_changes
 
-from .plugin_config import InstanceConfig
+from .plugin_config import VA_NAME, InstanceConfig
 from .requests_handler import RequestsHandler
 from .requests_handler.models import (
     Album,
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
         AlbumArtist,
         AlbumFromQuery,
         Lyrics,
-        ReleaseDate,
         SongArtist,
         SongInAlbum,
         Tag,
@@ -111,8 +110,6 @@ class VocaDBPlugin(BeetsPlugin):
     base_url: str = "https://vocadb.net/"
     subcommand: str = "vdbsync"
 
-    languages: Iterable[str] | None = config["import"]["languages"].as_str_seq()
-
     def __init__(self) -> None:
         super().__init__()
         self.client: RequestsHandler = self._requests_handler(
@@ -139,7 +136,6 @@ class VocaDBPlugin(BeetsPlugin):
                 self.config, self._default_config
             )
         )
-        self.language: str = self.get_lang()
 
     def __init_subclass__(
         cls,
@@ -401,7 +397,7 @@ class VocaDBPlugin(BeetsPlugin):
                 "query": title,
                 "discTypes": "Album",
                 "fields": SONG_FIELDS,
-                "lang": self.language,
+                "lang": self.instance_config.language,
                 "maxResults": str(self.instance_config.max_results),
                 "nameMatchMode": "Auto",
                 "preferAccurateMatches": "True",
@@ -420,24 +416,6 @@ class VocaDBPlugin(BeetsPlugin):
 
         return ()
 
-    def get_lang(self) -> str:
-        """Used to set the 'language' instance attribute."""
-        if not self.languages:
-            return "English"
-
-        lang: str
-        for lang in self.languages:
-            if lang == "jp":
-                return (
-                    "Romaji"
-                    if self.instance_config.prefer_romaji
-                    else "Japanese"
-                )
-            if lang == "en":
-                return "English"
-
-        return "English"  # Default if no matching language found
-
     @override
     def album_for_id(self, album_id: str) -> AlbumInfo | None:
         if not album_id.isnumeric():
@@ -451,14 +429,16 @@ class VocaDBPlugin(BeetsPlugin):
         album: Album | None = self.client._get(
             relative_path=f"albums/{album_id}",
             params={
-                "lang": self.language,
+                "lang": self.instance_config.language,
                 "fields": "Artists,Discs,Tags,Tracks,WebLinks",
                 "songFields": SONG_FIELDS,
             },
             type=Album,
         )
         return (
-            self.album_info(album, search_lang=self.language) if album else None
+            self.album_info(album, search_lang=self.instance_config.language)
+            if album
+            else None
         )
 
     @override
@@ -474,13 +454,15 @@ class VocaDBPlugin(BeetsPlugin):
         track: Song | None = self.client._get(
             relative_path=f"songs/{track_id}",
             params={
-                "lang": self.language,
+                "lang": self.instance_config.language,
                 "fields": SONG_FIELDS,
             },
             type=Song,
         )
         return (
-            self.track_info(track, search_lang=self.language) if track else None
+            self.track_info(track, search_lang=self.instance_config.language)
+            if track
+            else None
         )
 
     def album_info(
@@ -524,7 +506,7 @@ class VocaDBPlugin(BeetsPlugin):
             include_featured_artists=self.instance_config.include_featured_album_artists,
             comp=va,
         )
-        if artist == config["va_name"].as_str():
+        if artist == VA_NAME:
             va = True
 
         artists, artists_ids, artist_id = self.extract_artists_from_categories(
@@ -734,7 +716,7 @@ class VocaDBPlugin(BeetsPlugin):
         artists_by_categories, support_artists = self.get_artists_by_categories(
             artists
         )
-        va_name: str = config["va_name"].as_str()
+        va_name: str = VA_NAME
 
         main_artists: list[str] = (
             [va_name]
