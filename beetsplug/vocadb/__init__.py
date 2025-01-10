@@ -19,7 +19,7 @@ from beets.autotag.match import track_distance
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import Subcommand, show_model_changes
 
-from .plugin_config import VA_NAME, InstanceConfig
+from .plugin_config import VA_NAME, InstanceConfig, LanguagePreference
 from .requests_handler import RequestsHandler
 from .requests_handler.models import (
     Album,
@@ -907,7 +907,7 @@ class VocaDBPlugin(BeetsPlugin):
             if not culture_codes:
                 if (
                     not translated_lyrics
-                    and language == "Romaji"
+                    and language == LanguagePreference.ROMAJI
                     and translation_type == TranslationType.ROMANIZED
                 ):
                     out_lyrics = value
@@ -917,7 +917,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if translation_type == TranslationType.ORIGINAL:
                     out_script = "Latn"
                     out_language = "eng"
-                if translated_lyrics or language == "English":
+                if translated_lyrics or language == LanguagePreference.ENGLISH:
                     out_lyrics = value
                 continue
 
@@ -925,7 +925,10 @@ class VocaDBPlugin(BeetsPlugin):
                 if translation_type == TranslationType.ORIGINAL:
                     out_script = "Jpan"
                     out_language = "jpn"
-                if not translated_lyrics and language == "Japanese":
+                if (
+                    not translated_lyrics
+                    and language == LanguagePreference.JAPANESE
+                ):
                     out_lyrics = value
 
         if not out_lyrics and lyrics:
@@ -938,12 +941,12 @@ class VocaDBPlugin(BeetsPlugin):
         lyrics: list[Lyrics], language: str | None
     ) -> str | None:
         lyric: Lyrics
-        if language == "English":
+        if language == LanguagePreference.ENGLISH:
             for lyric in lyrics:
                 if "en" in lyric.culture_codes:
                     return lyric.value
-            language = "Romaji"
-        if language == "Romaji":
+            language = LanguagePreference.ROMAJI
+        if language == LanguagePreference.ROMAJI:
             for lyric in lyrics:
                 if lyric.translation_type == TranslationType.ROMANIZED:
                     return lyric.value
