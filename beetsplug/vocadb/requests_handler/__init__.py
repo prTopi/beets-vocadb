@@ -58,7 +58,9 @@ class RequestsHandler:
         cls, type: type[APIObjectT]
     ) -> msgspec.json.Decoder[APIObjectT]:
         """Caches and returns a decoder for the specified type"""
-        decoder = msgspec.json.Decoder[APIObjectT](type=type)
+        decoder: msgspec.json.Decoder[APIObjectT] = msgspec.json.Decoder[
+            APIObjectT
+        ](type=type)
         cls._decoders[type] = cast(
             msgspec.json.Decoder[msgspec.Struct], decoder
         )

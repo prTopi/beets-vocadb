@@ -773,7 +773,9 @@ class VocaDBPlugin(BeetsPlugin):
         artists_by_categories: ArtistsByCategories = ArtistsByCategories()
         support_artists: set[str] = set()
 
-        role_category_map = {
+        role_category_map: dict[
+            ArtistCategories | ArtistRoles, dict[str, str]
+        ] = {
             ArtistCategories.CIRCLE: artists_by_categories.circles,
             ArtistRoles.ARRANGER: artists_by_categories.arrangers,
             ArtistRoles.COMPOSER: artists_by_categories.composers,
@@ -781,7 +783,7 @@ class VocaDBPlugin(BeetsPlugin):
             ArtistCategories.VOCALIST: artists_by_categories.vocalists,
         }
 
-        producer_roles = {
+        producer_roles: set[ArtistRoles] = {
             ArtistRoles.ARRANGER,
             ArtistRoles.COMPOSER,
             ArtistRoles.LYRICIST,
