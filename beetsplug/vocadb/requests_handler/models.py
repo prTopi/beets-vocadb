@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime  # noqa: TC003
-from typing import Optional
+from typing import ClassVar, Optional, TypeVar
 
 import msgspec
 
@@ -122,8 +122,7 @@ class ArtistRoles(StrEnum):
     ENCODER = "Encoder"
 
 
-# to avoid extra whitespace
-SPLIT_PATTERN: re.Pattern[str] = re.compile(r"\s*,\s*")
+E = TypeVar("E", bound=StrEnum)
 
 
 class AlbumArtist(TaggedBase, kw_only=True):
@@ -134,22 +133,27 @@ class AlbumArtist(TaggedBase, kw_only=True):
     roles: str
     artist: Optional[Artist] = None
     categories: set[ArtistCategories] = msgspec.field(
-        default_factory=set, name="dummy1"
+        default_factory=set, name="_computed_categories"
     )
     effective_roles: set[ArtistRoles] = msgspec.field(
-        default_factory=set, name="dummy2"
+        default_factory=set, name="_computed_categories"
     )
 
+    _SPLIT_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"\s*,\s*")
+
     def __post_init__(self) -> None:
-        self.categories = {
-            ArtistCategories(c)
-            for c in SPLIT_PATTERN.split(self._categories)
-            if c
-        }
-        self.effective_roles = {
-            ArtistRoles(r)
-            for r in SPLIT_PATTERN.split(self._effective_roles)
-            if r
+        self.categories = self._parse_enum_set(
+            self._categories, ArtistCategories
+        )
+        self.effective_roles = self._parse_enum_set(
+            self._effective_roles, ArtistRoles
+        )
+
+    @classmethod
+    def _parse_enum_set(cls, value: str, enum_class: type[E]) -> set[E]:
+        """Helper method to parse comma-separated string into set of enum values"""
+        return {
+            enum_class(item) for item in cls._SPLIT_PATTERN.split(value) if item
         }
 
 
