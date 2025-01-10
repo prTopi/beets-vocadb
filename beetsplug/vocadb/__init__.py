@@ -83,7 +83,7 @@ class FlexibleAttributes(
         def add_prefix(attrs: frozenset[str]) -> frozenset[str]:
             return frozenset(f"{prefix}_{attr}" for attr in attrs)
 
-        return FlexibleAttributes(
+        return self.__class__(
             album=add_prefix(self.album), item=add_prefix(self.item)
         )
 
