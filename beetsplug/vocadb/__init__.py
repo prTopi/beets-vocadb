@@ -88,7 +88,7 @@ class FlexibleAttributes(
         )
 
 
-class ArtistsByCategories(
+class CategorizedArtists(
     msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True
 ):
     producers: dict[str, str] = {}
@@ -498,7 +498,7 @@ class VocaDBPlugin(BeetsPlugin):
         va: bool = release.disc_type == DiscTypes.COMPILATION
         album: str | None = release.name
         album_id: str | None = str(release.id)
-        artist_categories: ArtistsByCategories
+        artist_categories: CategorizedArtists
         artist: str
         artist_categories, artist = self.get_artists(
             release.artists,
@@ -602,7 +602,7 @@ class VocaDBPlugin(BeetsPlugin):
     ) -> TrackInfo:
         title: str = recording.name
         track_id: str = str(recording.id)
-        artist_categories: ArtistsByCategories
+        artist_categories: CategorizedArtists
         artist: str
         artist_categories, artist = self.get_artists(recording.artists)
 
@@ -708,8 +708,8 @@ class VocaDBPlugin(BeetsPlugin):
         artists: SongOrAlbumArtists,
         include_featured_artists: bool = True,
         comp: bool = False,
-    ) -> tuple[ArtistsByCategories, str]:
-        artists_by_categories: ArtistsByCategories
+    ) -> tuple[CategorizedArtists, str]:
+        artists_by_categories: CategorizedArtists
         support_artists: set[str]
 
         artists_by_categories, support_artists = self.get_artists_by_categories(
@@ -755,7 +755,7 @@ class VocaDBPlugin(BeetsPlugin):
     @staticmethod
     def get_artists_by_categories(
         artists: SongOrAlbumArtists,
-    ) -> tuple[ArtistsByCategories, set[str]]:
+    ) -> tuple[CategorizedArtists, set[str]]:
         """Categorizes artists by their roles and identifies support artists.
 
         Takes a list of artists and organizes them into categories like producers,
@@ -770,7 +770,7 @@ class VocaDBPlugin(BeetsPlugin):
             - ArtistsByCategories object with artists sorted into role categories
             - Set of artist names that are marked as support artists
         """
-        artists_by_categories: ArtistsByCategories = ArtistsByCategories()
+        artists_by_categories: CategorizedArtists = CategorizedArtists()
         support_artists: set[str] = set()
 
         role_category_map: dict[
@@ -838,7 +838,7 @@ class VocaDBPlugin(BeetsPlugin):
         return artists_by_categories, support_artists
 
     def extract_artists_from_categories(
-        self, artist_categories: ArtistsByCategories
+        self, artist_categories: CategorizedArtists
     ) -> tuple[list[str], list[str], str | None]:
         """
         Extracts relevant artists and their IDs.
