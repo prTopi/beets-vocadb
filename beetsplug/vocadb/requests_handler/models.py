@@ -133,10 +133,10 @@ class AlbumArtist(TaggedBase, kw_only=True):
     roles: str
     artist: Optional[Artist] = None
     categories: set[ArtistCategories] = msgspec.field(
-        default_factory=set, name="_computed_categories"
+        default_factory=set, name="dummy1"
     )
     effective_roles: set[ArtistRoles] = msgspec.field(
-        default_factory=set, name="_computed_categories"
+        default_factory=set, name="dummy2"
     )
 
     _SPLIT_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"\s*,\s*")
