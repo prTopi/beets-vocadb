@@ -119,14 +119,12 @@ class VocaDBPlugin(BeetsPlugin):
         _prefixed_flex_attributes: FlexibleAttributes = (
             self._flexible_attributes.with_prefix(self.name)
         )
-        self.album_types: dict[str, dbcore.types.Integer] = {
-            prefix_attribute: dbcore.types.INTEGER
-            for prefix_attribute in _prefixed_flex_attributes.album
-        }
-        self.item_types: dict[str, dbcore.types.Integer] = {
-            prefix_attribute: dbcore.types.INTEGER
-            for prefix_attribute in _prefixed_flex_attributes.item
-        }
+        self.album_types: dict[str, dbcore.types.Integer] = dict.fromkeys(
+            _prefixed_flex_attributes.album, dbcore.types.INTEGER
+        )
+        self.item_types: dict[str, dbcore.types.Integer] = dict.fromkeys(
+            _prefixed_flex_attributes.item, dbcore.types.INTEGER
+        )
         self.config.add(
             {
                 "source_weight": 0.5,
