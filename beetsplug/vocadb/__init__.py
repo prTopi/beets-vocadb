@@ -29,6 +29,7 @@ from .requests_handler.models import (
     Disc,
     DiscMediaType,
     DiscTypes,
+    ReleaseDate,
     Song,
     SongQueryResult,
     TranslationType,
