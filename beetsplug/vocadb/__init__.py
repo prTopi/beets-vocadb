@@ -110,11 +110,11 @@ class CategorizedArtists(
     msgspec.Struct, forbid_unknown_fields=True, omit_defaults=True
 ):
     producers: dict[str, str] = {}
+    composers: dict[str, str] = {}
+    arrangers: dict[str, str] = {}
+    lyricists: dict[str, str] = {}
     circles: dict[str, str] = {}
     vocalists: dict[str, str] = {}
-    arrangers: dict[str, str] = {}
-    composers: dict[str, str] = {}
-    lyricists: dict[str, str] = {}
 
 
 class VocaDBPlugin(BeetsPlugin):
@@ -733,7 +733,7 @@ class VocaDBPlugin(BeetsPlugin):
         artists_by_categories: CategorizedArtists
         support_artists: set[str]
 
-        artists_by_categories, support_artists = self.get_artists_by_categories(
+        artists_by_categories, support_artists = self.categorize_artists(
             artists
         )
         va_name: str = VA_NAME
@@ -774,7 +774,7 @@ class VocaDBPlugin(BeetsPlugin):
         return artists_by_categories, artist_string
 
     @staticmethod
-    def get_artists_by_categories(
+    def categorize_artists(
         artists: SongOrAlbumArtists,
     ) -> tuple[CategorizedArtists, set[str]]:
         """Categorizes artists by their roles and identifies support artists.
