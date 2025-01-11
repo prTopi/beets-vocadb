@@ -3,12 +3,20 @@
 from __future__ import annotations
 
 import re
+import sys
 from datetime import datetime  # noqa: TC003
+from functools import cached_property
 from typing import ClassVar, Optional, TypeVar
 
 import msgspec
 
-from . import StrEnum
+if not sys.version_info < (3, 11):
+    from enum import StrEnum  # pyright: ignore[reportUnreachable]
+else:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        pass
 
 
 class TaggedBase(msgspec.Struct, omit_defaults=True, rename="camel"): ...
@@ -125,29 +133,23 @@ class ArtistRoles(StrEnum):
 E = TypeVar("E", bound=StrEnum)
 
 
-class AlbumArtist(TaggedBase, kw_only=True):
+class AlbumArtist(TaggedBase, dict=True, kw_only=True):
     _categories: str = msgspec.field(name="categories")
     _effective_roles: str = msgspec.field(name="effectiveRoles")
     is_support: bool
     name: str
     roles: str
     artist: Optional[Artist] = None
-    categories: set[ArtistCategories] = msgspec.field(
-        default_factory=set, name="dummy1"
-    )
-    effective_roles: set[ArtistRoles] = msgspec.field(
-        default_factory=set, name="dummy2"
-    )
 
     _SPLIT_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"\s*,\s*")
 
-    def __post_init__(self) -> None:
-        self.categories = self._parse_enum_set(
-            self._categories, ArtistCategories
-        )
-        self.effective_roles = self._parse_enum_set(
-            self._effective_roles, ArtistRoles
-        )
+    @cached_property
+    def categories(self) -> set[ArtistCategories]:
+        return self._parse_enum_set(self._categories, ArtistCategories)
+
+    @cached_property
+    def effective_roles(self) -> set[ArtistRoles]:
+        return self._parse_enum_set(self._effective_roles, ArtistRoles)
 
     @classmethod
     def _parse_enum_set(cls, value: str, enum_class: type[E]) -> set[E]:
@@ -304,7 +306,7 @@ class WebLink(TaggedBase):
     id: Optional[int] = None
 
 
-class DiscTypes(StrEnum):
+class DiscType(StrEnum):
     UNKNOWN = "Unknown"
     ALBUM = "Album"
     SINGLE = "Single"
@@ -321,7 +323,7 @@ class DiscTypes(StrEnum):
 
 class AlbumFromQuery(AlbumOrSong):
     release_date: ReleaseDate
-    disc_type: DiscTypes
+    disc_type: DiscType
 
 
 class Album(AlbumFromQuery):

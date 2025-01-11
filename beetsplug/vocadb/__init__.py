@@ -19,8 +19,19 @@ from beets.autotag.match import track_distance
 from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
 from beets.ui import Subcommand, show_model_changes
 
-from .plugin_config import VA_NAME, InstanceConfig, LanguagePreference
-from .requests_handler import RequestsHandler
+from .plugin_config import VA_NAME, InstanceConfig
+from .requests_handler import (
+    AlbumOptionalFields,
+    GetAlbumParams,
+    GetSongParams,
+    Language,
+    NameMatchMode,
+    RequestsHandler,
+    SearchAlbumsParams,
+    SearchSongParams,
+    SongOptionalFields,
+    SongSortRule,
+)
 from .requests_handler.models import (
     Album,
     AlbumQueryResult,
@@ -28,7 +39,7 @@ from .requests_handler.models import (
     ArtistRoles,
     Disc,
     DiscMediaType,
-    DiscTypes,
+    DiscType,
     ReleaseDate,
     Song,
     SongQueryResult,
@@ -43,7 +54,7 @@ if TYPE_CHECKING:
 
     from beets.autotag.hooks import Distance
     from beets.library import Library
-    from typing_extensions import LiteralString, TypeAlias
+    from typing_extensions import TypeAlias
 
     from .requests_handler.models import (
         AlbumArtist,
@@ -61,7 +72,14 @@ SongOrAlbumArtists: TypeAlias = "list[AlbumArtist] | list[SongArtist]"
 
 NAME: str = __name__
 USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
-SONG_FIELDS: LiteralString = "Artists,CultureCodes,Tags,Bpm,Lyrics"
+
+SONG_FIELDS: set[SongOptionalFields] = {
+    SongOptionalFields.ARTISTS,
+    SongOptionalFields.CULTURECODES,
+    SongOptionalFields.TAGS,
+    SongOptionalFields.BPM,
+    SongOptionalFields.LYRICS,
+}
 
 
 class FlexibleAttributes(
@@ -360,14 +378,14 @@ class VocaDBPlugin(BeetsPlugin):
         extra_tags: dict[str, object] | None = None,
     ) -> tuple[()] | tuple[AlbumInfo, ...]:
         self._log.debug("Searching for album {0}", album)
-        candidates_container: AlbumQueryResult | None = self.client._get(
-            relative_path="albums",
-            params={
-                "query": album,
-                "maxResults": str(self.instance_config.max_results),
-                "nameMatchMode": "Auto",
-            },
-            type=AlbumQueryResult,
+        candidates_container: AlbumQueryResult | None = (
+            self.client.search_albums(
+                params=SearchAlbumsParams(
+                    query=album,
+                    max_results=self.instance_config.max_results,
+                    name_match_mode=NameMatchMode.AUTO,
+                )
+            )
         )
         if not candidates_container:
             return ()
@@ -390,19 +408,19 @@ class VocaDBPlugin(BeetsPlugin):
         self, item: library.Item, artist: str, title: str
     ) -> tuple[TrackInfo, ...]:
         self._log.debug("Searching for track {0}", item)
-        item_candidates_container: SongQueryResult | None = self.client._get(
-            relative_path="songs",
-            params={
-                "query": title,
-                "discTypes": "Album",
-                "fields": SONG_FIELDS,
-                "lang": self.instance_config.language,
-                "maxResults": str(self.instance_config.max_results),
-                "nameMatchMode": "Auto",
-                "preferAccurateMatches": "True",
-                "sort": "SongType",
-            },
-            type=SongQueryResult,
+        item_candidates_container: SongQueryResult | None = (
+            self.client.search_songs(
+                params=SearchSongParams(
+                    query=title,
+                    fields=SONG_FIELDS,
+                    max_results=self.instance_config.max_results,
+                    disc_types=DiscType.ALBUM,
+                    name_match_mode=NameMatchMode.AUTO,
+                    prefer_accurate_matches=True,
+                    sort=SongSortRule.SONGTYPE,
+                    lang=self.instance_config.language,
+                )
+            )
         )
         if item_candidates_container:
             items: list[Song] = item_candidates_container.items
@@ -425,14 +443,19 @@ class VocaDBPlugin(BeetsPlugin):
             )
             return None
         self._log.debug("Searching for album {0}", album_id)
-        album: Album | None = self.client._get(
-            relative_path=f"albums/{album_id}",
-            params={
-                "lang": self.instance_config.language,
-                "fields": "Artists,Discs,Tags,Tracks,WebLinks",
-                "songFields": SONG_FIELDS,
-            },
-            type=Album,
+        album: Album | None = self.client.get_album(
+            album_id=int(album_id),
+            params=GetAlbumParams(
+                fields={
+                    AlbumOptionalFields.ARTISTS,
+                    AlbumOptionalFields.DISCS,
+                    AlbumOptionalFields.TAGS,
+                    AlbumOptionalFields.TRACKS,
+                    AlbumOptionalFields.WEBLINKS,
+                },
+                song_fields=SONG_FIELDS,
+                lang=self.instance_config.language,
+            ),
         )
         return (
             self.album_info(album, search_lang=self.instance_config.language)
@@ -450,13 +473,11 @@ class VocaDBPlugin(BeetsPlugin):
             )
             return None
         self._log.debug("Searching for track {0}", track_id)
-        track: Song | None = self.client._get(
-            relative_path=f"songs/{track_id}",
-            params={
-                "lang": self.instance_config.language,
-                "fields": SONG_FIELDS,
-            },
-            type=Song,
+        track: Song | None = self.client.get_song(
+            song_id=int(track_id),
+            params=GetSongParams(
+                fields=SONG_FIELDS, lang=self.instance_config.language
+            ),
         )
         return (
             self.track_info(track, search_lang=self.instance_config.language)
@@ -495,7 +516,7 @@ class VocaDBPlugin(BeetsPlugin):
                 }
             )
 
-        va: bool = release.disc_type == DiscTypes.COMPILATION
+        va: bool = release.disc_type == DiscType.COMPILATION
         album: str | None = release.name
         album_id: str | None = str(release.id)
         artist_categories: CategorizedArtists
@@ -907,7 +928,7 @@ class VocaDBPlugin(BeetsPlugin):
             if not culture_codes:
                 if (
                     not translated_lyrics
-                    and language == LanguagePreference.ROMAJI
+                    and language == Language.ROMAJI
                     and translation_type == TranslationType.ROMANIZED
                 ):
                     out_lyrics = value
@@ -917,7 +938,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if translation_type == TranslationType.ORIGINAL:
                     out_script = "Latn"
                     out_language = "eng"
-                if translated_lyrics or language == LanguagePreference.ENGLISH:
+                if translated_lyrics or language == Language.ENGLISH:
                     out_lyrics = value
                 continue
 
@@ -925,10 +946,7 @@ class VocaDBPlugin(BeetsPlugin):
                 if translation_type == TranslationType.ORIGINAL:
                     out_script = "Jpan"
                     out_language = "jpn"
-                if (
-                    not translated_lyrics
-                    and language == LanguagePreference.JAPANESE
-                ):
+                if not translated_lyrics and language == Language.JAPANESE:
                     out_lyrics = value
 
         if not out_lyrics and lyrics:
@@ -941,12 +959,12 @@ class VocaDBPlugin(BeetsPlugin):
         lyrics: list[Lyrics], language: str | None
     ) -> str | None:
         lyric: Lyrics
-        if language == LanguagePreference.ENGLISH:
+        if language == Language.ENGLISH:
             for lyric in lyrics:
                 if "en" in lyric.culture_codes:
                     return lyric.value
-            language = LanguagePreference.ROMAJI
-        if language == LanguagePreference.ROMAJI:
+            language = Language.ROMAJI
+        if language == Language.ROMAJI:
             for lyric in lyrics:
                 if lyric.translation_type == TranslationType.ROMANIZED:
                     return lyric.value

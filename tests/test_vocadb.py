@@ -3,7 +3,7 @@ from unittest import TestCase
 import msgspec
 
 from beetsplug.vocadb import VocaDBPlugin
-from beetsplug.vocadb.plugin_config import LanguagePreference
+from beetsplug.vocadb.plugin_config import get_lang
 from beetsplug.vocadb.requests_handler.models import Lyrics, TagUsage
 
 
@@ -71,12 +71,12 @@ class TestVocaDBPlugin(TestCase):
         )
         assert self.plugin.get_genres(tags) == "Genre2"
 
-    def test_language_preference(self) -> None:
-        assert LanguagePreference.from_config(False, ["en", "jp"]) == "English"
-        assert LanguagePreference.from_config(False, ["jp", "en"]) == "Japanese"
-        assert LanguagePreference.from_config(True, ["jp", "en"]) == "Romaji"
-        assert LanguagePreference.from_config(True, ["en", "jp"]) == "English"
-        assert LanguagePreference.from_config(True) == "English"
+    def test_get_lang(self) -> None:
+        assert get_lang(False, ["en", "jp"]) == "English"
+        assert get_lang(False, ["jp", "en"]) == "Japanese"
+        assert get_lang(True, ["jp", "en"]) == "Romaji"
+        assert get_lang(True, ["en", "jp"]) == "English"
+        assert get_lang(True) == "English"
 
     def test_get_lyrics(self) -> None:
         lyrics: list[Lyrics] = msgspec.json.decode(

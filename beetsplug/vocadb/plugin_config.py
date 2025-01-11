@@ -8,42 +8,37 @@ from typing import TYPE_CHECKING
 import msgspec
 from beets import config
 
+from .requests_handler import Language
+
 if not sys.version_info < (3, 11):
-    from enum import StrEnum  # pyright: ignore[reportUnreachable]
+    pass  # pyright: ignore[reportUnreachable]
 else:
-    from .requests_handler import StrEnum
+    pass
 
 if TYPE_CHECKING:
     from confuse.core import Subview
+
 
 LANGUAGES: list[str] | None = config["import"]["languages"].as_str_seq()
 VA_NAME: str = config["va_name"].as_str()
 
 
-class LanguagePreference(StrEnum):
-    ENGLISH = "English"
-    JAPANESE = "Japanese"
-    ROMAJI = "Romaji"
+def get_lang(
+    prefer_romaji: bool, languages: list[str] | None = LANGUAGES
+) -> Language:
+    if not languages:
+        return Language.DEFAULT
 
-    DEFAULT = ENGLISH
+    for language in languages:
+        # Check for Japanese preference
+        if language == "jp":
+            return Language.ROMAJI if prefer_romaji else Language.JAPANESE
 
-    @classmethod
-    def from_config(
-        cls, prefer_romaji: bool, languages: list[str] | None = LANGUAGES
-    ) -> LanguagePreference:
-        if not languages:
-            return cls.DEFAULT
+        # Check for English preference
+        if language == "en":
+            return Language.ENGLISH
 
-        for language in languages:
-            # Check for Japanese preference
-            if language == "jp":
-                return cls.ROMAJI if prefer_romaji else cls.JAPANESE
-
-            # Check for English preference
-            if language == "en":
-                return cls.ENGLISH
-
-        return cls.DEFAULT
+    return Language.DEFAULT
 
 
 class InstanceConfig(msgspec.Struct):
@@ -53,19 +48,10 @@ class InstanceConfig(msgspec.Struct):
     translated_lyrics: bool = False
     include_featured_album_artists: bool = False
     max_results: int = 5
-    _language: LanguagePreference = LanguagePreference.DEFAULT
+    language: Language = Language.DEFAULT
 
     def __post_init__(self) -> None:
-        self._language = LanguagePreference.from_config(self.prefer_romaji)
-
-    @property
-    def language(self) -> str:
-        return self._language.value
-
-    # just in case
-    @language.setter
-    def language(self, value: str) -> None:
-        self._language = LanguagePreference(value)
+        self.language = get_lang(self.prefer_romaji)
 
     @classmethod
     def from_config_subview(
