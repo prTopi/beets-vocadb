@@ -6,7 +6,7 @@ import re
 import sys
 from datetime import datetime  # noqa: TC003
 from functools import cached_property
-from typing import ClassVar, Optional, TypeVar
+from typing import Optional, TypeVar
 
 import msgspec
 
@@ -93,7 +93,17 @@ class Artist(TaggedBase):
     picture_mime: Optional[str] = None
 
 
-class ArtistCategories(StrEnum):
+SPLIT_PATTERN: re.Pattern[str] = re.compile(r"\s*,\s*")
+
+
+class StrEnumAsSet(StrEnum):
+    @classmethod
+    def create_set(cls, csv: str):
+        """Helper method to parse comma-separated string into set of enum values"""
+        return {cls(element) for element in SPLIT_PATTERN.split(csv) if element}
+
+
+class ArtistCategories(StrEnumAsSet):
     VOCALIST = "Vocalist"
     NOTHING = "Nothing"
     PRODUCER = "Producer"
@@ -106,7 +116,7 @@ class ArtistCategories(StrEnum):
     SUBJECT = "Subject"
 
 
-class ArtistRoles(StrEnum):
+class ArtistRoles(StrEnumAsSet):
     DEFAULT = "Default"
     ANIMATOR = "Animator"
     ARRANGER = "Arranger"
@@ -141,22 +151,13 @@ class AlbumArtist(TaggedBase, dict=True, kw_only=True):
     roles: str
     artist: Optional[Artist] = None
 
-    _SPLIT_PATTERN: ClassVar[re.Pattern[str]] = re.compile(r"\s*,\s*")
-
     @cached_property
     def categories(self) -> set[ArtistCategories]:
-        return self._parse_enum_set(self._categories, ArtistCategories)
+        return ArtistCategories.create_set(self._categories)
 
     @cached_property
     def effective_roles(self) -> set[ArtistRoles]:
-        return self._parse_enum_set(self._effective_roles, ArtistRoles)
-
-    @classmethod
-    def _parse_enum_set(cls, value: str, enum_class: type[E]) -> set[E]:
-        """Helper method to parse comma-separated string into set of enum values"""
-        return {
-            enum_class(item) for item in cls._SPLIT_PATTERN.split(value) if item
-        }
+        return ArtistRoles.create_set(self._effective_roles)
 
 
 class SongArtist(AlbumArtist):
