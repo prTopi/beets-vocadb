@@ -255,6 +255,7 @@ class SongType(StrEnum):
     ARRANGEMENT = "Arrangement"
     INSTRUMENTAL = "Instrumental"
     MASHUP = "Mashup"
+    SHORTVERSION = "ShortVersion"
     MUSICPV = "MusicPV"
     DRAMAPV = "DramaPV"
     LIVE = "Live"
