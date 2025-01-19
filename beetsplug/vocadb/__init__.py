@@ -494,7 +494,10 @@ class VocaDBPlugin(BeetsPlugin):
                     disc_number=i + 1, name="CD", media_type=DiscMediaType.AUDIO
                 )
                 for i in range(
-                    max(track.disc_number for track in release.tracks)
+                    max(
+                        {track.disc_number for track in release.tracks},
+                        default=1,
+                    )
                 )
             ]
         ignored_discs: set[int] = set()
