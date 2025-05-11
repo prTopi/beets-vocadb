@@ -8,6 +8,9 @@ authors = [
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
+
+keywords = ["music", "vocadb", "beets", "metadata"]
+requires-python = ">=3.9,<4.0"
 classifiers = [
     "Topic :: Multimedia :: Sound/Audio",
     "Topic :: Multimedia :: Sound/Audio :: Players :: MP3",
@@ -19,22 +22,29 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+
 dependencies = [
-    "beets",
-    "httpx[http2]",
-    "msgspec",
-    "typing_extensions; python_version < '3.12'",
+    "beets (>=2.3.0,<3.0.0)",
+    "httpx[http2] (>=0.28.1,<0.29.0)",
+    "msgspec (>=0.19.0,<0.20.0)",
+    "typing-extensions (>=4.13.2,<4.14.0); python_version < '3.12'",
 ]
+
+[tool.poetry]
+packages = [{ include = "beetsplug" }]
+include = ["LICENSE", "README.md"]
+
+[tool.poetry.group.test.dependencies]
+coverage = "^7.8.0"
+pytest = "^8.3.5"
+flake8 = "^7.2.0"
 
 [tool.basedpyright]
 pythonVersion = "3.9"
 
-[tool.setuptools.packages.find]
-exclude = ["typings"]
-
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 target-version = "py39"
