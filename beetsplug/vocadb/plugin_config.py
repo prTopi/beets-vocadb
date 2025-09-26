@@ -27,7 +27,7 @@ class InstanceConfig(msgspec.Struct):
     language: ContentLanguagePreference = ContentLanguagePreference.DEFAULT
 
     def __post_init__(self) -> None:
-        self.language = self.get_lang(self.prefer_romaji)
+        self.language = self.get_lang(self.prefer_romaji, LANGUAGES)
 
     # convert fields to serilizable types
     def to_dict(self) -> dict[str, int | bool | str]:
@@ -68,7 +68,7 @@ class InstanceConfig(msgspec.Struct):
 
     @staticmethod
     def get_lang(
-        prefer_romaji: bool, languages: list[str] | None = LANGUAGES
+        prefer_romaji: bool, languages: list[str] | None
     ) -> ContentLanguagePreference:
         if languages:
             for language in languages:
