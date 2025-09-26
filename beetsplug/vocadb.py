@@ -4,8 +4,8 @@ from itertools import chain
 from json import load
 from optparse import Values
 from re import Match, match, search
-from typing import NamedTuple, Optional, TypedDict, TYPE_CHECKING, Union
 from sys import version_info
+from typing import TYPE_CHECKING, NamedTuple, Optional, TypedDict, Union
 
 if version_info >= (3, 11):
     from typing import NotRequired
@@ -15,6 +15,7 @@ if version_info >= (3, 12):
     from typing import override
 else:
     from typing_extensions import override
+
 from urllib.error import HTTPError
 from urllib.parse import quote, urljoin
 from urllib.request import Request, urlopen
@@ -23,12 +24,15 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRead
 
 import beets
-from beets import autotag, config, library, ui, util
-from beets.autotag.hooks import AlbumInfo, TrackInfo, Distance
+from beets.autotag import apply_item_metadata, apply_metadata
+from beets.autotag.distance import Distance
+from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.autotag.match import track_distance
 from beets.library import Album, Item, Library
-from beets.plugins import BeetsPlugin, apply_item_changes, get_distance
-from beets.ui import show_model_changes, Subcommand
+from beets.metadata_plugins import MetadataSourcePlugin
+from beets.plugins import apply_item_changes
+from beets.ui import Subcommand, should_move, should_write, show_model_changes
+from beets.util import ancestry
 
 
 class InstanceInfo(NamedTuple):
@@ -165,22 +169,24 @@ class ConfigDict(TypedDict):
     translated_lyrics: bool
     include_featured_album_artists: bool
     va_string: str
-    max_results: int
 
 
-class VocaDBPlugin(BeetsPlugin):
-
+class VocaDBPlugin(MetadataSourcePlugin):
     default_config: ConfigDict = {
         "prefer_romaji": False,
         "translated_lyrics": False,
         "include_featured_album_artists": False,
         "va_string": "Various artists",
-        "max_results": 5,
     }
 
     user_agent: str = f"beets/{beets.__version__} +https://beets.io/"
-    headers: dict[str, str] = {"accept": "application/json", "User-Agent": user_agent}
-    languages: Optional[Sequence[str]] = config["import"]["languages"].as_str_seq()
+    headers: dict[str, str] = {
+        "accept": "application/json",
+        "User-Agent": user_agent,
+    }
+    languages: Optional[Sequence[str]] = beets.config["import"][
+        "languages"
+    ].as_str_seq()
     song_fields: str = "Artists,Tags,Bpm,Lyrics"
 
     instance_info: InstanceInfo = InstanceInfo(
@@ -192,11 +198,6 @@ class VocaDBPlugin(BeetsPlugin):
 
     def __init__(self) -> None:
         super().__init__()
-        self.config.add(
-            {
-                "source_weight": 0.5,
-            }
-        )
         self.config.add(self.default_config)
 
         self.data_source: str = self.instance_info.name
@@ -204,7 +205,7 @@ class VocaDBPlugin(BeetsPlugin):
     def __init_subclass__(cls, instance_info: InstanceInfo) -> None:
         super().__init_subclass__()
         cls.instance_info = instance_info
-        vocadb_config = config["vocadb"]
+        vocadb_config = beets.config["vocadb"]
         if vocadb_config.exists():
             for key in vocadb_config.keys():
                 cls.default_config[key] = vocadb_config[key].get()
@@ -221,7 +222,7 @@ class VocaDBPlugin(BeetsPlugin):
             if lang == "en":
                 return "English"
 
-        return "English"  # Default if no matching language found
+        return "English"
 
     @property
     def prefer_romaji(self) -> bool:
@@ -240,8 +241,8 @@ class VocaDBPlugin(BeetsPlugin):
         return self.config["va_string"].as_str()
 
     @property
-    def max_results(self) -> int:
-        return self.config["max_results"].as_number()
+    def search_limit(self) -> int:
+        return self.config["search_limit"].as_number()
 
     @override
     def commands(self) -> tuple[Subcommand, ...]:
@@ -283,16 +284,20 @@ class VocaDBPlugin(BeetsPlugin):
 
     def func(self, lib: Library, opts: Values, args: list[str]) -> None:
         """Command handler for the *dbsync function."""
-        move: bool = ui.should_move(opts.move)
+        move: bool = should_move(opts.move)
         pretend: bool = opts.pretend
-        write: bool = ui.should_write(opts.write)
-        query: list[str] = ui.decargs(args)
+        write: bool = should_write(opts.write)
 
-        self.singletons(lib, query, move, pretend, write)
-        self.albums(lib, query, move, pretend, write)
+        self.singletons(lib, args, move, pretend, write)
+        self.albums(lib, args, move, pretend, write)
 
     def singletons(
-        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+        self,
+        lib: Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
     ) -> None:
         """Retrieve and apply info from the autotagger for items matched by
         query.
@@ -316,7 +321,9 @@ class VocaDBPlugin(BeetsPlugin):
                     item_formatted,
                 )
                 continue
-            track_info: Optional[TrackInfo] = self.track_for_id(item.mb_trackid)
+            track_info: Optional[TrackInfo] = self.track_for_id(
+                item.mb_trackid
+            )
             if not (track_info):
                 self._log.info(
                     "Recording ID not found: {0} for track {1}",
@@ -325,12 +332,17 @@ class VocaDBPlugin(BeetsPlugin):
                 )
                 continue
             with lib.transaction():
-                autotag.apply_item_metadata(item, track_info)
+                apply_item_metadata(item, track_info)
                 show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
     def albums(
-        self, lib: Library, query: list[str], move: bool, pretend: bool, write: bool
+        self,
+        lib: Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
     ) -> None:
         """Retrieve and apply info from the autotagger for albums matched by
         query and their items.
@@ -354,7 +366,9 @@ class VocaDBPlugin(BeetsPlugin):
                     album_formatted,
                 )
                 continue
-            album_info: Optional[AlbumInfo] = self.album_for_id(album.mb_albumid)
+            album_info: Optional[AlbumInfo] = self.album_for_id(
+                album.mb_albumid
+            )
             if not (album_info):
                 self._log.info(
                     "Release ID {0} not found for album {1}",
@@ -371,10 +385,11 @@ class VocaDBPlugin(BeetsPlugin):
             for item in items:
                 if item.mb_trackid not in track_index:
                     old_track_id: str = item.mb_trackid
-                    # Unset track id so that it won't affect distance
                     item.mb_trackid = None
                     matches: dict[str, Distance] = {
-                        track_info["track_id"]: track_distance(item, track_info)
+                        track_info["track_id"]: track_distance(
+                            item, track_info
+                        )
                         for track_info in track_index.values()
                     }
                     item.mb_trackid = min(matches, key=lambda k: matches[k])
@@ -388,7 +403,7 @@ class VocaDBPlugin(BeetsPlugin):
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
-                autotag.apply_metadata(album_info, mapping)
+                apply_metadata(album_info, mapping)
                 changed: bool = False
                 any_changed_item: Item = items[0]
                 for item in items:
@@ -401,7 +416,7 @@ class VocaDBPlugin(BeetsPlugin):
                     continue
                 if not pretend:
                     key: str
-                    for key in library.Album.item_keys:
+                    for key in Album.item_keys:
                         if key not in [
                             "original_day",
                             "original_month",
@@ -410,26 +425,9 @@ class VocaDBPlugin(BeetsPlugin):
                         ]:
                             album[key] = any_changed_item[key]
                     album.store()
-                    if move and lib.directory in util.ancestry(items[0].path):
+                    if move and lib.directory in ancestry(items[0].path):
                         self._log.debug("moving album {0}", album_formatted)
                         album.move()
-
-    @override
-    def track_distance(self, item: Item, info: TrackInfo) -> Distance:
-        """Returns the track distance."""
-        return get_distance(data_source=self.data_source, info=info, config=self.config)
-
-    @override
-    def album_distance(
-        self,
-        items: Sequence[Item],
-        album_info: AlbumInfo,
-        mapping: dict[Item, TrackInfo],
-    ) -> Distance:
-        """Returns the album distance."""
-        return get_distance(
-            data_source=self.data_source, info=album_info, config=self.config
-        )
 
     @override
     def candidates(
@@ -443,8 +441,9 @@ class VocaDBPlugin(BeetsPlugin):
         self._log.debug("Searching for album {0}", album)
         url: str = urljoin(
             self.instance_info.api_url,
-            f"albums/?query={quote(album)}&maxResults={self.max_results}&nameMatchMode=Auto",
+            f"albums/?query={quote(album)}&maxResults={self.search_limit}&nameMatchMode=Auto",
         )
+        self._log.debug("url: {0}", url)
         request: Request = Request(url, headers=self.headers)
         result: SupportsRead[Union[str, bytes]]
         try:
@@ -456,16 +455,20 @@ class VocaDBPlugin(BeetsPlugin):
                         len(result_dict["items"]),
                         album,
                     )
-                    # songFields parameter doesn't exist for album search
-                    # so we'll get albums by their id
                     ids: list[str] = [
                         str(item.get("id")) for item in result_dict["items"]
                     ]
                     return tuple(
-                        [album for album in map(self.album_for_id, ids) if album]
+                        [
+                            album
+                            for album in map(self.album_for_id, ids)
+                            if album
+                        ]
                     )
                 else:
-                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    self._log.debug(
+                        "API Error: Returned empty page (query: {0})", url
+                    )
                     return ()
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
@@ -481,7 +484,7 @@ class VocaDBPlugin(BeetsPlugin):
             f"songs/?query={quote(title)}"
             + f"&fields={self.song_fields}"
             + f"&lang={self.language}"
-            + f"&maxResults={self.max_results}"
+            + f"&maxResults={self.search_limit}"
             + "&sort=SongType&preferAccurateMatches=true&nameMatchMode=Auto",
         )
         request: Request = Request(url, headers=self.headers)
@@ -498,12 +501,16 @@ class VocaDBPlugin(BeetsPlugin):
                     return tuple(
                         [
                             track
-                            for track in map(self.track_info, result_dict["items"])
+                            for track in map(
+                                self.track_info, result_dict["items"]
+                            )
                             if track
                         ]
                     )
                 else:
-                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    self._log.debug(
+                        "API Error: Returned empty page (query: {0})", url
+                    )
                     return ()
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
@@ -535,7 +542,9 @@ class VocaDBPlugin(BeetsPlugin):
                     result_dict: AlbumDict = load(result)
                     return self.album_info(result_dict, search_lang=language)
                 else:
-                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    self._log.debug(
+                        "API Error: Returned empty page (query: {0})", url
+                    )
                     return None
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
@@ -554,7 +563,9 @@ class VocaDBPlugin(BeetsPlugin):
         language: str = self.language
         url: str = urljoin(
             self.instance_info.api_url,
-            f"songs/{track_id}" + f"?fields={self.song_fields}" + f"&lang={language}",
+            f"songs/{track_id}"
+            + f"?fields={self.song_fields}"
+            + f"&lang={language}",
         )
         request: Request = Request(url, headers=self.headers)
         result: SupportsRead[Union[str, bytes]]
@@ -564,7 +575,9 @@ class VocaDBPlugin(BeetsPlugin):
                     result_dict: SongDict = load(result)
                     return self.track_info(result_dict, search_lang=language)
                 else:
-                    self._log.debug("API Error: Returned empty page (query: {0})", url)
+                    self._log.debug(
+                        "API Error: Returned empty page (query: {0})", url
+                    )
                     return None
         except HTTPError as e:
             self._log.debug("API Error: {0} (query: {1})", e, url)
@@ -586,7 +599,7 @@ class VocaDBPlugin(BeetsPlugin):
         for disc in release.get("discs", []):
             if (
                 disc["mediaType"] == "Video"
-                and config["match"]["ignore_video_tracks"]
+                and beets.config["match"]["ignore_video_tracks"]
                 or not release.get("tracks")
             ):
                 ignored_discs.append(disc["discNumber"])
@@ -730,7 +743,9 @@ class VocaDBPlugin(BeetsPlugin):
         length: float = recording.get("lengthSeconds", 0)
         data_url: str = urljoin(self.instance_info.base_url, f"S/{track_id}")
         max_milli_bpm: Optional[int] = recording.get("maxMilliBpm")
-        bpm: Optional[str] = str(max_milli_bpm // 1000) if max_milli_bpm else None
+        bpm: Optional[str] = (
+            str(max_milli_bpm // 1000) if max_milli_bpm else None
+        )
         genre: Optional[str] = self.get_genres(recording)
         script: Optional[str]
         language: Optional[str]
@@ -742,7 +757,9 @@ class VocaDBPlugin(BeetsPlugin):
         original_month: Optional[int] = None
         original_year: Optional[int] = None
         if "publishDate" in recording:
-            date: datetime = datetime.fromisoformat(recording["publishDate"][:-1])
+            date: datetime = datetime.fromisoformat(
+                recording["publishDate"][:-1]
+            )
             original_day = date.day
             original_month = date.month
             original_year = date.year
@@ -825,7 +842,9 @@ class VocaDBPlugin(BeetsPlugin):
     ) -> tuple[dict[str, dict[str, str]], str]:
         artists_by_categories: dict[str, dict[str, str]]
         is_support: dict[str, bool]
-        artists_by_categories, is_support = cls.get_artists_by_categories(artists)
+        artists_by_categories, is_support = cls.get_artists_by_categories(
+            artists
+        )
 
         artist_string: Optional[str] = None
         main_artists: Optional[list[str]] = None
@@ -855,7 +874,7 @@ class VocaDBPlugin(BeetsPlugin):
                 for name, id in artists_by_categories["vocalists"].items()
                 if not is_support.get(id)
             ]
-            if featured_artists and not len(main_artists) + len(featured_artists) > 5:
+            if featured_artists:
                 artist_string += " feat. " + ", ".join(featured_artists)
 
         return artists_by_categories, artist_string
@@ -909,13 +928,21 @@ class VocaDBPlugin(BeetsPlugin):
             not artists_by_categories["producers"]
             and artists_by_categories["vocalists"]
         ):
-            artists_by_categories["producers"] = artists_by_categories["vocalists"]
+            artists_by_categories["producers"] = artists_by_categories[
+                "vocalists"
+            ]
         if not artists_by_categories["arrangers"]:
-            artists_by_categories["arrangers"] = artists_by_categories["producers"]
+            artists_by_categories["arrangers"] = artists_by_categories[
+                "producers"
+            ]
         if not artists_by_categories["composers"]:
-            artists_by_categories["composers"] = artists_by_categories["producers"]
+            artists_by_categories["composers"] = artists_by_categories[
+                "producers"
+            ]
         if not artists_by_categories["lyricists"]:
-            artists_by_categories["lyricists"] = artists_by_categories["producers"]
+            artists_by_categories["lyricists"] = artists_by_categories[
+                "producers"
+            ]
         return artists_by_categories, is_support
 
     @staticmethod
