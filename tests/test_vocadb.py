@@ -1,10 +1,13 @@
 from unittest import TestCase
 
-import msgspec
-
 from beetsplug.vocadb import VocaDBPlugin
-from beetsplug.vocadb.plugin_config import get_lang
-from beetsplug.vocadb.requests_handler.models import Lyrics, TagUsage
+from beetsplug.vocadb.vocadb_api_client import (
+    LyricsForSongContract,
+    TagUsageForApiContract,
+)
+from beetsplug.vocadb.vocadb_api_client.models.content_language_preference import (
+    ContentLanguagePreference,
+)
 
 
 class TestVocaDBPlugin(TestCase):
@@ -15,27 +18,29 @@ class TestVocaDBPlugin(TestCase):
         cls.plugin = plugin
 
     def test_get_genres(self) -> None:
-        tags: list[TagUsage] = []
+        tags: list[TagUsageForApiContract] = []
         assert self.plugin.get_genres(tags) is None
-        tags = msgspec.json.decode(
-            b"""[
+        tags = self.plugin.album_api.api_client.decode(
+            content="""[
                 {
                     "count": 0,
                     "tag": {
                         "categoryName": "Genres",
+                        "id": 0,
                         "name": "genre1"
                     }
                 }
             ]""",
-            type=list[TagUsage],
+            target_type=list[TagUsageForApiContract],
         )
         assert self.plugin.get_genres(tags) == "Genre1"
-        tags = msgspec.json.decode(
-            b"""[
+        tags = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "count": 2,
                     "tag": {
                         "categoryName": "Genres",
+                        "id": 0,
                         "name": "genre1"
                     }
                 },
@@ -43,19 +48,21 @@ class TestVocaDBPlugin(TestCase):
                     "count": 1,
                     "tag": {
                         "categoryName": "Genres",
+                        "id": 0,
                         "name": "genre2"
                     }
                 }
             ]""",
-            type=list[TagUsage],
+            target_type=list[TagUsageForApiContract],
         )
         assert self.plugin.get_genres(tags) == "Genre1; Genre2"
-        tags = msgspec.json.decode(
-            b"""[
+        tags = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "count": 2,
                     "tag": {
                         "categoryName": "Vocalists",
+                        "id": 0,
                         "name": "genre1"
                     }
                 },
@@ -63,32 +70,28 @@ class TestVocaDBPlugin(TestCase):
                     "count": 1,
                     "tag": {
                         "categoryName": "Genres",
+                        "id": 0,
                         "name": "genre2"
                     }
                 }
             ]""",
-            type=list[TagUsage],
+            target_type=list[TagUsageForApiContract],
         )
         assert self.plugin.get_genres(tags) == "Genre2"
 
-    def test_get_lang(self) -> None:
-        assert get_lang(False, ["en", "jp"]) == "English"
-        assert get_lang(False, ["jp", "en"]) == "Japanese"
-        assert get_lang(True, ["jp", "en"]) == "Romaji"
-        assert get_lang(True, ["en", "jp"]) == "English"
-        assert get_lang(True) == "English"
-
     def test_get_lyrics(self) -> None:
-        lyrics: list[Lyrics] = msgspec.json.decode(
-            b"""[
+        lyrics: list[LyricsForSongContract] = (
+            self.plugin.album_api.api_client.decode(
+                """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
-                    "id": 123,
+                    "id": 0,
                     "source": "FooBar",
                     "translationType": "Translation",
                     "url": "https://foo.bar",
@@ -96,123 +99,156 @@ class TestVocaDBPlugin(TestCase):
                 },
                 {
                     "cultureCodes": [""],
+                    "id": 0,
                     "translationType": "Romanized",
                     "value": "lyrics3"
                 }
             ]""",
-            type=list[Lyrics],
+                target_type=list[LyricsForSongContract],
+            )
         )
-        assert self.plugin.get_lyrics(lyrics, "Japanese") == (
+        self.plugin.instance_config.language = (
+            ContentLanguagePreference.JAPANESE
+        )
+        assert self.plugin.get_lyrics(lyrics) == (
             "Jpan",
             "jpn",
             "lyrics1",
         )
-        assert self.plugin.get_lyrics(lyrics, "English") == (
+        self.plugin.instance_config.language = ContentLanguagePreference.ENGLISH
+        assert self.plugin.get_lyrics(lyrics) == (
             "Jpan",
             "jpn",
             "lyrics2",
         )
-        assert self.plugin.get_lyrics(lyrics, "Romaji") == (
+        self.plugin.instance_config.language = ContentLanguagePreference.ROMAJI
+        assert self.plugin.get_lyrics(lyrics) == (
             "Jpan",
             "jpn",
             "lyrics3",
         )
-        assert self.plugin.get_lyrics(lyrics, None) == (
+        self.plugin.instance_config.language = ContentLanguagePreference.DEFAULT
+        assert self.plugin.get_lyrics(lyrics) == (
             "Jpan",
             "jpn",
             "lyrics1",
         )
-        lyrics = msgspec.json.decode(
-            b"""[
+        lyrics = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Translation",
                     "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics2"
                 }
             ]""",
-            type=list[Lyrics],
+            target_type=list[LyricsForSongContract],
         )
-        assert self.plugin.get_lyrics(lyrics, "Japanese") == (
+        self.plugin.instance_config.language = (
+            ContentLanguagePreference.JAPANESE
+        )
+        assert self.plugin.get_lyrics(lyrics) == (
             "Latn",
             "eng",
             "lyrics1",
         )
-        assert self.plugin.get_lyrics(lyrics, "English") == (
+        self.plugin.instance_config.language = ContentLanguagePreference.ENGLISH
+        assert self.plugin.get_lyrics(lyrics) == (
             "Latn",
             "eng",
             "lyrics2",
         )
-        lyrics = msgspec.json.decode(
-            b"""[
+        lyrics = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics1"
                 }
             ]""",
-            type=list[Lyrics],
+            target_type=list[LyricsForSongContract],
         )
-        assert self.plugin.get_lyrics(lyrics, "English") == (
+        assert self.plugin.get_lyrics(lyrics) == (
             "Jpan",
             "jpn",
             "lyrics1",
         )
 
     def test_get_fallback_lyrics(self) -> None:
-        lyrics: list[Lyrics] = msgspec.json.decode(
-            b"""[
+        lyrics: list[LyricsForSongContract] = (
+            self.plugin.album_api.api_client.decode(
+                """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
+                    "id": 0,
                     "translationType": "Translation",
                     "value": "lyrics2"
                 },
                 {
                     "cultureCodes": [""],
+                    "id": 0,
                     "translationType": "Romanized",
                     "value": "lyrics3"
                 }
             ]""",
-            type=list[Lyrics],
+                target_type=list[LyricsForSongContract],
+            )
         )
-        assert self.plugin.get_fallback_lyrics(lyrics, "Japanese") == "lyrics1"
-        assert self.plugin.get_fallback_lyrics(lyrics, "English") == "lyrics2"
-        assert self.plugin.get_fallback_lyrics(lyrics, "Romaji") == "lyrics3"
-        assert self.plugin.get_fallback_lyrics(lyrics, None) == "lyrics1"
-        lyrics = msgspec.json.decode(
-            b"""[
+        self.plugin.instance_config.language = (
+            ContentLanguagePreference.JAPANESE
+        )
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics1"
+        self.plugin.instance_config.language = ContentLanguagePreference.ENGLISH
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics2"
+        self.plugin.instance_config.language = ContentLanguagePreference.ROMAJI
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics3"
+        self.plugin.instance_config.language = ContentLanguagePreference.DEFAULT
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics1"
+        lyrics = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Translation",
                     "value": "lyrics1"
                 },
                 {
                     "cultureCodes": ["en"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics2"
                 }
             ]""",
-            type=list[Lyrics],
+            target_type=list[LyricsForSongContract],
         )
-        assert self.plugin.get_fallback_lyrics(lyrics, "Japanese") == "lyrics1"
-        assert self.plugin.get_fallback_lyrics(lyrics, "English") == "lyrics2"
-        lyrics = msgspec.json.decode(
-            b"""[
+        self.plugin.instance_config.language = (
+            ContentLanguagePreference.JAPANESE
+        )
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics1"
+        self.plugin.instance_config.language = ContentLanguagePreference.ENGLISH
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics2"
+        lyrics = self.plugin.album_api.api_client.decode(
+            """[
                 {
                     "cultureCodes": ["ja"],
+                    "id": 0,
                     "translationType": "Original",
                     "value": "lyrics1"
                 }
             ]""",
-            type=list[Lyrics],
+            target_type=list[LyricsForSongContract],
         )
-        assert self.plugin.get_fallback_lyrics(lyrics, "English") == "lyrics1"
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics1"

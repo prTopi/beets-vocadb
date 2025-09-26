@@ -1,17 +1,9 @@
-from . import vocadb
-from .vocadb.requests_handler import RequestsHandler
-
-
-class UtaiteDBRequestsHandler(
-    RequestsHandler,
-    base_url="https://touhoudb.com/api/",
-): ...
+from beetsplug import vocadb
 
 
 class TouhouDBPlugin(
     vocadb.VocaDBPlugin,
-    requests_handler=UtaiteDBRequestsHandler,
-    data_source="TouhouDB",
     base_url="https://touhoudb.com/",
+    api_url="https://touhoudb.com/api/",
     subcommand="tdbsync",
 ): ...

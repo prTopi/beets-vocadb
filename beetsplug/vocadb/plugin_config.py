@@ -2,43 +2,19 @@
 
 from __future__ import annotations
 
-import sys
 from typing import TYPE_CHECKING
 
 import msgspec
 from beets import config
 
-from .requests_handler import Language
-
-if not sys.version_info < (3, 11):
-    pass  # pyright: ignore[reportUnreachable]
-else:
-    pass
+from beetsplug.vocadb.vocadb_api_client import ContentLanguagePreference
 
 if TYPE_CHECKING:
-    from confuse.core import Subview
+    from confuse import ConfigView
 
 
 LANGUAGES: list[str] | None = config["import"]["languages"].as_str_seq()
 VA_NAME: str = config["va_name"].as_str()
-
-
-def get_lang(
-    prefer_romaji: bool, languages: list[str] | None = LANGUAGES
-) -> Language:
-    if not languages:
-        return Language.DEFAULT
-
-    for language in languages:
-        # Check for Japanese preference
-        if language == "jp":
-            return Language.ROMAJI if prefer_romaji else Language.JAPANESE
-
-        # Check for English preference
-        if language == "en":
-            return Language.ENGLISH
-
-    return Language.DEFAULT
 
 
 class InstanceConfig(msgspec.Struct):
@@ -47,15 +23,25 @@ class InstanceConfig(msgspec.Struct):
     prefer_romaji: bool = False
     translated_lyrics: bool = False
     include_featured_album_artists: bool = False
-    max_results: int = 5
-    language: Language = Language.DEFAULT
+    search_limit: int = 5
+    language: ContentLanguagePreference = ContentLanguagePreference.DEFAULT
 
     def __post_init__(self) -> None:
-        self.language = get_lang(self.prefer_romaji)
+        self.language = self.get_lang(self.prefer_romaji)
+
+    # convert fields to serilizable types
+    def to_dict(self) -> dict[str, int | bool | str]:
+        return {
+            "prefer_romaji": self.prefer_romaji,
+            "translated_lyrics": self.translated_lyrics,
+            "include_featured_album_artists": self.include_featured_album_artists,
+            "search_limit": self.search_limit,
+            "language": str(self.language),
+        }
 
     @classmethod
     def from_config_subview(
-        cls, config: Subview, default: InstanceConfig | None = None
+        cls, config: ConfigView, default: InstanceConfig | None = None
     ) -> InstanceConfig:
         """Creates an InstanceConfig from a configuration subview.
 
@@ -69,11 +55,7 @@ class InstanceConfig(msgspec.Struct):
             back to defaults when values are missing.
         """
 
-        fallback: dict[str, bool | int] = msgspec.structs.asdict(
-            default or cls()
-        )
-
-        config.add(fallback)
+        config.add(default.to_dict() if default else InstanceConfig().to_dict())
 
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),
@@ -81,5 +63,25 @@ class InstanceConfig(msgspec.Struct):
             include_featured_album_artists=config[
                 "include_featured_album_artists"
             ].get(bool),
-            max_results=config["max_results"].get(int),
+            search_limit=config["search_limit"].get(int),
         )
+
+    @staticmethod
+    def get_lang(
+        prefer_romaji: bool, languages: list[str] | None = LANGUAGES
+    ) -> ContentLanguagePreference:
+        if languages:
+            for language in languages:
+                # Check for Japanese preference
+                if language == "jp":
+                    return (
+                        ContentLanguagePreference.ROMAJI
+                        if prefer_romaji
+                        else ContentLanguagePreference.JAPANESE
+                    )
+
+                # Check for English preference
+                if language == "en":
+                    return ContentLanguagePreference.ENGLISH
+
+        return ContentLanguagePreference.DEFAULT
