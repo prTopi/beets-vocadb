@@ -36,7 +36,6 @@ class InstanceConfig(msgspec.Struct):
             "translated_lyrics": self.translated_lyrics,
             "include_featured_album_artists": self.include_featured_album_artists,
             "search_limit": self.search_limit,
-            "language": str(self.language),
         }
 
     @classmethod
