@@ -1,11 +1,24 @@
 from __future__ import annotations
 
 import sys
+
+if not sys.version_info < (3, 12):
+    from typing import override  # pyright: ignore[reportUnreachable]
+else:
+    from typing_extensions import override
+
 from re import match, search
 from typing import TYPE_CHECKING
 
 import httpx
+from beets import __version__ as beets_version
+from beets import autotag, config, dbcore, library, ui, util
+from beets.autotag.hooks import AlbumInfo, TrackInfo
+from beets.plugins import apply_item_changes
+from beets.ui import Subcommand, show_model_changes
+from packaging.version import Version
 
+from beetsplug.vocadb.plugin_config import VA_NAME, InstanceConfig
 from beetsplug.vocadb.vocadb_api_client import (
     AlbumApiApi,
     AlbumDiscPropertiesContract,
@@ -27,20 +40,14 @@ from beetsplug.vocadb.vocadb_api_client import (
 )
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
 
-if not sys.version_info < (3, 12):
-    from typing import override  # pyright: ignore[reportUnreachable]
+BEETS_VERSION = Version(beets_version)
+
+if not BEETS_VERSION >= Version("2.4.0"):
+    from beets.autotag.match import track_distance
+    from beets.plugins import BeetsPlugin as MetadataSourcePlugin
 else:
-    from typing_extensions import override
-
-from beets import __version__ as beets_version
-from beets import autotag, config, dbcore, library, ui, util
-from beets.autotag.distance import track_distance
-from beets.autotag.hooks import AlbumInfo, TrackInfo
-from beets.metadata_plugins import MetadataSourcePlugin
-from beets.plugins import apply_item_changes
-from beets.ui import Subcommand, show_model_changes
-
-from beetsplug.vocadb.plugin_config import VA_NAME, InstanceConfig
+    from beets.autotag.distance import track_distance
+    from beets.metadata_plugins import MetadataSourcePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -165,9 +172,9 @@ class VocaDBPlugin(MetadataSourcePlugin):
             self._flexible_attributes.album[
                 AlbumFlexibleAttributes.ARTIST_ID
             ]: dbcore.types.INTEGER,
-            self._flexible_attributes.album[
-                AlbumFlexibleAttributes.ARTIST_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
+            # self._flexible_attributes.album[
+            #     AlbumFlexibleAttributes.ARTIST_IDS
+            # ]: dbcore.types.MULTI_VALUE_DSV,
         }
         self.item_types: dict[
             str, dbcore.types.Integer | dbcore.types.DelimitedString
@@ -178,9 +185,9 @@ class VocaDBPlugin(MetadataSourcePlugin):
             self._flexible_attributes.item[
                 ItemFlexibleAttributes.ARTIST_ID
             ]: dbcore.types.INTEGER,
-            self._flexible_attributes.item[
-                ItemFlexibleAttributes.ARTIST_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
+            # self._flexible_attributes.item[
+            #     ItemFlexibleAttributes.ARTIST_IDS
+            # ]: dbcore.types.MULTI_VALUE_DSV,
         }
         self.instance_config: InstanceConfig = (
             InstanceConfig.from_config_subview(
