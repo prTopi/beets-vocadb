@@ -27,6 +27,10 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: poetry
 
+      - name: Set beets to version ${{ matrix.beets }}
+        run: |
+          poetry add beets==${{ matrix.beets }}
+
       - name: Install dependencies
         run: |
           poetry install
