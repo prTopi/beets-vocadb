@@ -1222,4 +1222,8 @@ class VocaDBPlugin(MetadataSourcePlugin):
             for remote_lyrics in remote_lyrics_list:
                 if remote_lyrics.translation_type == TranslationType.ROMANIZED:
                     return remote_lyrics.value
+        if language_preference == ContentLanguagePreference.DEFAULT:
+            for remote_lyrics in remote_lyrics_list:
+                if remote_lyrics.translation_type == TranslationType.ORIGINAL:
+                    return remote_lyrics.value
         return remote_lyrics_list[0].value if remote_lyrics_list else None
