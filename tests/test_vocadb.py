@@ -240,6 +240,8 @@ class TestVocaDBPlugin(TestCase):
         assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics1"
         self.plugin.instance_config.language = ContentLanguagePreference.ENGLISH
         assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics2"
+        self.plugin.instance_config.language = ContentLanguagePreference.DEFAULT
+        assert self.plugin.get_fallback_lyrics(lyrics) == "lyrics2"
         lyrics = self.plugin.album_api.api_client.decode(
             """[
                 {
