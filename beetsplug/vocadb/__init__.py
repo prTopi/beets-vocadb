@@ -738,8 +738,6 @@ class VocaDBPlugin(MetadataSourcePlugin):
             genre=genre,
             label=label,
             language=language,
-            original_day=None,
-            original_month=None,
             media=media,
             mediums=mediums,
             month=month,
