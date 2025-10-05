@@ -934,18 +934,20 @@ class VocaDBPlugin(MetadataSourcePlugin):
             ", ".join(main_artists) if not len(main_artists) > 5 else VA_NAME
         )
 
+        featured_artists: list[str] = []
+
         if (
             include_featured_artists
             and artists_by_categories[ProcessedArtistCategories.VOCALISTS]
             and (comp or main_artists)
         ):
-            featured_artists: list[str] = [
+            featured_artists.extend(
                 name
                 for name in artists_by_categories[
                     ProcessedArtistCategories.VOCALISTS
                 ].keys()
                 if name not in not_creditable_artists
-            ]
+            )
             if (
                 featured_artists
                 and not len(main_artists) + len(featured_artists) > 5
@@ -958,11 +960,17 @@ class VocaDBPlugin(MetadataSourcePlugin):
             artist_by_categories=artists_by_categories
         )
 
-        artist_id: str | None
-        try:
-            artist_id = artists_ids[artists_names.index(main_artists[0])]
-        except (IndexError, ValueError):
-            artist_id = next((artist_id for artist_id in artists_ids), None)
+        artist_id: str | None = None
+        for x in *main_artists, *featured_artists:
+            try:
+                if artist_id := artists_ids[artists_names.index(x)]:
+                    break
+            except (IndexError, ValueError):
+                ...
+        if not artist_id:
+            artist_id = next(
+                (artist_id for artist_id in artists_ids if artist_id), None
+            )
 
         return (
             artist_string,
