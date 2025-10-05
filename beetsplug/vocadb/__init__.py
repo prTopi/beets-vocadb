@@ -74,6 +74,8 @@ if TYPE_CHECKING:
         WebLinkForApiContract,
     )
 
+SUPPORTS_MULTI_VALUE_DSV = hasattr(dbcore.types, "MULTI_VALUE_DSV")
+
 
 SongOrAlbumArtists: TypeAlias = (
     "list[ArtistForAlbumForApiContract] | list[ArtistForSongContract]"
@@ -165,30 +167,34 @@ class VocaDBPlugin(MetadataSourcePlugin):
             prefix=self.name,
         )
         self.album_types: dict[
-            str, dbcore.types.Integer | dbcore.types.DelimitedString
+            str, dbcore.types.String | dbcore.types.DelimitedString
         ] = {
             self._flexible_attributes.album[
                 AlbumFlexibleAttributes.ALBUM_ID
-            ]: dbcore.types.INTEGER,
+            ]: dbcore.types.STRING,
             self._flexible_attributes.album[
                 AlbumFlexibleAttributes.ARTIST_ID
-            ]: dbcore.types.INTEGER,
-            # self._flexible_attributes.album[
-            #     AlbumFlexibleAttributes.ARTIST_IDS
-            # ]: dbcore.types.MULTI_VALUE_DSV,
+            ]: dbcore.types.STRING,
+            self._flexible_attributes.album[
+                AlbumFlexibleAttributes.ARTIST_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV
+            if SUPPORTS_MULTI_VALUE_DSV
+            else dbcore.types.STRING,
         }
         self.item_types: dict[
-            str, dbcore.types.Integer | dbcore.types.DelimitedString
+            str, dbcore.types.String | dbcore.types.DelimitedString
         ] = {
             self._flexible_attributes.item[
                 ItemFlexibleAttributes.TRACK_ID
-            ]: dbcore.types.INTEGER,
+            ]: dbcore.types.STRING,
             self._flexible_attributes.item[
                 ItemFlexibleAttributes.ARTIST_ID
-            ]: dbcore.types.INTEGER,
-            # self._flexible_attributes.item[
-            #     ItemFlexibleAttributes.ARTIST_IDS
-            # ]: dbcore.types.MULTI_VALUE_DSV,
+            ]: dbcore.types.STRING,
+            self._flexible_attributes.item[
+                ItemFlexibleAttributes.ARTIST_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV
+            if SUPPORTS_MULTI_VALUE_DSV
+            else dbcore.types.STRING,
         }
         self.instance_config: InstanceConfig = InstanceConfig.from_config_view(
             config=self.config, default=self._default_config
@@ -753,8 +759,8 @@ class VocaDBPlugin(MetadataSourcePlugin):
             self._flexible_attributes.album[AlbumFlexibleAttributes.ARTIST_ID]
         ] = artist_id
         # album_info[
-        #   self._flexible_attributes.album[AlbumFlexibleAttributes.ARTIST_IDS]
-        # ] = artists_ids
+        #     self._flexible_attributes.album[AlbumFlexibleAttributes.ARTIST_IDS]
+        # ] = artists_ids if SUPPORTS_MULTI_VALUE_DSV else "; ".join(artists_ids)
         return album_info
 
     def track_info(
@@ -814,7 +820,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
             artist=artist,
             artists=artists,
             # artist_id=artist_id,
-            artists_ids=artists_ids,
+            # artists_ids=artists_ids,
             length=length,
             index=index,
             track_alt=str(index) if index is not None else None,
@@ -842,9 +848,9 @@ class VocaDBPlugin(MetadataSourcePlugin):
         track_info[
             self._flexible_attributes.item[ItemFlexibleAttributes.ARTIST_ID]
         ] = artist_id
-        # track_info[
-        #   self._flexible_attributes.item[ItemFlexibleAttributes.ARTIST_IDS]
-        # ] = artists_ids
+        track_info[
+            self._flexible_attributes.item[ItemFlexibleAttributes.ARTIST_IDS]
+        ] = artists_ids if SUPPORTS_MULTI_VALUE_DSV else "; ".join(artists_ids)
         return track_info
 
     def get_album_track_infos(
