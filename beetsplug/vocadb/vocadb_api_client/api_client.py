@@ -91,7 +91,8 @@ class ApiClient:
         Returns:
             Structured response data if successful, None if request fails
         """
-        headers = headers or httpx.Headers()
+        if not headers:
+            headers = httpx.Headers()
         headers.update(headers=self.default_headers)
 
         try:
