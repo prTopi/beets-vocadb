@@ -211,7 +211,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         cls.subcommand = subcommand
 
     @override
-    def commands(self) -> tuple[Subcommand, ...]:
+    def commands(self) -> Sequence[Subcommand]:
         cmd: Subcommand = Subcommand(
             name=self.subcommand,
             help=f"update metadata from {self.data_source}",
@@ -246,7 +246,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         )
         cmd.parser.add_format_option()
         cmd.func = self.func
-        return (cmd,)
+        return [cmd]
 
     def func(self, lib: Library, opts: Values, args: list[str]) -> None:
         """Command handler for the *dbsync function."""
@@ -497,7 +497,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         artist: str,
         album: str,
         va_likely: bool,
-    ) -> tuple[AlbumInfo, ...]:
+    ) -> Iterable[AlbumInfo]:
         self._log.debug(msg=f"Searching for album {album}")
         remote_album_find_result: (
             AlbumForApiContractPartialFindResult | None
@@ -516,20 +516,20 @@ class VocaDBPlugin(MetadataSourcePlugin):
         )
         # songFields parameter doesn't exist for album search
         # so we'll get albums by their id
-        info: AlbumInfo | None
-        return tuple(
-            info
-            for id in [
-                str(remote_album_candidate.id)
-                for remote_album_candidate in remote_album_candidates
-            ]
-            if (info := self.album_for_id(id))
+        yield from filter(
+            None,
+            map(
+                lambda remote_album_candidate: self.album_for_id(
+                    str(remote_album_candidate.id)
+                ),
+                remote_album_candidates,
+            ),
         )
 
     @override
     def item_candidates(
         self, item: library.Item, artist: str, title: str
-    ) -> tuple[TrackInfo, ...]:
+    ) -> Iterable[TrackInfo]:
         self._log.debug(msg=f"Searching for track {title}")
         remote_item_find_result: SongForApiContractPartialFindResult | None = (
             self.song_api.api_songs_get(
@@ -551,7 +551,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         self._log.debug(
             msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"
         )
-        return tuple(map(self.track_info, remote_item_candidates))
+        yield from map(self.track_info, remote_item_candidates)
 
     @override
     def album_for_id(self, album_id: str) -> AlbumInfo | None:
