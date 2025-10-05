@@ -55,14 +55,5 @@ class TaggedBase(
 ): ...
 
 
-class FrozenBase(
-    msgspec.Struct,
-    frozen=True,
-    forbid_unknown_fields=True,
-    omit_defaults=True,
-    rename="camel",
-): ...
-
-
 # Explicitly export the public API
 __all__ = ["StrEnum", "StrEnumSet"]
