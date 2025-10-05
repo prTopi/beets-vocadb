@@ -39,7 +39,7 @@ class InstanceConfig(msgspec.Struct):
         }
 
     @classmethod
-    def from_config_subview(
+    def from_config_view(
         cls, config: ConfigView, default: InstanceConfig | None = None
     ) -> InstanceConfig:
         """Creates an InstanceConfig from a configuration subview.

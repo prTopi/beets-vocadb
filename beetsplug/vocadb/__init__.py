@@ -190,10 +190,8 @@ class VocaDBPlugin(MetadataSourcePlugin):
             #     ItemFlexibleAttributes.ARTIST_IDS
             # ]: dbcore.types.MULTI_VALUE_DSV,
         }
-        self.instance_config: InstanceConfig = (
-            InstanceConfig.from_config_subview(
-                config=self.config, default=self._default_config
-            )
+        self.instance_config: InstanceConfig = InstanceConfig.from_config_view(
+            config=self.config, default=self._default_config
         )
         self.config.add(value=(self.instance_config).to_dict())
 
@@ -204,7 +202,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         subcommand: str,
     ) -> None:
         super().__init_subclass__()
-        cls._default_config = InstanceConfig.from_config_subview(
+        cls._default_config = InstanceConfig.from_config_view(
             config=config["vocadb"]
         )
         cls.base_url = base_url
