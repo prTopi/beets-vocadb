@@ -354,17 +354,6 @@ class VocaDBPlugin(MetadataSourcePlugin):
                 )
                 continue
             items: dbcore.Results[library.Item] = album.items()
-            for track_info in album_info.tracks:
-                plugin_id: str | None = track_info.get(
-                    self._flexible_attributes.item[
-                        ItemFlexibleAttributes.TRACK_ID
-                    ]
-                )
-                self._log.debug(
-                    msg=f"Track: {track_info.title}, "
-                    + f"{plugin_id=} ({type(plugin_id)})"
-                    + f"{track_info.track_id=} ({type(track_info.track_id)})"
-                )
 
             plugin_track_id: int | None
             track_id: str | None
