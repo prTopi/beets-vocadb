@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from datetime import datetime
 
 from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
