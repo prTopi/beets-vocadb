@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 import httpx
 from beets import __version__ as beets_version
-from beets import autotag, config, dbcore, library, ui, util
+from beets import autotag, config, dbcore, ui, util
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.plugins import apply_item_changes
 from beets.ui import Subcommand, show_model_changes
@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from optparse import Values
     from re import Match
 
+    from beets import library
     from beets.autotag.distance import Distance
     from beets.library import Library
     from typing_extensions import TypeAlias
@@ -461,7 +462,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                 if pretend or not changed or not any_changed_item:
                     continue
                 key: str
-                for key in set(library.Album.item_keys) - {
+                for key in set(album.item_keys) - {
                     "original_day",
                     "original_month",
                     "original_year",
