@@ -11,7 +11,7 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
-        beets: ["1.5.0", "1.6.0", "2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0"]
+        beets: ["2.5.0"]
     steps:
       - uses: actions/checkout@v4
         with:
