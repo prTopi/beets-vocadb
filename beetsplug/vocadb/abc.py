@@ -19,7 +19,10 @@ from beets.autotag.distance import track_distance
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.metadata_plugins import MetadataSourcePlugin
 from beets.plugins import apply_item_changes
-from beets.ui import Subcommand, show_model_changes
+from beets.ui import (
+    Subcommand,
+    show_model_changes,  # pyright: ignore[reportUnknownVariableType]
+)
 
 from beetsplug.vocadb.plugin_config import VA_NAME, InstanceConfig
 from beetsplug.vocadb.vocadb_api_client import (
@@ -150,7 +153,7 @@ class PluginABCs:
         subcommand: str
 
         def __init__(self) -> None:
-            super().__init__()
+            super().__init__()  # pyright: ignore[reportUnknownMemberType]
             client: ApiClient = ApiClient(
                 user_agent=USER_AGENT, base_url=self.api_url, logger=self._log
             )
@@ -190,7 +193,7 @@ class PluginABCs:
                     config=self.config, default=self._default_config
                 )
             )
-            self.config.add(value=(self.instance_config).to_dict())
+            self.config.add(value=(self.instance_config).to_dict())  # pyright: ignore[reportUnknownMemberType]
 
         def __init_subclass__(
             cls,
@@ -210,29 +213,29 @@ class PluginABCs:
         def commands(self) -> Sequence[Subcommand]:
             cmd: Subcommand = Subcommand(
                 name=self.subcommand,
-                help=f"update metadata from {type(self).data_source}",
+                help=f"update metadata from {self.data_source}",  # pyright: ignore[reportAny]
             )
-            _ = cmd.parser.add_option(
+            _ = cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                 "-p",
                 "--pretend",
                 action="store_true",
                 help="show all changes but do nothing",
             )
-            _ = cmd.parser.add_option(
+            _ = cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                 "-m",
                 "--move",
                 action="store_true",
                 dest="move",
                 help="move files in the library directory",
             )
-            _ = cmd.parser.add_option(
+            _ = cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                 "-M",
                 "--nomove",
                 action="store_false",
                 dest="move",
                 help="don't move files in library",
             )
-            _ = cmd.parser.add_option(
+            _ = cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                 "-W",
                 "--nowrite",
                 action="store_false",
@@ -240,19 +243,19 @@ class PluginABCs:
                 dest="write",
                 help="don't write updated metadata to files",
             )
-            cmd.parser.add_format_option()
+            _ = cmd.parser.add_format_option()  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
             cmd.func = self.func
             return [cmd]
 
         def func(self, lib: Library, opts: Values, args: list[str]) -> None:
             """Command handler for the *dbsync function."""
-            move: bool = ui.should_move(move_opt=opts.move)
-            pretend: bool = opts.pretend
-            write: bool = ui.should_write(write_opt=opts.write)
-            query: list[str] = ui.decargs(arglist=args)
+            move: bool = ui.should_move(move_opt=opts.move)  # pyright: ignore[reportAny,reportUnknownMemberType]
+            pretend: bool = opts.pretend  # pyright: ignore[reportAny]
+            write: bool = ui.should_write(write_opt=opts.write)  # pyright: ignore[reportAny,reportUnknownMemberType]
+            query: list[str] = ui.decargs(arglist=args)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
-            self.singletons(lib, query, move, pretend, write)
-            self.albums(lib, query, move, pretend, write)
+            self.singletons(lib, query, move, pretend, write)  # pyright: ignore[reportUnknownArgumentType]
+            self.albums(lib, query, move, pretend, write)  # pyright: ignore[reportUnknownArgumentType]
 
         def singletons(
             self,
@@ -263,20 +266,20 @@ class PluginABCs:
             write: bool,
         ) -> None:
             item: library.Item
-            for item in lib.items(query=query + ["singleton:true"]):
+            for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
                 item_formatted: str = format(item)
                 track_id: str | None = None
-                plugin_track_id: int | None = item.get(
+                plugin_track_id: int | None = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     key=self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
                     ]
                 )
                 if plugin_track_id:
-                    track_id = str(plugin_track_id)
+                    track_id = str(plugin_track_id)  # pyright: ignore[reportUnknownArgumentType]
                 else:
-                    mb_trackid: str | None = item.get(key="mb_trackid")
+                    mb_trackid: str | None = item.get(key="mb_trackid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     if mb_trackid:
-                        track_id = mb_trackid
+                        track_id = mb_trackid  # pyright: ignore[reportUnknownVariableType]
                 if not track_id:
                     self._log.debug(
                         msg="Skipping singleton with no "
@@ -286,16 +289,18 @@ class PluginABCs:
                         + f" or mb_trackid: {item_formatted}"
                     )
                     continue
-                if not item.get(key="data_source") == self.data_source:
+                if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportAny,reportUnknownMemberType]
                     self._log.debug(
-                        msg=f"Skipping non-{self.data_source} singleton: {item_formatted}"
+                        msg=f"Skipping non-{self.data_source} singleton: "  # pyright: ignore[reportAny]
+                        + item_formatted
                     )
                     continue
                 self._log.debug("Searching for track {0}", item_formatted)
-                track_info: TrackInfo | None = self.track_for_id(track_id)
+                track_info: TrackInfo | None = self.track_for_id(track_id)  # pyright: ignore[reportUnknownArgumentType]
                 if not track_info:
                     self._log.info(
-                        msg=f"Recording ID not found: {track_id} for track {item_formatted}"
+                        msg=f"Recording ID not found: {track_id} "
+                        + f"for track {item_formatted}"
                     )
                     continue
                 with lib.transaction():
@@ -315,20 +320,20 @@ class PluginABCs:
             query and their items.
             """
             album: library.Album
-            for album in lib.albums(query):
+            for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
                 album_formatted: str = format(album)
                 album_id: str | None = None
-                plugin_album_id: int | None = album.get(
+                plugin_album_id: int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     key=self._flexible_attributes.album[
                         AlbumFlexibleAttributes.ALBUM_ID
                     ]
                 )
                 if plugin_album_id:
-                    album_id = str(plugin_album_id)
+                    album_id = str(plugin_album_id)  # pyright: ignore[reportUnknownArgumentType]
                 else:
-                    mb_albumid: str | None = album.get(key="mb_albumid")
+                    mb_albumid: str | None = album.get(key="mb_albumid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     if mb_albumid:
-                        album_id = mb_albumid
+                        album_id = mb_albumid  # pyright: ignore[reportUnknownVariableType]
                 if not album_id:
                     self._log.debug(
                         msg="Skipping album with no "
@@ -338,17 +343,18 @@ class PluginABCs:
                         + f" or mb_albumid: {album_formatted}"
                     )
                     continue
-                if not album.get(key="data_source") == self.data_source:
+                if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportAny,reportUnknownMemberType]
                     self._log.debug(
-                        msg=f"Skipping non-{self.data_source} album: {album_formatted}"
+                        msg=f"Skipping non-{self.data_source} album: {album_formatted}"  # pyright: ignore[reportAny]
                     )
                     continue
                 album_info: AlbumInfo | None = self.album_for_id(
-                    album_id=album_id
+                    album_id=album_id  # pyright: ignore[reportUnknownArgumentType]
                 )
                 if not album_info:
                     self._log.info(
-                        msg=f"Release ID {album_id} not found for album {album_formatted}"
+                        msg=f"Release ID {album_id} "
+                        + f"not found for album {album_formatted}"
                     )
                     continue
                 items: dbcore.Results[library.Item] = album.items()
@@ -374,7 +380,7 @@ class PluginABCs:
                 item: library.Item
                 for item in items:
                     # First, try to get track ID from flexible attributes
-                    plugin_track_id = item.get(
+                    plugin_track_id = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                         key=self._flexible_attributes.item[
                             ItemFlexibleAttributes.TRACK_ID
                         ]
@@ -382,14 +388,14 @@ class PluginABCs:
 
                     if plugin_track_id:
                         try:
-                            mapping[item] = track_index[str(plugin_track_id)]
+                            mapping[item] = track_index[str(plugin_track_id)]  # pyright: ignore[reportUnknownArgumentType]
                             continue
                         except KeyError:
                             ...  # Fall through to try mb_trackid
 
                     # Fall back to mb_trackid
-                    mb_trackid: str | None = item.get("mb_trackid")
-                    if mb_trackid and mb_trackid.isnumeric():
+                    mb_trackid: str | None = item.get("mb_trackid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
                         try:
                             mapping[item] = track_index[mb_trackid]
                             item[
@@ -403,8 +409,8 @@ class PluginABCs:
 
                     # If neither flexible attribute nor mb_trackid work,
                     # use automatic matching
-                    current_track_id: str | None = (
-                        str(plugin_track_id) or mb_trackid
+                    current_track_id: str | None = (  # pyright: ignore[reportUnknownVariableType]
+                        str(plugin_track_id) or mb_trackid  # pyright: ignore[reportUnknownArgumentType]
                     )
 
                     self._log.warning(
@@ -412,7 +418,7 @@ class PluginABCs:
                         + f"{plugin_track_id=}, {mb_trackid=}, {current_track_id=}"
                     )
 
-                    old_track_id: str | None = current_track_id
+                    old_track_id: str | None = current_track_id  # pyright: ignore[reportUnknownVariableType]
                     self._log.warning(
                         msg=f"Trying to automatch missing track ID {old_track_id}"
                         + f" in album info for {album_formatted}..."
@@ -470,12 +476,12 @@ class PluginABCs:
                     for flex_key in self._flexible_attributes.album.values():
                         if flex_key in album_info:
                             album[flex_key] = album_info[flex_key]
-                    album.store()
+                    album.store()  # pyright: ignore[reportUnknownMemberType]
                     if move and lib.directory in util.ancestry(
                         path=any_changed_item.path
                     ):
                         self._log.debug(msg=f"moving album {album_formatted}")
-                        album.move()
+                        album.move()  # pyright: ignore[reportUnknownMemberType]
 
         @override
         def candidates(
@@ -544,7 +550,7 @@ class PluginABCs:
         def album_for_id(self, album_id: str) -> AlbumInfo | None:
             if not album_id.isnumeric():
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} album: {album_id}"
+                    msg=f"Skipping non-{self.data_source} album: {album_id}"  # pyright: ignore[reportAny]
                 )
                 return None
             self._log.debug(msg=f"Searching for album {album_id}")
@@ -576,7 +582,7 @@ class PluginABCs:
         def track_for_id(self, track_id: str) -> TrackInfo | None:
             if not track_id.isnumeric():
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} singleton: {track_id}"
+                    msg=f"Skipping non-{self.data_source} singleton: {track_id}"  # pyright: ignore[reportAny]
                 )
                 return None
             self._log.debug(msg=f"Searching for track {track_id}")
@@ -732,7 +738,7 @@ class PluginABCs:
                 # artist_id=artist_id,
                 artists_ids=artists_ids,
                 catalognum=catalognum,
-                data_source=self.data_source,
+                data_source=self.data_source,  # pyright: ignore[reportAny]
                 day=day,
                 genre=genre,
                 label=label,
@@ -829,7 +835,7 @@ class PluginABCs:
                 medium=medium,
                 medium_index=medium_index,
                 medium_total=medium_total,
-                data_source=self.data_source,
+                data_source=self.data_source,  # pyright: ignore[reportAny]
                 data_url=data_url,
                 lyricist=lyricist,
                 composer=composer,
@@ -882,11 +888,11 @@ class PluginABCs:
                     medium_index=remote_track.track_number,
                     medium_total=total,
                 )
-                if track_info.script and script != "Qaaa":
+                if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
                     if not script:
-                        script = track_info.script
-                        language = track_info.language
-                    elif script != track_info.script:
+                        script = track_info.script  # pyright: ignore[reportAny]
+                        language = track_info.language  # pyright: ignore[reportAny]
+                    elif script != track_info.script:  # pyright: ignore[reportAny]
                         script = "Qaaa"
                         language = "mul"
                 track_infos.append(track_info)
@@ -906,7 +912,8 @@ class PluginABCs:
             Returns:
                 Tuple containing:
                 - Locally generated artist string
-                - Artist ID of the first main artist or the first non-empty artist if available
+                - Artist ID of the first main artist
+                or the first non-empty artist if available
                 - List of unique artist names in order of first appearance
                 - List of corresponding artist IDs in same order as artist names
                 - ArtistsByCategories object with artists sorted into role categories
@@ -996,8 +1003,8 @@ class PluginABCs:
             """Categorizes artists by their roles and identifies not creditable artists.
 
             Takes a list of artists and organizes them into categories like producers,
-            circles, vocalists, etc. based on their roles and categories. Also identifies
-            which artists are not creditable.
+            circles, vocalists, etc. based on their roles and categories.
+            Also identifies which artists are not creditable.
 
             Args:
                 remote_artists: List of AlbumArtist or SongArtist objects to categorize
@@ -1098,7 +1105,8 @@ class PluginABCs:
             Extracts relevant artists and their IDs.
 
             Args:
-                artist_by_categories: ArtistsByCategories object containing categorized artists
+                artist_by_categories:
+                    ArtistsByCategories object containing categorized artists
 
             Returns:
                 Tuple containing:
