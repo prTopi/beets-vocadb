@@ -418,9 +418,8 @@ class PluginABCs:
                         + f"{plugin_track_id=}, {mb_trackid=}, {current_track_id=}"
                     )
 
-                    old_track_id: str | None = current_track_id  # pyright: ignore[reportUnknownVariableType]
                     self._log.warning(
-                        msg=f"Trying to automatch missing track ID {old_track_id}"
+                        msg=f"Trying to automatch missing track ID {current_track_id}"
                         + f" in album info for {album_formatted}..."
                     )
                     # Unset track id so that it won't affect distance
@@ -430,15 +429,8 @@ class PluginABCs:
                         ]
                     ] = None
                     matches: dict[str, Distance] = {
-                        str(plugin_album_id): track_distance(item, track_info)
-                        for track_info in track_index.values()
-                        if (
-                            plugin_album_id := track_info.get(
-                                self._flexible_attributes.item[
-                                    ItemFlexibleAttributes.TRACK_ID
-                                ]
-                            )
-                        )
+                        track_id: track_distance(item, track_info)
+                        for track_id, track_info in track_index.items()
                     }
                     new_track_id: str = min(matches, key=lambda k: matches[k])
                     item[
