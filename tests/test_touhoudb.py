@@ -1,8 +1,8 @@
 from beetsplug.touhoudb import TouhouDBPlugin
-from tests import test_vocadb
+from tests.abc import TestABC
 
 
 class TestTouhouDBPlugin(
-    test_vocadb.TestVocaDBPlugin,
+    TestABC,
     plugin=TouhouDBPlugin(),
 ): ...

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import msgspec
-from beets import config
+from beets import config as beets_config
 
 from beetsplug.vocadb.vocadb_api_client import ContentLanguagePreference
 
@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from confuse import ConfigView
 
 
-LANGUAGES: list[str] | None = config["import"]["languages"].as_str_seq()
-VA_NAME: str = config["va_name"].as_str()
+LANGUAGES: list[str] | None = beets_config["import"]["languages"].as_str_seq()  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
+VA_NAME: str = beets_config["va_name"].as_str()  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
 
 
 class InstanceConfig(msgspec.Struct):
@@ -54,15 +54,15 @@ class InstanceConfig(msgspec.Struct):
             back to defaults when values are missing.
         """
 
-        config.add(default.to_dict() if default else InstanceConfig().to_dict())
+        config.add((default if default else InstanceConfig()).to_dict())  # pyright: ignore[reportUnknownMemberType]
 
         return cls(
-            prefer_romaji=config["prefer_romaji"].get(bool),
-            translated_lyrics=config["translated_lyrics"].get(bool),
-            include_featured_album_artists=config[
+            prefer_romaji=config["prefer_romaji"].get(bool),  # pyright: ignore[reportArgumentType]
+            translated_lyrics=config["translated_lyrics"].get(bool),  # pyright: ignore[reportArgumentType]
+            include_featured_album_artists=config[  # pyright: ignore[reportArgumentType]
                 "include_featured_album_artists"
             ].get(bool),
-            search_limit=config["search_limit"].get(int),
+            search_limit=config["search_limit"].get(int),  # pyright: ignore[reportArgumentType]
         )
 
     @staticmethod
