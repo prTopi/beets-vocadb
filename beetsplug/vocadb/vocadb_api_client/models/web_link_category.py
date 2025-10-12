@@ -1,8 +1,10 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class WebLinkCategory(StrEnum):
-    OFFICIAL = "Official"
-    COMMERCIAL = "Commercial"
-    REFERENCE = "Reference"
-    OTHER = "Other"
+class WebLinkCategory(PascalCaseStrEnum):
+    OFFICIAL = auto()
+    COMMERCIAL = auto()
+    REFERENCE = auto()
+    OTHER = auto()

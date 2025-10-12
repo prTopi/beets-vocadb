@@ -48,4 +48,4 @@ class SongForApiContract(TaggedBase):
 
     @cached_property
     def pv_services(self) -> StrEnumSet[PVServices]:
-        return StrEnumSet[PVServices].from_csv(PVServices, self._pv_services)
+        return StrEnumSet[PVServices].from_delimited_str(PVServices, self._pv_services)

@@ -1,6 +1,8 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class DiscMediaType(StrEnum):
-    AUDIO = "Audio"
-    VIDEO = "Video"
+class DiscMediaType(PascalCaseStrEnum):
+    AUDIO = auto()
+    VIDEO = auto()

@@ -1,21 +1,23 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class SongType(StrEnum):
-    UNSPECIFIED = "Unspecified"
-    ORIGINAL = "Original"
-    REMASTER = "Remaster"
-    REMIX = "Remix"
-    COVER = "Cover"
-    ARRANGEMENT = "Arrangement"
-    INSTRUMENTAL = "Instrumental"
-    MASHUP = "Mashup"
-    SHORTVERSION = "ShortVersion"
-    MUSICPV = "MusicPV"
-    DRAMAPV = "DramaPV"
-    LIVE = "Live"
-    ILLUSTRATION = "Illustration"
-    OTHER = "Other"
+class SongType(PascalCaseStrEnum):
+    UNSPECIFIED = auto()
+    ORIGINAL = auto()
+    REMASTER = auto()
+    REMIX = auto()
+    COVER = auto()
+    ARRANGEMENT = auto()
+    INSTRUMENTAL = auto()
+    MASHUP = auto()
+    SHORT_VERSION = auto()
+    MUSIC_P_V = auto()
+    DRAMAPV = auto()
+    LIVE = auto()
+    ILLUSTRATION = auto()
+    OTHER = auto()
 
     # TouhouDB-specific
-    REARRANGEMENT = "Rearrangement"
+    REARRANGEMENT = auto()

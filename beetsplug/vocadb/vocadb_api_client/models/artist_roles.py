@@ -1,27 +1,27 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
 
-# TODO: decide
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class ArtistRoles(StrEnum):
-    DEFAULT = "Default"
-    ANIMATOR = "Animator"
-    ARRANGER = "Arranger"
-    COMPOSER = "Composer"
-    DISTRIBUTOR = "Distributor"
-    ILLUSTRATOR = "Illustrator"
-    INSTRUMENTALIST = "Instrumentalist"
-    LYRICIST = "Lyricist"
-    MASTERING = "Mastering"
-    MIXER = "Mixer"
-    OTHER = "Other"
-    PUBLISHER = "Publisher"
-    VOCALDATAPROVIDER = "VocalDataProvider"
-    VOCALIST = "Vocalist"
-    VOICEMANIPULATOR = "VoiceManipulator"
+class ArtistRoles(PascalCaseStrEnum):
+    DEFAULT = auto()
+    ANIMATOR = auto()
+    ARRANGER = auto()
+    COMPOSER = auto()
+    DISTRIBUTOR = auto()
+    ILLUSTRATOR = auto()
+    INSTRUMENTALIST = auto()
+    LYRICIST = auto()
+    MASTERING = auto()
+    MIXER = auto()
+    OTHER = auto()
+    PUBLISHER = auto()
+    VOCAL_DATA_PROVIDER = auto()
+    VOCALIST = auto()
+    VOICE_MANIPULATOR = auto()
 
     # UtaiteDB- and TouhouDB-specific
-    CHORUS = "Chorus"
+    CHORUS = auto()
 
     # UtaiteDB-specific
-    ENCODER = "Encoder"
+    ENCODER = auto()

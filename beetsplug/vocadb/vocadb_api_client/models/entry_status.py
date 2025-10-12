@@ -1,8 +1,10 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class EntryStatus(StrEnum):
-    DRAFT = "Draft"
-    FINISHED = "Finished"
-    APPROVED = "Approved"
-    LOCKED = "Locked"
+class EntryStatus(PascalCaseStrEnum):
+    DRAFT = auto()
+    FINISHED = auto()
+    APPROVED = auto()
+    LOCKED = auto()

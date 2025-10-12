@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import sys
+from enum import auto
 
 if not sys.version_info < (3, 12):
     from typing import override  # pyright: ignore[reportUnreachable]
@@ -81,7 +82,7 @@ USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
     (
         SongOptionalFields.ARTISTS,
-        SongOptionalFields.CULTURECODES,
+        SongOptionalFields.CULTURE_CODES,
         SongOptionalFields.TAGS,
         SongOptionalFields.BPM,
         SongOptionalFields.LYRICS,
@@ -90,15 +91,15 @@ SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
 
 
 class AlbumFlexibleAttributes(StrEnum):
-    ALBUM_ID = "album_id"
-    ARTIST_ID = "albumartist_id"
-    ARTIST_IDS = "albumartist_ids"
+    ALBUM_ID = auto()
+    ARTIST_ID = auto()
+    ARTIST_IDS = auto()
 
 
 class ItemFlexibleAttributes(StrEnum):
-    TRACK_ID = "track_id"
-    ARTIST_ID = "artist_id"
-    ARTIST_IDS = "artist_ids"
+    TRACK_ID = auto()
+    ARTIST_ID = auto()
+    ARTIST_IDS = auto()
 
 
 # TODO: this sucks
@@ -122,12 +123,12 @@ class FlexibleAttributes:
 
 
 class ProcessedArtistCategories(StrEnum):
-    PRODUCERS = "producers"
-    COMPOSERS = "composers"
-    ARRANGERS = "arrangers"
-    LYRICISTS = "lyricists"
-    CIRCLES = "circles"
-    VOCALISTS = "vocalists"
+    PRODUCERS = auto()
+    COMPOSERS = auto()
+    ARRANGERS = auto()
+    LYRICISTS = auto()
+    CIRCLES = auto()
+    VOCALISTS = auto()
 
 
 class CategorizedArtists(
@@ -516,7 +517,7 @@ class PluginABCs:
                 maxResults=self.instance_config.search_limit,
                 nameMatchMode=NameMatchMode.AUTO,
                 preferAccurateMatches=True,
-                sort=SongSortRule.SONGTYPE,
+                sort=SongSortRule.SONG_TYPE,
                 lang=self.instance_config.language,
             )
             remote_item_candidates: list[SongForApiContract] | None
@@ -547,7 +548,7 @@ class PluginABCs:
                             AlbumOptionalFields.DISCS,
                             AlbumOptionalFields.TAGS,
                             AlbumOptionalFields.TRACKS,
-                            AlbumOptionalFields.WEBLINKS,
+                            AlbumOptionalFields.WEB_LINKS,
                         }
                     ),
                     songFields=SONG_FIELDS,

@@ -1,8 +1,10 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class ContentLanguageSelection(StrEnum):
-    UNSPECIFIED = "Unspecified"
-    JAPANESE = "Japanese"
-    ROMAJI = "Romaji"
-    ENGLISH = "English"
+class ContentLanguageSelection(PascalCaseStrEnum):
+    UNSPECIFIED = auto()
+    JAPANESE = auto()
+    ROMAJI = auto()
+    ENGLISH = auto()

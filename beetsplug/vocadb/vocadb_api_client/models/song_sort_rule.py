@@ -1,12 +1,14 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class SongSortRule(StrEnum):
-    NONE = "None"
-    NAME = "Name"
-    ADDITIONDATE = "AdditionDate"
-    PUBLISHDATE = "PublishDate"
-    FAVORITEDTIMES = "FavoritedTimes"
-    RATINGSCORE = "RatingScore"
-    TAGUSAGECOUNT = "TagUsageCount"
-    SONGTYPE = "SongType"
+class SongSortRule(PascalCaseStrEnum):
+    NONE = auto()
+    NAME = auto()
+    ADDITION_DATE = auto()
+    PUBLISH_DATE = auto()
+    FAVORITED_TIMES = auto()
+    RATING_SCORE = auto()
+    TAG_USAGE_COUNT = auto()
+    SONG_TYPE = auto()

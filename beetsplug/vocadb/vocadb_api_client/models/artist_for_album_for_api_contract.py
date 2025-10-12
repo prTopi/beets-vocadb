@@ -24,16 +24,16 @@ class ArtistForAlbumForApiContract(TaggedBase, dict=True, kw_only=True):
 
     @cached_property
     def categories(self) -> StrEnumSet[ArtistCategories]:
-        return StrEnumSet[ArtistCategories].from_csv(
+        return StrEnumSet[ArtistCategories].from_delimited_str(
             ArtistCategories, self._categories
         )
 
     @cached_property
     def effective_roles(self) -> StrEnumSet[ArtistRoles]:
-        return StrEnumSet[ArtistRoles].from_csv(
+        return StrEnumSet[ArtistRoles].from_delimited_str(
             ArtistRoles, self._effective_roles
         )
 
     @cached_property
     def roles(self) -> StrEnumSet[ArtistRoles]:
-        return StrEnumSet[ArtistRoles].from_csv(ArtistRoles, self._roles)
+        return StrEnumSet[ArtistRoles].from_delimited_str(ArtistRoles, self._roles)

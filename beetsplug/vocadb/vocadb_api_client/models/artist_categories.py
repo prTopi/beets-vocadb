@@ -1,14 +1,16 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class ArtistCategories(StrEnum):
-    VOCALIST = "Vocalist"
-    NOTHING = "Nothing"
-    PRODUCER = "Producer"
-    ANIMATOR = "Animator"
-    LABEL = "Label"
-    CIRCLE = "Circle"
-    OTHER = "Other"
-    BAND = "Band"
-    ILLUSTRATOR = "Illustrator"
-    SUBJECT = "Subject"
+class ArtistCategories(PascalCaseStrEnum):
+    VOCALIST = auto()
+    NOTHING = auto()
+    PRODUCER = auto()
+    ANIMATOR = auto()
+    LABEL = auto()
+    CIRCLE = auto()
+    OTHER = auto()
+    BAND = auto()
+    ILLUSTRATOR = auto()
+    SUBJECT = auto()

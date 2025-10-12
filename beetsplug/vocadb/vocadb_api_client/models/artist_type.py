@@ -1,44 +1,46 @@
-from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from enum import auto
+
+from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
 
 
-class ArtistType(StrEnum):
+class ArtistType(PascalCaseStrEnum):
     # Vocalist
-    VOCALOID = "Vocaloid"
+    VOCALOID = auto()
     UTAU = "UTAU"
     CEVIO = "CeVIO"
-    SYNTHESIZERV = "SynthesizerV"
+    SYNTHESIZER_V = auto()
     NEUTRINO = "NEUTRINO"
-    VOISONA = "VoiSona"
-    NEWTYPE = "NewType"
-    VOICEROID = "Voiceroid"
+    VOI_SONA = auto()
+    NEW_TYPE = auto()
+    VOICEROID = auto()
     VOICEVOX = "VOICEVOX"
     AIVOICE = "AIVOICE"
-    ACEVIRTUALSINGER = "ACEVirtualSinger"
-    OTHERVOICESYNTHESIZER = "OtherVoiceSynthesizer"
-    OTHERVOCALIST = "OtherVocalist"
+    A_C_E_VIRTUAL_SINGER = auto()
+    OTHER_VOICE_SYNTHESIZER = auto()
+    OTHER_VOCALIST = auto()
 
     # Producer
-    MUSICPRODUCER = "Producer"
-    COVERARTIST = "CoverArtist"
-    ANIMATIONPRODUCER = "Animator"
-    ILLUSTRATOR = "Illustrator"
+    PRODUCER = auto()
+    COVER_ARTIST = auto()
+    ANIMATOR = auto()
+    ILLUSTRATOR = auto()
 
     # Group
-    CIRCLE = "Circle"
-    LABEL = "Label"
-    OTHERGROUP = "OtherGroup"
+    CIRCLE = auto()
+    LABEL = auto()
+    OTHER_GROUP = auto()
 
     # UtaiteDB-specific
-    BAND = "Band"
-    UTAITE = "Utaite"
-    UNKNOWN = "Unknown"
+    BAND = auto()
+    UTAITE = auto()
+    UNKNOWN = auto()
 
     # TouhouDB-specific
-    VOCALIST = "Vocalist"
-    CHARACTER = "Character"
-    DESIGNER = "Designer"
+    VOCALIST = auto()
+    CHARACTER = auto()
+    DESIGNER = auto()
 
     # Other
-    LYRICIST = "Lyricist"
-    INSTRUMENTALIST = "Instrumentalist"
-    OTHERINDIVIDUAL = "OtherIndividual"
+    LYRICIST = auto()
+    INSTRUMENTALIST = auto()
+    OTHER_INDIVIDUAL = auto()
