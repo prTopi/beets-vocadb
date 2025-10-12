@@ -137,10 +137,8 @@ class CategorizedArtists(
     ]
 ):
     def __init__(self) -> None:
-        super().__init__()
         # Initialize all expected keys
-        for key in ProcessedArtistCategories:
-            self[key] = {}
+        super().__init__({key: {} for key in ProcessedArtistCategories})
 
 
 class PluginABCs:
