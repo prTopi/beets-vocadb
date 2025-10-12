@@ -14,24 +14,10 @@ else:
 if not sys.version_info < (3, 11):
     from enum import StrEnum  # pyright: ignore[reportUnreachable]
 else:
-    from enum import Enum
+    from backports.strenum import StrEnum
 
-    class StrEnum(str, Enum):
-        """
-        Compatible StrEnum implementation for Python < 3.11
-        """
 
-        _value_: str
 
-        @override
-        def __new__(cls, value: str) -> StrEnum:
-            obj = str.__new__(cls, value)
-            obj._value_ = value
-            return obj
-
-        @override
-        def __str__(self) -> str:
-            return self.value
 
 
 E = TypeVar("E", bound=StrEnum)
