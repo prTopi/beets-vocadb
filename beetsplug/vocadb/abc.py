@@ -79,13 +79,13 @@ SongOrAlbumArtists: TypeAlias = (
 USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 
 SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
-    {
+    (
         SongOptionalFields.ARTISTS,
         SongOptionalFields.CULTURECODES,
         SongOptionalFields.TAGS,
         SongOptionalFields.BPM,
         SongOptionalFields.LYRICS,
-    }
+    )
 )
 
 
