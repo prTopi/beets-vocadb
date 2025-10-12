@@ -144,7 +144,6 @@ class CategorizedArtists(
 class PluginABCs:
     class PluginABC(MetadataSourcePlugin, metaclass=abc.ABCMeta):
         _flexible_attributes: FlexibleAttributes
-        _default_config: InstanceConfig | None = None
 
         base_url: httpx.URL | str
         api_url: httpx.URL | str
@@ -187,9 +186,7 @@ class PluginABCs:
                 ]: dbcore.types.MULTI_VALUE_DSV,
             }
             self.instance_config: InstanceConfig = (
-                InstanceConfig.from_config_view(
-                    config=self.config, default=self._default_config
-                )
+                InstanceConfig.from_config_view(config=self.config)
             )
             self.config.add(value=(self.instance_config).to_dict())  # pyright: ignore[reportUnknownMemberType]
 
@@ -200,9 +197,6 @@ class PluginABCs:
             subcommand: str,
         ) -> None:
             super().__init_subclass__()
-            cls._default_config = InstanceConfig.from_config_view(
-                config=beets_config["vocadb"]
-            )
             cls.base_url = base_url
             cls.api_url = api_url
             cls.subcommand = subcommand

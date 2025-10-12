@@ -39,9 +39,7 @@ class InstanceConfig(msgspec.Struct):
         }
 
     @classmethod
-    def from_config_view(
-        cls, config: ConfigView, default: InstanceConfig | None = None
-    ) -> InstanceConfig:
+    def from_config_view(cls, config: ConfigView) -> InstanceConfig:
         """Creates an InstanceConfig from a configuration subview.
 
         Args:
@@ -54,7 +52,7 @@ class InstanceConfig(msgspec.Struct):
             back to defaults when values are missing.
         """
 
-        config.add((default if default else InstanceConfig()).to_dict())  # pyright: ignore[reportUnknownMemberType]
+        config.add(InstanceConfig().to_dict())  # pyright: ignore[reportUnknownMemberType]
 
         return cls(
             prefer_romaji=config["prefer_romaji"].get(bool),  # pyright: ignore[reportArgumentType]
