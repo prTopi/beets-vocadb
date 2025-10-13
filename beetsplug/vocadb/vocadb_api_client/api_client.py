@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class DecoderProtocol(Protocol):
+class Decodable(Protocol):
     def decode(self, buf: Buffer | str, /) -> object: ...
 
 
@@ -24,7 +24,7 @@ class ApiClient:
     Generic API client using httpx and msgspec
     """
 
-    _decoders: ClassVar[dict[type, DecoderProtocol]] = {}
+    _decoders: ClassVar[dict[type, Decodable]] = {}
 
     def __init__(
         self,
