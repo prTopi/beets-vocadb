@@ -6,7 +6,7 @@ from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
 from beetsplug.vocadb.vocadb_api_client.models.album_disc_properties_contract import (
     AlbumDiscPropertiesContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.artist_for_album_for_api_contract import (
+from beetsplug.vocadb.vocadb_api_client.models.artist_for_album_for_api_contract import (  # noqa: E501
     ArtistForAlbumForApiContract,
 )
 from beetsplug.vocadb.vocadb_api_client.models.content_language_selection import (

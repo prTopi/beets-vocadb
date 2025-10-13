@@ -8,7 +8,7 @@ from beetsplug.vocadb.vocadb_api_client.api._api_base import ApiBase
 from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract import (
     AlbumForApiContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract_partial_find_result import (
+from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract_partial_find_result import (  # noqa: E501
     AlbumForApiContractPartialFindResult,
 )
 from beetsplug.vocadb.vocadb_api_client.models.content_language_preference import (

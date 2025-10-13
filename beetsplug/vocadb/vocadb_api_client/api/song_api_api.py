@@ -11,7 +11,7 @@ from beetsplug.vocadb.vocadb_api_client.models.content_language_preference impor
 from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract import (
     SongForApiContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract_partial_find_result import (
+from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract_partial_find_result import (  # noqa: E501
     SongForApiContractPartialFindResult,
 )
 

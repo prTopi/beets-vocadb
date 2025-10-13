@@ -50,7 +50,7 @@ from beetsplug.vocadb.vocadb_api_client.models.album_disc_properties_contract im
 from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract import (
     AlbumForApiContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract_partial_find_result import (
+from beetsplug.vocadb.vocadb_api_client.models.album_for_api_contract_partial_find_result import (  # noqa: E501
     AlbumForApiContractPartialFindResult,
 )
 from beetsplug.vocadb.vocadb_api_client.models.album_optional_fields import (
@@ -67,7 +67,7 @@ from beetsplug.vocadb.vocadb_api_client.models.artist_categories import (
 from beetsplug.vocadb.vocadb_api_client.models.artist_contract import (
     ArtistContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.artist_for_album_for_api_contract import (
+from beetsplug.vocadb.vocadb_api_client.models.artist_for_album_for_api_contract import (  # noqa: E501
     ArtistForAlbumForApiContract,
 )
 from beetsplug.vocadb.vocadb_api_client.models.artist_for_song_contract import (
@@ -99,7 +99,7 @@ from beetsplug.vocadb.vocadb_api_client.models.pv_services import PVServices
 from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract import (
     SongForApiContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract_partial_find_result import (
+from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract_partial_find_result import (  # noqa: E501
     SongForApiContractPartialFindResult,
 )
 from beetsplug.vocadb.vocadb_api_client.models.song_in_album_for_api_contract import (
