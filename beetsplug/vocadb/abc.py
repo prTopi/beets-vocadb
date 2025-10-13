@@ -198,9 +198,14 @@ class PluginABCs:
             subcommand: str,
         ) -> None:
             super().__init_subclass__()
+            cls._dumm_to_prevent_instantiation = lambda: None
             cls.base_url = base_url
             cls.api_url = api_url
             cls.subcommand = subcommand
+
+        @staticmethod
+        @abc.abstractmethod
+        def _dumm_to_prevent_instantiation() -> None: ...
 
         @override
         def commands(self) -> Sequence[Subcommand]:
