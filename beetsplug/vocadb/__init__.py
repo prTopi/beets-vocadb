@@ -1,8 +1,8 @@
-from beetsplug.vocadb.abc import PluginABCs
+from beetsplug.vocadb.abc import PluginABC
 
 
 class VocaDBPlugin(
-    PluginABCs.PluginABC,
+    PluginABC,
     base_url="https://vocadb.net/",
     api_url="https://vocadb.net/api/",
     subcommand="vdbsync",
