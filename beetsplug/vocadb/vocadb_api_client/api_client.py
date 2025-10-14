@@ -96,9 +96,11 @@ class ApiClient:
         headers.update(headers=self.default_headers)
 
         try:
-            response: httpx.Response = self.client.get(
-                url=relative_path, headers=headers, params=params
+            request: httpx.Request = self.client.build_request(
+                method="GET", url=relative_path, headers=headers, params=params
             )
+            self._log.debug(f"url: {request.url}")
+            response: httpx.Response = self.client.send(request=request)
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
             self._log.error("Error fetching data - {}", e)

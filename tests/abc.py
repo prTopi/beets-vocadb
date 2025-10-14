@@ -1,7 +1,7 @@
 import abc
 from unittest import TestCase
 
-from beetsplug.vocadb.abc import PluginABCs
+from beetsplug.vocadb.base import PluginBases
 from beetsplug.vocadb.vocadb_api_client import (
     LyricsForSongContract,
     TagUsageForApiContract,
@@ -13,9 +13,9 @@ from beetsplug.vocadb.vocadb_api_client.models.content_language_preference impor
 
 class TestABC(TestCase, metaclass=abc.ABCMeta):
     __test__: bool = False
-    plugin: PluginABCs.PluginABC
+    plugin: PluginBases.PluginBase
 
-    def __init_subclass__(cls, plugin: PluginABCs.PluginABC) -> None:
+    def __init_subclass__(cls, plugin: PluginBases.PluginBase) -> None:
         super().__init_subclass__()
         cls.__test__ = True
         cls.plugin = plugin

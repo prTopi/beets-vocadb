@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import abc
 import sys
 from enum import auto
 
@@ -92,8 +91,8 @@ SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
 
 class AlbumFlexibleAttributes(StrEnum):
     ALBUM_ID = auto()
-    ARTIST_ID = auto()
-    ARTIST_IDS = auto()
+    ALBUMARTIST_ID = auto()
+    ALBUMARTIST_IDS = auto()
 
 
 class ItemFlexibleAttributes(StrEnum):
@@ -142,8 +141,8 @@ class CategorizedArtists(
         super().__init__({key: {} for key in ProcessedArtistCategories})
 
 
-class PluginABCs:
-    class PluginABC(MetadataSourcePlugin, metaclass=abc.ABCMeta):
+class PluginBases:
+    class PluginBase(MetadataSourcePlugin):
         _flexible_attributes: FlexibleAttributes
 
         base_url: httpx.URL | str
@@ -167,10 +166,10 @@ class PluginABCs:
                     AlbumFlexibleAttributes.ALBUM_ID
                 ]: dbcore.types.STRING,
                 self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ARTIST_ID
+                    AlbumFlexibleAttributes.ALBUMARTIST_ID
                 ]: dbcore.types.STRING,
                 self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ARTIST_IDS
+                    AlbumFlexibleAttributes.ALBUMARTIST_IDS
                 ]: dbcore.types.MULTI_VALUE_DSV,
             }
             self.item_types: dict[
@@ -245,10 +244,13 @@ class PluginABCs:
             move: bool = ui.should_move(move_opt=opts.move)  # pyright: ignore[reportAny,reportUnknownMemberType]
             pretend: bool = opts.pretend  # pyright: ignore[reportAny]
             write: bool = ui.should_write(write_opt=opts.write)  # pyright: ignore[reportAny,reportUnknownMemberType]
-            query: list[str] = ui.decargs(arglist=args)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
-            self.singletons(lib, query, move, pretend, write)  # pyright: ignore[reportUnknownArgumentType]
-            self.albums(lib, query, move, pretend, write)  # pyright: ignore[reportUnknownArgumentType]
+            self.singletons(
+                lib=lib, query=args, move=move, pretend=pretend, write=write
+            )
+            self.albums(
+                lib=lib, query=args, move=move, pretend=pretend, write=write
+            )
 
         def singletons(
             self,
@@ -498,7 +500,7 @@ class PluginABCs:
                 None,
                 map(
                     lambda remote_album_candidate: self.album_for_id(
-                        str(remote_album_candidate.id)
+                        album_id=str(remote_album_candidate.id)
                     ),
                     remote_album_candidates,
                 ),
@@ -653,15 +655,46 @@ class PluginABCs:
             )
             if artist == VA_NAME:
                 va = True
-
-            tracks: list[TrackInfo]
-            script: str | None
-            language: str | None
-            tracks, script, language = self.get_album_track_infos(
-                remote_tracks=remote_album.tracks,
-                remote_discs=remote_album.discs,
-                ignored_discs=ignored_discs,
+            album_genre: str | None = self.get_genres(
+                remote_tags=remote_album.tags or []
             )
+
+            tracks: list[TrackInfo] = []
+            script: str | None = None
+            language: str | None = None
+            remote_track: SongInAlbumForApiContract
+            track_genres: set[str | None] = set()
+            for remote_track in remote_album.tracks:
+                if not remote_track.song or (
+                    (disc_number := remote_track.disc_number) in ignored_discs
+                ):
+                    continue
+                format: str | None = remote_album.discs[disc_number - 1].name
+                total: int | None = remote_album.discs[disc_number - 1].total
+                track_info: TrackInfo = self.track_info(
+                    remote_track=remote_track.song,
+                    index=remote_track.track_number,
+                    media=format,
+                    medium=disc_number,
+                    medium_index=remote_track.track_number,
+                    medium_total=total,
+                )
+                if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
+                    if not script:
+                        script = track_info.script  # pyright: ignore[reportAny]
+                        language = track_info.language  # pyright: ignore[reportAny]
+                    elif script != track_info.script:  # pyright: ignore[reportAny]
+                        script = "Qaaa"
+                        language = "mul"
+                if not track_info.genre:
+                    track_info.genre = album_genre
+
+                track_genres.add(track_info.genre)
+                tracks.append(track_info)
+            if script == "Qaaa" or language == "mul":
+                for track_info in tracks:
+                    track_info.script = script
+                    track_info.language = language
             asin: str | None = None
             remote_web_links: list[WebLinkForApiContract] | None
             if remote_web_links := remote_album.web_links:
@@ -700,9 +733,6 @@ class PluginABCs:
             remote_discs: list[AlbumDiscPropertiesContract] = remote_album.discs
             mediums: int = len(remote_discs)
             catalognum: str | None = remote_album.catalog_number
-            genre: str | None = self.get_genres(
-                remote_tags=remote_album.tags or []
-            )
             media: str | None
             try:
                 media = remote_discs[0].name
@@ -725,7 +755,6 @@ class PluginABCs:
                 catalognum=catalognum,
                 data_source=self.data_source,  # pyright: ignore[reportAny]
                 day=day,
-                genre=genre,
                 label=label,
                 language=language,
                 media=media,
@@ -743,7 +772,7 @@ class PluginABCs:
             ] = album_id
             album_info[
                 self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ARTIST_ID
+                    AlbumFlexibleAttributes.ALBUMARTIST_ID
                 ]
             ] = artist_id
             # album_info[
@@ -846,46 +875,6 @@ class PluginABCs:
                 ]
             ] = artists_ids
             return track_info
-
-        def get_album_track_infos(
-            self,
-            remote_tracks: list[SongInAlbumForApiContract],
-            remote_discs: Sequence[AlbumDiscPropertiesContract],
-            ignored_discs: set[int],
-        ) -> tuple[list[TrackInfo], str | None, str | None]:
-            track_infos: list[TrackInfo] = []
-            script: str | None = None
-            language: str | None = None
-            remote_track: SongInAlbumForApiContract
-            for remote_track in remote_tracks:
-                disc_number: int
-                if not remote_track.song or (
-                    (disc_number := remote_track.disc_number) in ignored_discs
-                ):
-                    continue
-                format: str | None = remote_discs[disc_number - 1].name
-                total: int | None = remote_discs[disc_number - 1].total
-                track_info: TrackInfo = self.track_info(
-                    remote_track=remote_track.song,
-                    index=remote_track.track_number,
-                    media=format,
-                    medium=disc_number,
-                    medium_index=remote_track.track_number,
-                    medium_total=total,
-                )
-                if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
-                    if not script:
-                        script = track_info.script  # pyright: ignore[reportAny]
-                        language = track_info.language  # pyright: ignore[reportAny]
-                    elif script != track_info.script:  # pyright: ignore[reportAny]
-                        script = "Qaaa"
-                        language = "mul"
-                track_infos.append(track_info)
-            if script == "Qaaa" or language == "mul":
-                for track_info in track_infos:
-                    track_info.script = script
-                    track_info.language = language
-            return track_infos, script, language
 
         def get_artists(
             self,

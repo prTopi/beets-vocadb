@@ -1,8 +1,8 @@
-from beetsplug.vocadb.abc import PluginABCs
+from beetsplug.vocadb.base import PluginBases
 
 
 class TouhouDBPlugin(
-    PluginABCs.PluginABC,
+    PluginBases.PluginBase,
     base_url="https://touhoudb.com/",
     api_url="https://touhoudb.com/api/",
     subcommand="tdbsync",
