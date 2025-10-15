@@ -1,5 +1,7 @@
-# import apis into api package
+# Define package exports
+__all__ = ["AlbumApiApi", "SongApiApi"]
 
+# import apis into api package
 from beetsplug.vocadb.vocadb_api_client.api.album_api_api import (
     AlbumApiApi as AlbumApiApi,
 )
