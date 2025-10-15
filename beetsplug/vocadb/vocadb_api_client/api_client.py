@@ -105,8 +105,13 @@ class ApiClient:
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
             self._log.error("Error fetching data - {}", e)
-            return None
-        return self.decode(content=response.text, target_type=return_type)
+            return
+        try:
+            return self.decode(content=response.text, target_type=return_type)
+        except msgspec.DecodeError:
+            import json
+
+            self._log.debug(json.dumps(response.json(), indent=2))
 
     # TODO: better error handling
 
