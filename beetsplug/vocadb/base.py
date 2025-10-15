@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from collections import defaultdict
 from enum import auto
 
 if not sys.version_info < (3, 12):
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
     from datetime import datetime
     from optparse import Values
-    from re import Match
 
     from beets import library
     from beets.autotag.distance import Distance
@@ -68,7 +68,6 @@ if TYPE_CHECKING:
         SongForApiContractPartialFindResult,
         SongInAlbumForApiContract,
         TagUsageForApiContract,
-        WebLinkForApiContract,
     )
 
 
@@ -594,11 +593,6 @@ class PluginBases:
         ) -> AlbumInfo | None:
             if not remote_album.tracks:
                 return None
-            # grouped_remote_tracks: defaultdict[
-            #     int, list[SongInAlbumForApiContract]
-            # ] = defaultdict(list[SongInAlbumForApiContract])
-            # for remote_track in remote_album.tracks:
-            #     grouped_remote_tracks[remote_track.disc_number].append(remote_track)
             if not remote_album.discs:
                 remote_album.discs = [
                     AlbumDiscPropertiesContract(
@@ -607,37 +601,65 @@ class PluginBases:
                         name="CD",
                         media_type=DiscMediaType.AUDIO,
                     )
-                    for i in range(
-                        max(
-                            {
-                                remote_track.disc_number
-                                for remote_track in remote_album.tracks
-                            },
-                            default=1,
-                        )
-                    )
+                    for i in range(remote_album.tracks[-1].disc_number)
                 ]
-            ignored_discs: set[int] = set()
+            album_genre: str | None = self.get_genres(
+                remote_tags=remote_album.tags or []
+            )
+            language: str | None = None
             remote_disc: AlbumDiscPropertiesContract
-            for remote_disc in remote_album.discs:
-                disc_number: int = remote_disc.disc_number
+            remote_track: SongInAlbumForApiContract
+            script: str | None = None
+            # track_genres: set[str | None] = set()
+            tracks: list[TrackInfo] = []
+            tracks_by_disc: defaultdict[
+                int,
+                list[SongInAlbumForApiContract],
+            ] = defaultdict(list)
+            for remote_track in remote_album.tracks:
+                tracks_by_disc[remote_track.disc_number].append(remote_track)
+            ignore_video_tracks: bool = beets_config["match"][  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
+                "ignore_video_tracks"
+            ].get(template=bool)
+            for disc_number, remote_disc_tracks in tracks_by_disc.items():
                 if (
-                    remote_disc.media_type == DiscMediaType.VIDEO
-                    and beets_config["match"]["ignore_video_tracks"].get(
-                        template=bool
-                    )
-                    or not remote_album.tracks
+                    not remote_disc_tracks
+                    or (
+                        remote_disc := remote_album.discs[disc_number - 1]
+                    ).media_type
+                    == DiscMediaType.VIDEO
+                    and ignore_video_tracks
                 ):
-                    ignored_discs.add(disc_number)
                     continue
-                remote_disc.total = max(
-                    {
-                        remote_track.track_number
-                        for remote_track in remote_album.tracks
-                        if remote_track.disc_number == disc_number
-                    }
-                )
+                track_info: TrackInfo | None = None
+                total: int = remote_disc.total or len(remote_disc_tracks)
+                for remote_track in remote_disc_tracks:
+                    if not remote_track.song:
+                        continue
+                    format: str | None = remote_disc.name
+                    track_info = self.track_info(
+                        remote_track=remote_track.song,
+                        index=remote_track.track_number,
+                        media=format,
+                        medium=disc_number,
+                        medium_index=remote_track.track_number,
+                        medium_total=total,
+                    )
+                    if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
+                        if not script:
+                            script = track_info.script  # pyright: ignore[reportAny]
+                            language = track_info.language  # pyright: ignore[reportAny]
+                        elif script != track_info.script:  # pyright: ignore[reportAny]
+                            script = "Qaaa"
+                            language = "mul"
+                    if not track_info.genre:
+                        track_info.genre = album_genre
 
+                    tracks.append(track_info)
+            if script == "Qaaa" or language == "mul":
+                for track_info in tracks:
+                    track_info.script = script
+                    track_info.language = language
             remote_disc_type: DiscType
             va: bool = (
                 remote_disc_type := remote_album.disc_type
@@ -655,81 +677,39 @@ class PluginBases:
             )
             if artist == VA_NAME:
                 va = True
-            album_genre: str | None = self.get_genres(
-                remote_tags=remote_album.tags or []
+            asin: str | None = next(
+                (
+                    asin_match[1]
+                    for link in (remote_album.web_links or [])
+                    if not link.disabled
+                    and link.url
+                    and link.description
+                    and match(
+                        pattern=r"Amazon( ((LE|RE|JP|US)).*)?$",
+                        string=link.description,
+                    )
+                    and (
+                        asin_match := search(
+                            pattern=r"/dp/(.+?)(/|$)", string=link.url
+                        )
+                    )
+                ),
+                None,
             )
-
-            tracks: list[TrackInfo] = []
-            script: str | None = None
-            language: str | None = None
-            remote_track: SongInAlbumForApiContract
-            track_genres: set[str | None] = set()
-            for remote_track in remote_album.tracks:
-                if not remote_track.song or (
-                    (disc_number := remote_track.disc_number) in ignored_discs
-                ):
-                    continue
-                format: str | None = remote_album.discs[disc_number - 1].name
-                total: int | None = remote_album.discs[disc_number - 1].total
-                track_info: TrackInfo = self.track_info(
-                    remote_track=remote_track.song,
-                    index=remote_track.track_number,
-                    media=format,
-                    medium=disc_number,
-                    medium_index=remote_track.track_number,
-                    medium_total=total,
-                )
-                if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
-                    if not script:
-                        script = track_info.script  # pyright: ignore[reportAny]
-                        language = track_info.language  # pyright: ignore[reportAny]
-                    elif script != track_info.script:  # pyright: ignore[reportAny]
-                        script = "Qaaa"
-                        language = "mul"
-                if not track_info.genre:
-                    track_info.genre = album_genre
-
-                track_genres.add(track_info.genre)
-                tracks.append(track_info)
-            if script == "Qaaa" or language == "mul":
-                for track_info in tracks:
-                    track_info.script = script
-                    track_info.language = language
-            asin: str | None = None
-            remote_web_links: list[WebLinkForApiContract] | None
-            if remote_web_links := remote_album.web_links:
-                for remote_web_link in remote_web_links:
-                    remote_web_link: WebLinkForApiContract
-                    if (
-                        not remote_web_link.disabled
-                        and remote_web_link.url
-                        and remote_web_link.description
-                        and match(
-                            pattern="Amazon( \\((LE|RE|JP|US)\\).*)?$",
-                            string=remote_web_link.description,
-                        )
-                    ):
-                        asin_match: Match[str] | None = search(
-                            pattern="\\/dp\\/(.+?)(\\/|$)",
-                            string=remote_web_link.url,
-                        )
-                        if asin_match:
-                            asin = asin_match[1]
-                            break
             albumtype: str = remote_disc_type.lower()
             albumtypes: list[str] = [albumtype]
             remote_date: OptionalDateTimeContract = remote_album.release_date
             year: int | None = remote_date.year
             month: int | None = remote_date.month
             day: int | None = remote_date.day
-            label: str | None = None
-            remote_albumartists: list[ArtistForAlbumForApiContract] | None
-            remote_albumartist: ArtistForAlbumForApiContract
-            if remote_albumartists := remote_album.artists:
-                for remote_albumartist in remote_albumartists:
-                    if ArtistCategories.LABEL in remote_albumartist.categories:
-                        label = remote_albumartist.name
-                        break
+            label: str | None = next(
+                (
+                    remote_albumartist.name
+                    for remote_albumartist in (remote_album.artists or [])
+                    if ArtistCategories.LABEL in remote_albumartist.categories
+                ),
+                None,
+            )
             remote_discs: list[AlbumDiscPropertiesContract] = remote_album.discs
             mediums: int = len(remote_discs)
             catalognum: str | None = remote_album.catalog_number
