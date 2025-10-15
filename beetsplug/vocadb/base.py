@@ -14,14 +14,15 @@ from typing import TYPE_CHECKING
 
 import httpx
 from beets import __version__ as beets_version
-from beets import autotag, dbcore, ui, util
 from beets import config as beets_config
-from beets.autotag.distance import track_distance
+from beets import dbcore
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 from beets.metadata_plugins import MetadataSourcePlugin
 from beets.plugins import apply_item_changes
 from beets.ui import (
     Subcommand,
+    should_move,  # pyright: ignore[reportUnknownVariableType]
+    should_write,  # pyright: ignore[reportUnknownVariableType]
     show_model_changes,  # pyright: ignore[reportUnknownVariableType]
 )
 
@@ -44,6 +45,7 @@ from beetsplug.vocadb.vocadb_api_client import (
     SongSortRule,
     TagBaseContract,
     TranslationType,
+    WebLinkForApiContract,
 )
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
 
@@ -54,8 +56,9 @@ if TYPE_CHECKING:
 
     from beets import library
     from beets.autotag.distance import Distance
+    from beets.autotag.hooks import Info
+    from beets.dbcore import Results
     from beets.library import Library
-    from typing_extensions import TypeAlias
 
     from beetsplug.vocadb.vocadb_api_client import (
         AlbumForApiContract,
@@ -69,11 +72,6 @@ if TYPE_CHECKING:
         SongInAlbumForApiContract,
         TagUsageForApiContract,
     )
-
-
-SongOrAlbumArtists: TypeAlias = (
-    "list[ArtistForAlbumForApiContract] | list[ArtistForSongContract]"
-)
 
 USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 
@@ -141,7 +139,16 @@ class CategorizedArtists(
 
 
 class PluginBases:
+    """Wrapper to prevent PluginBase from being initialized directly"""
+
     class PluginBase(MetadataSourcePlugin):
+        """Base plugin class for integration of VocaDB instances with Beets.
+
+        This base class provides the core functionality for retrieving metadata from
+        an instance of VocaDB and saving it to a Beets library. Examples of VocaDB
+        instances include VocaDB, UtaiteDB and TouhouDB. Subclassing is required.
+        """
+
         _flexible_attributes: FlexibleAttributes
 
         base_url: httpx.URL | str
@@ -240,9 +247,9 @@ class PluginBases:
 
         def func(self, lib: Library, opts: Values, args: list[str]) -> None:
             """Command handler for the *dbsync function."""
-            move: bool = ui.should_move(move_opt=opts.move)  # pyright: ignore[reportAny,reportUnknownMemberType]
+            move: bool = should_move(move_opt=opts.move)  # pyright: ignore[reportAny]
             pretend: bool = opts.pretend  # pyright: ignore[reportAny]
-            write: bool = ui.should_write(write_opt=opts.write)  # pyright: ignore[reportAny,reportUnknownMemberType]
+            write: bool = should_write(write_opt=opts.write)  # pyright: ignore[reportAny]
 
             self.singletons(
                 lib=lib, query=args, move=move, pretend=pretend, write=write
@@ -259,22 +266,29 @@ class PluginBases:
             pretend: bool,
             write: bool,
         ) -> None:
+            """Update metadata for singleton tracks (not part of albums).
+
+            Args:
+                lib: Beets library instance
+                query: Query to filter items
+                move: Whether to move files
+                pretend: Show changes without applying them
+                write: Whether to write changes to files
+            """
+            from beets.autotag import apply_item_metadata
+
             item: library.Item
             for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
                 item_formatted: str = format(item)
-                track_id: str | None = None
-                plugin_track_id: int | None = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    key=self._flexible_attributes.item[
-                        ItemFlexibleAttributes.TRACK_ID
-                    ]
-                )
-                if plugin_track_id:
-                    track_id = str(plugin_track_id)  # pyright: ignore[reportUnknownArgumentType]
-                else:
-                    mb_trackid: str | None = item.get(key="mb_trackid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    if mb_trackid:
-                        track_id = mb_trackid  # pyright: ignore[reportUnknownVariableType]
-                if not track_id:
+                if not (
+                    track_id := self.get_id(
+                        entity=item,
+                        preferred_key=self._flexible_attributes.item[
+                            ItemFlexibleAttributes.TRACK_ID
+                        ],
+                        fallback_key="mb_trackid",
+                    )
+                ):
                     self._log.debug(
                         msg="Skipping singleton with no "
                         + self._flexible_attributes.item[
@@ -290,7 +304,7 @@ class PluginBases:
                     )
                     continue
                 self._log.debug("Searching for track {0}", item_formatted)
-                track_info: TrackInfo | None = self.track_for_id(track_id)  # pyright: ignore[reportUnknownArgumentType]
+                track_info: TrackInfo | None = self.track_for_id(track_id)
                 if not track_info:
                     self._log.info(
                         msg=f"Recording ID not found: {track_id} "
@@ -298,7 +312,7 @@ class PluginBases:
                     )
                     continue
                 with lib.transaction():
-                    autotag.apply_item_metadata(item, track_info)
+                    apply_item_metadata(item, track_info)
                     if show_model_changes(new=item):
                         apply_item_changes(lib, item, move, pretend, write)
 
@@ -310,24 +324,29 @@ class PluginBases:
             pretend: bool,
             write: bool,
         ) -> None:
-            """Retrieve and apply info from the autotagger for albums matched by
-            query and their items.
+            """Update metadata for albums and their tracks.
+
+            Args:
+                lib: Beets library instance
+                query: Query to filter albums
+                move: Whether to move files
+                pretend: Show changes without applying them
+                write: Whether to write changes to files
             """
+            from beets.autotag import apply_metadata
+            from beets.autotag.distance import track_distance
+            from beets.util import ancestry
+
             album: library.Album
             for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
                 album_formatted: str = format(album)
-                album_id: str | None = None
-                plugin_album_id: int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    key=self._flexible_attributes.album[
+                album_id: str | None = self.get_id(
+                    entity=album,
+                    preferred_key=self._flexible_attributes.album[
                         AlbumFlexibleAttributes.ALBUM_ID
-                    ]
+                    ],
+                    fallback_key="mb_albumid",
                 )
-                if plugin_album_id:
-                    album_id = str(plugin_album_id)  # pyright: ignore[reportUnknownArgumentType]
-                else:
-                    mb_albumid: str | None = album.get(key="mb_albumid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    if mb_albumid:
-                        album_id = mb_albumid  # pyright: ignore[reportUnknownVariableType]
                 if not album_id:
                     self._log.debug(
                         msg="Skipping album with no "
@@ -343,7 +362,7 @@ class PluginBases:
                     )
                     continue
                 album_info: AlbumInfo | None = self.album_for_id(
-                    album_id=album_id  # pyright: ignore[reportUnknownArgumentType]
+                    album_id=album_id
                 )
                 if not album_info:
                     self._log.info(
@@ -351,7 +370,7 @@ class PluginBases:
                         + f"not found for album {album_formatted}"
                     )
                     continue
-                items: dbcore.Results[library.Item] = album.items()
+                items: Results[library.Item] = album.items()
 
                 plugin_track_id: int | None
                 track_id: str | None
@@ -359,15 +378,13 @@ class PluginBases:
                     track_id: track_info
                     for track_info in album_info.tracks
                     if (
-                        track_id := str(plugin_track_id)
-                        if (
-                            plugin_track_id := track_info.get(
-                                self._flexible_attributes.item[
-                                    ItemFlexibleAttributes.TRACK_ID
-                                ]
-                            )
+                        track_id := self.get_id(
+                            entity=track_info,
+                            preferred_key=self._flexible_attributes.item[
+                                ItemFlexibleAttributes.TRACK_ID
+                            ],
+                            fallback_key="track_id",
                         )
-                        else (track_info.track_id)
                     )
                 }
                 mapping: dict[library.Item, TrackInfo] = {}
@@ -439,7 +456,7 @@ class PluginBases:
 
                 self._log.debug(msg=f"applying changes to {album_formatted}")
                 with lib.transaction():
-                    autotag.apply_metadata(album_info, mapping)
+                    apply_metadata(album_info, mapping)
                     changed: bool = False
                     any_changed_item: library.Item | None = items.get()
                     for item in items:
@@ -463,11 +480,24 @@ class PluginBases:
                         if flex_key in album_info:
                             album[flex_key] = album_info[flex_key]
                     album.store()  # pyright: ignore[reportUnknownMemberType]
-                    if move and lib.directory in util.ancestry(
+                    if move and lib.directory in ancestry(
                         path=any_changed_item.path
                     ):
                         self._log.debug(msg=f"moving album {album_formatted}")
                         album.move()  # pyright: ignore[reportUnknownMemberType]
+
+        @staticmethod
+        def get_id(
+            entity: library.LibModel | Info,
+            preferred_key: str,
+            fallback_key: str,
+        ) -> str | None:
+            plugin_id: int | None = entity.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                preferred_key
+            )
+            if plugin_id:
+                return str(plugin_id)  # pyright: ignore[reportUnknownArgumentType]
+            return entity.get(fallback_key) or None  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
         @override
         def candidates(
@@ -530,7 +560,9 @@ class PluginBases:
             self._log.debug(
                 msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"
             )
-            yield from map(self.track_info, remote_item_candidates)
+            yield from filter(
+                None, map(self.track_info, remote_item_candidates)
+            )
 
         @override
         def album_for_id(self, album_id: str) -> AlbumInfo | None:
@@ -538,7 +570,7 @@ class PluginBases:
                 self._log.debug(
                     msg=f"Skipping non-{self.data_source} album: {album_id}"  # pyright: ignore[reportAny]
                 )
-                return None
+                return
             self._log.debug(msg=f"Searching for album {album_id}")
             remote_album: AlbumForApiContract | None = (
                 self.album_api.api_albums_id_get(
@@ -570,9 +602,9 @@ class PluginBases:
                 self._log.debug(
                     msg=f"Skipping non-{self.data_source} singleton: {track_id}"  # pyright: ignore[reportAny]
                 )
-                return None
+                return
             self._log.debug(msg=f"Searching for track {track_id}")
-            remote_track: SongForApiContract | None = (
+            remote_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
                     id=int(track_id),
                     fields=SONG_FIELDS,
@@ -581,9 +613,9 @@ class PluginBases:
             )
             return (
                 self.track_info(
-                    remote_track=remote_track,
+                    remote_song=remote_song,
                 )
-                if remote_track
+                if remote_song
                 else None
             )
 
@@ -591,71 +623,32 @@ class PluginBases:
             self,
             remote_album: AlbumForApiContract,
         ) -> AlbumInfo | None:
+            """Convert VocaDB album API response to Beets AlbumInfo format.
+
+            Args:
+                remote_album: Album data from VocaDB API
+
+            Returns:
+                Album information in Beets format or None if conversion fails
+            """
             if not remote_album.tracks:
-                return None
+                return
             if not remote_album.discs:
-                remote_album.discs = [
-                    AlbumDiscPropertiesContract(
-                        disc_number=i + 1,
-                        id=0,
-                        name="CD",
-                        media_type=DiscMediaType.AUDIO,
-                    )
-                    for i in range(remote_album.tracks[-1].disc_number)
-                ]
+                remote_album.discs = self.discs_fallback(
+                    disc_total=remote_album.tracks[-1].disc_number
+                )
             album_genre: str | None = self.get_genres(
                 remote_tags=remote_album.tags or []
             )
-            language: str | None = None
-            remote_disc: AlbumDiscPropertiesContract
-            remote_track: SongInAlbumForApiContract
-            script: str | None = None
             # track_genres: set[str | None] = set()
-            tracks: list[TrackInfo] = []
-            tracks_by_disc: defaultdict[
-                int,
-                list[SongInAlbumForApiContract],
-            ] = defaultdict(list)
-            for remote_track in remote_album.tracks:
-                tracks_by_disc[remote_track.disc_number].append(remote_track)
-            ignore_video_tracks: bool = beets_config["match"][  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
-                "ignore_video_tracks"
-            ].get(template=bool)
-            for disc_number, remote_disc_tracks in tracks_by_disc.items():
-                if (
-                    not remote_disc_tracks
-                    or (
-                        remote_disc := remote_album.discs[disc_number - 1]
-                    ).media_type
-                    == DiscMediaType.VIDEO
-                    and ignore_video_tracks
-                ):
-                    continue
-                track_info: TrackInfo | None = None
-                total: int = remote_disc.total or len(remote_disc_tracks)
-                for remote_track in remote_disc_tracks:
-                    if not remote_track.song:
-                        continue
-                    format: str | None = remote_disc.name
-                    track_info = self.track_info(
-                        remote_track=remote_track.song,
-                        index=remote_track.track_number,
-                        media=format,
-                        medium=disc_number,
-                        medium_index=remote_track.track_number,
-                        medium_total=total,
-                    )
-                    if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
-                        if not script:
-                            script = track_info.script  # pyright: ignore[reportAny]
-                            language = track_info.language  # pyright: ignore[reportAny]
-                        elif script != track_info.script:  # pyright: ignore[reportAny]
-                            script = "Qaaa"
-                            language = "mul"
-                    if not track_info.genre:
-                        track_info.genre = album_genre
-
-                    tracks.append(track_info)
+            tracks: list[TrackInfo]
+            script: str | None
+            language: str | None
+            tracks, script, language = self.get_album_track_infos(
+                remote_songs=remote_album.tracks,
+                remote_discs=remote_album.discs,
+                album_genre=album_genre,
+            )
             if script == "Qaaa" or language == "mul":
                 for track_info in tracks:
                     track_info.script = script
@@ -670,46 +663,23 @@ class PluginBases:
             artists: list[str]
             artists_ids: list[str]
             artist_id: str | None
-            artist, artist_id, artists, artists_ids, _ = self.get_artists(
-                remote_artists=remote_album.artists,
-                include_featured_artists=self.instance_config.include_featured_album_artists,
-                comp=va,
+            label: str | None
+            artist, artist_id, artists, artists_ids, label = (
+                self.get_album_artists(
+                    remote_artists=remote_album.artists,
+                    include_featured_artists=self.instance_config.include_featured_album_artists,
+                    comp=va,
+                )
             )
             if artist == VA_NAME:
                 va = True
-            asin: str | None = next(
-                (
-                    asin_match[1]
-                    for link in (remote_album.web_links or [])
-                    if not link.disabled
-                    and link.url
-                    and link.description
-                    and match(
-                        pattern=r"Amazon( ((LE|RE|JP|US)).*)?$",
-                        string=link.description,
-                    )
-                    and (
-                        asin_match := search(
-                            pattern=r"/dp/(.+?)(/|$)", string=link.url
-                        )
-                    )
-                ),
-                None,
-            )
+            asin: str | None = self.get_asin(web_links=remote_album.web_links)
             albumtype: str = remote_disc_type.lower()
             albumtypes: list[str] = [albumtype]
             remote_date: OptionalDateTimeContract = remote_album.release_date
             year: int | None = remote_date.year
             month: int | None = remote_date.month
             day: int | None = remote_date.day
-            label: str | None = next(
-                (
-                    remote_albumartist.name
-                    for remote_albumartist in (remote_album.artists or [])
-                    if ArtistCategories.LABEL in remote_albumartist.categories
-                ),
-                None,
-            )
             remote_discs: list[AlbumDiscPropertiesContract] = remote_album.discs
             mediums: int = len(remote_discs)
             catalognum: str | None = remote_album.catalog_number
@@ -745,84 +715,266 @@ class PluginBases:
                 year=year,
                 data_url=data_url,
             )
-            album_info[
-                self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ALBUM_ID
-                ]
-            ] = album_id
-            album_info[
-                self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ALBUMARTIST_ID
-                ]
-            ] = artist_id
-            # album_info[
-            #     self._flexible_attributes.album[AlbumFlexibleAttributes.ARTIST_IDS]
-            # ] = artists_ids
+            album_info.update(
+                {
+                    self._flexible_attributes.album[
+                        AlbumFlexibleAttributes.ALBUM_ID
+                    ]: album_id,
+                    self._flexible_attributes.album[
+                        AlbumFlexibleAttributes.ALBUMARTIST_ID
+                    ]: artist_id,
+                    # self._flexible_attributes.album[
+                    #     AlbumFlexibleAttributes.ALBUMARTIST_IDS
+                    # ]: artists_ids,
+                }
+            )
             return album_info
+
+        @staticmethod
+        def discs_fallback(
+            disc_total: int,
+        ) -> list[AlbumDiscPropertiesContract]:
+            """Create default disc properties for albums without disc information.
+
+            Args:
+                disc_total: Number of discs in the album
+
+            Returns:
+                List of default disc properties
+            """
+            return [
+                AlbumDiscPropertiesContract(
+                    disc_number=i + 1,
+                    id=0,
+                    name="CD",
+                    media_type=DiscMediaType.AUDIO,
+                )
+                for i in range(disc_total)
+            ]
+
+        def get_album_track_infos(
+            self,
+            remote_songs: list[SongInAlbumForApiContract],
+            remote_discs: list[AlbumDiscPropertiesContract],
+            album_genre: str | None,
+        ) -> tuple[list[TrackInfo], str | None, str | None]:
+            """Extract track information from album data.
+
+            Args:
+                remote_songs: Track data from VocaDB API
+                remote_discs: Disc data from VocaDB API
+                album_genre: Default genre for tracks
+
+            Returns:
+                Tuple containing:
+                - List of tracks in Beets TrackInfo format
+                - Script string
+                - Language string
+            """
+            language: str | None = None
+            remote_disc: AlbumDiscPropertiesContract
+            remote_song: SongInAlbumForApiContract
+            script: str | None = None
+            # track_genres: set[str | None] = set()
+            tracks: list[TrackInfo] = []
+            tracks_by_disc: dict[
+                int,
+                list[SongInAlbumForApiContract],
+            ] = self.group_tracks_by_disc(remote_songs=remote_songs)
+            ignore_video_tracks: bool = beets_config["match"][  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
+                "ignore_video_tracks"
+            ].get(template=bool)
+            for disc_number, remote_disc_tracks in tracks_by_disc.items():
+                if (
+                    not remote_disc_tracks
+                    or (remote_disc := remote_discs[disc_number - 1]).media_type
+                    == DiscMediaType.VIDEO
+                    and ignore_video_tracks
+                ):
+                    continue
+                track_info: TrackInfo | None
+                total: int = remote_disc.total or len(remote_disc_tracks)
+                for remote_song in remote_disc_tracks:
+                    if not remote_song.song or not (
+                        track_info := self.track_info(
+                            remote_song=remote_song.song,
+                            index=remote_song.track_number,
+                            media=remote_disc.name,
+                            medium=disc_number,
+                            medium_index=remote_song.track_number,
+                            medium_total=total,
+                        )
+                    ):
+                        continue
+                    if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
+                        if not script:
+                            script = track_info.script  # pyright: ignore[reportAny]
+                            language = track_info.language  # pyright: ignore[reportAny]
+                        elif script != track_info.script:  # pyright: ignore[reportAny]
+                            script = "Qaaa"
+                            language = "mul"
+                    if not track_info.genre:
+                        track_info.genre = album_genre
+
+                    tracks.append(track_info)
+            return tracks, script, language
+
+        @classmethod
+        def get_album_artists(
+            cls,
+            remote_artists: list[ArtistForAlbumForApiContract] | None,
+            comp: bool,
+            include_featured_artists: bool = True,
+        ) -> tuple[
+            str,
+            str | None,
+            list[str],
+            list[str],
+            str | None,
+        ]:
+            """Extract and format album artist information.
+
+            Args:
+                remote_artists: Artist data from VocaDB API
+                comp: Whether this is a compilation album
+                include_featured_artists: Whether to include featured artists
+            Returns:
+                Tuple containing:
+                - Locally generated artist string
+                - Artist ID of the first main artist
+                or the first non-empty artist if available
+                - List of unique artist names in order of first appearance
+                - List of corresponding artist IDs in same order as artist names
+                - Label string
+            """
+            if not remote_artists:
+                return "", None, [], [], None
+            artists_by_categories: CategorizedArtists
+            not_creditable_artists: set[str]
+            artists_by_categories, not_creditable_artists = (
+                cls.categorize_artists(remote_artists)
+            )
+            return (
+                *cls._get_artists(
+                    artists_by_categories=artists_by_categories,
+                    not_creditable_artists=not_creditable_artists,
+                    include_featured_artists=include_featured_artists,
+                    comp=comp,
+                ),
+                cls._get_label(remote_artists=remote_artists),
+            )
+
+        @staticmethod
+        def group_tracks_by_disc(
+            remote_songs: list[SongInAlbumForApiContract],
+        ) -> dict[int, list[SongInAlbumForApiContract]]:
+            tracks_by_disc: defaultdict[
+                int,
+                list[SongInAlbumForApiContract],
+            ] = defaultdict(list)
+            for remote_song in remote_songs:
+                tracks_by_disc[remote_song.disc_number].append(remote_song)
+            return tracks_by_disc
+
+        @staticmethod
+        def get_asin(
+            web_links: list[WebLinkForApiContract] | None,
+        ) -> str | None:
+            """Extract ASIN (Amazon Standard Identification Number) from web links."""
+            return next(
+                (
+                    asin_match[1]
+                    for link in (web_links or [])
+                    if not link.disabled
+                    and link.url
+                    and link.description
+                    and match(
+                        pattern=r"Amazon( ((LE|RE|JP|US)).*)?$",
+                        string=link.description,
+                    )
+                    and (
+                        asin_match := search(
+                            pattern=r"/dp/(.+?)(/|$)", string=link.url
+                        )
+                    )
+                ),
+                None,
+            )
+
+        @staticmethod
+        def _get_label(
+            remote_artists: list[ArtistForAlbumForApiContract] | None,
+        ) -> str | None:
+            return next(
+                (
+                    remote_albumartist.name
+                    for remote_albumartist in (remote_artists or [])
+                    if ArtistCategories.LABEL in remote_albumartist.categories
+                ),
+                None,
+            )
 
         def track_info(
             self,
-            remote_track: SongForApiContract,
+            remote_song: SongForApiContract,
             index: int | None = None,
             media: str | None = None,
             medium: int | None = None,
             medium_index: int | None = None,
             medium_total: int | None = None,
-        ) -> TrackInfo:
-            title: str | None
-            assert (title := remote_track.name)
-            track_id: str = str(remote_track.id)
+        ) -> TrackInfo | None:
+            """Convert VocaDB song API response to Beets TrackInfo format.
+
+            Args:
+                remote_song: Song data from VocaDB API
+                index: Track index in album
+                media: Media type (CD, Digital, etc.)
+                medium: Disc number
+                medium_index: Track number on disc
+                medium_total: Total tracks on disc
+
+            Returns:
+                Track information in Beets TrackInfo format
+            """
             artist: str
             artists: list[str]
             artists_ids: list[str]
             artist_id: str | None
-            artists_by_categories: CategorizedArtists
-            artist, artist_id, artists, artists_ids, artists_by_categories = (
-                self.get_artists(remote_artists=remote_track.artists)
-            )
-
-            arranger: str = ", ".join(
-                artists_by_categories[ProcessedArtistCategories.ARRANGERS]
-            )
-            composer: str = ", ".join(
-                artists_by_categories[ProcessedArtistCategories.COMPOSERS]
-            )
-            lyricist: str = ", ".join(
-                artists_by_categories[ProcessedArtistCategories.LYRICISTS]
-            )
-            length: float = remote_track.length_seconds
-            data_url: str = str(
-                httpx.URL(url=self.base_url).join(url=f"S/{track_id}")
-            )
-            max_milli_bpm: int | None = remote_track.max_milli_bpm
-            bpm: str | None = (
-                str(max_milli_bpm // 1000) if max_milli_bpm else None
-            )
-            genre: str | None = self.get_genres(
-                remote_tags=remote_track.tags or []
-            )
+            arranger: str | None
+            composer: str | None
+            lyricist: str | None
+            (
+                artist,
+                artist_id,
+                artists,
+                artists_ids,
+                arranger,
+                composer,
+                lyricist,
+            ) = self.get_track_artists(remote_artists=remote_song.artists)
+            track_id: str = str(remote_song.id)
             script: str | None
             language: str | None
             lyrics: str | None
             script, language, lyrics = self.get_lyrics(
-                remote_lyrics_list=remote_track.lyrics,
+                remote_lyrics_list=remote_song.lyrics,
             )
             original_day: int | None = None
             original_month: int | None = None
             original_year: int | None = None
-            if remote_track.publish_date:
-                date: datetime = remote_track.publish_date
+            if remote_song.publish_date:
+                date: datetime = remote_song.publish_date
                 original_day = date.day
                 original_month = date.month
                 original_year = date.year
             track_info: TrackInfo = TrackInfo(
-                title=title,
+                title=remote_song.name,
                 # track_id=track_id,
                 artist=artist,
                 artists=artists,
                 # artist_id=artist_id,
                 # artists_ids=artists_ids,
-                length=length,
+                length=remote_song.length_seconds,
                 index=index,
                 track_alt=str(index) if index else None,
                 media=media,
@@ -830,12 +982,14 @@ class PluginBases:
                 medium_index=medium_index,
                 medium_total=medium_total,
                 data_source=self.data_source,  # pyright: ignore[reportAny]
-                data_url=data_url,
+                data_url=str(
+                    httpx.URL(url=self.base_url).join(url=f"S/{track_id}")
+                ),
                 lyricist=lyricist,
                 composer=composer,
                 arranger=arranger,
-                bpm=bpm,
-                genre=genre,
+                bpm=self.get_bpm(remote_song.max_milli_bpm),
+                genre=self.get_genres(remote_tags=remote_song.tags or []),
                 script=script,
                 language=language,
                 lyrics=lyrics,
@@ -843,25 +997,82 @@ class PluginBases:
                 original_month=original_month,
                 original_year=original_year,
             )
-            track_info[
-                self._flexible_attributes.item[ItemFlexibleAttributes.TRACK_ID]
-            ] = track_id
-            track_info[
-                self._flexible_attributes.item[ItemFlexibleAttributes.ARTIST_ID]
-            ] = artist_id
-            track_info[
-                self._flexible_attributes.item[
-                    ItemFlexibleAttributes.ARTIST_IDS
-                ]
-            ] = artists_ids
+            track_info.update(
+                {
+                    self._flexible_attributes.item[
+                        ItemFlexibleAttributes.TRACK_ID
+                    ]: track_id,
+                    self._flexible_attributes.item[
+                        ItemFlexibleAttributes.ARTIST_ID
+                    ]: artist_id,
+                    self._flexible_attributes.item[
+                        ItemFlexibleAttributes.ARTIST_IDS
+                    ]: artists_ids,
+                }
+            )
             return track_info
 
-        def get_artists(
-            self,
-            remote_artists: SongOrAlbumArtists | None,
-            include_featured_artists: bool = True,
-            comp: bool = False,
-        ) -> tuple[str, str | None, list[str], list[str], CategorizedArtists]:
+        @classmethod
+        def get_track_artists(
+            cls, remote_artists: list[ArtistForSongContract] | None
+        ) -> tuple[
+            str,
+            str | None,
+            list[str],
+            list[str],
+            str | None,
+            str | None,
+            str | None,
+        ]:
+            """
+            Calls _get_artists with comp=False and include_featured_artists=True.
+
+            Returns:
+                Tuple containing:
+                - Locally generated artist string
+                - Artist ID of the first main artist
+                or the first non-empty artist if available
+                - List of unique artist names in order of first appearance
+                - List of corresponding artist IDs in same order as artist names
+                - Arranger string
+                - Composer string
+                - Lyricist string
+            """
+            if not remote_artists:
+                return "", None, [], [], "", "", ""
+            artists_by_categories: CategorizedArtists
+            not_creditable_artists: set[str]
+            artists_by_categories, not_creditable_artists = (
+                cls.categorize_artists(remote_artists)
+            )
+            arranger, composer, lyricist = (
+                ", ".join(artists_by_categories[category]) or None
+                for category in (
+                    ProcessedArtistCategories.ARRANGERS,
+                    ProcessedArtistCategories.COMPOSERS,
+                    ProcessedArtistCategories.LYRICISTS,
+                )
+            )
+            return (
+                *cls._get_artists(
+                    artists_by_categories=artists_by_categories,
+                    not_creditable_artists=not_creditable_artists,
+                    comp=False,
+                    include_featured_artists=True,
+                ),
+                arranger,
+                composer,
+                lyricist,
+            )
+
+        @classmethod
+        def _get_artists(
+            cls,
+            artists_by_categories: CategorizedArtists,
+            not_creditable_artists: set[str],
+            comp: bool,
+            include_featured_artists: bool,
+        ) -> tuple[str, str | None, list[str], list[str]]:
             """
             Returns:
                 Tuple containing:
@@ -872,14 +1083,6 @@ class PluginBases:
                 - List of corresponding artist IDs in same order as artist names
                 - ArtistsByCategories object with artists sorted into role categories
             """
-            if not remote_artists:
-                return "", None, [], [], CategorizedArtists()
-            artists_by_categories: CategorizedArtists
-            not_creditable_artists: set[str]
-
-            artists_by_categories, not_creditable_artists = (
-                self.categorize_artists(remote_artists)
-            )
 
             main_artists: list[str] = [
                 VA_NAME if comp else name
@@ -928,7 +1131,7 @@ class PluginBases:
 
             artists_names: list[str]
             artists_ids: list[str]
-            artists_names, artists_ids = self.extract_artists_from_categories(
+            artists_names, artists_ids = cls.extract_artists_from_categories(
                 artist_by_categories=artists_by_categories
             )
 
@@ -947,12 +1150,12 @@ class PluginBases:
                 artist_id,
                 artists_names,
                 artists_ids,
-                artists_by_categories,
             )
 
         @staticmethod
         def categorize_artists(
-            remote_artists: SongOrAlbumArtists,
+            remote_artists: list[ArtistForAlbumForApiContract]
+            | list[ArtistForSongContract],
         ) -> tuple[CategorizedArtists, set[str]]:
             """Categorizes artists by their roles and identifies not creditable artists.
 
@@ -1052,8 +1255,9 @@ class PluginBases:
 
             return artists_by_categories, not_creditable_artists
 
+        @staticmethod
         def extract_artists_from_categories(
-            self, artist_by_categories: CategorizedArtists
+            artist_by_categories: CategorizedArtists,
         ) -> tuple[list[str], list[str]]:
             """
             Extracts relevant artists and their IDs.
@@ -1081,6 +1285,10 @@ class PluginBases:
             artists_ids: list[str] = list(artists.values())
 
             return artists_names, artists_ids
+
+        @staticmethod
+        def get_bpm(max_milli_bpm: int | None) -> str | None:
+            return str(max_milli_bpm // 1000) if max_milli_bpm else None
 
         @staticmethod
         def get_genres(remote_tags: list[TagUsageForApiContract]) -> str | None:
