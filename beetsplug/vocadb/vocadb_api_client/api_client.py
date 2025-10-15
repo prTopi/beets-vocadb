@@ -5,11 +5,12 @@ from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 
 import httpx
 import msgspec
-from typing_extensions import Buffer
 
 if TYPE_CHECKING:
     from logging import Logger
     from typing import ClassVar
+
+    from typing_extensions import Buffer
 
 
 T = TypeVar("T")
