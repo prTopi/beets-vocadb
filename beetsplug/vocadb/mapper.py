@@ -112,17 +112,11 @@ class Mapper:
         )
         # track_genres: set[str | None] = set()
         tracks: list[TrackInfo]
-        script: str | None
-        language: str | None
-        tracks, script, language = self.get_album_track_infos(
+        tracks = self.get_album_track_infos(
             remote_songs=remote_album.tracks,
             remote_discs=remote_album.discs,
             album_genre=album_genre,
         )
-        if script == "Qaaa" or language == "mul":
-            for track_info in tracks:
-                track_info.script = script
-                track_info.language = language
         remote_disc_type: DiscType
         va: bool = (
             remote_disc_type := remote_album.disc_type
@@ -174,11 +168,9 @@ class Mapper:
             data_source=self.data_source,
             day=day,
             label=label,
-            language=language,
             media=media,
             mediums=mediums,
             month=month,
-            script=script,
             va=va,
             year=year,
             data_url=data_url,
@@ -203,7 +195,7 @@ class Mapper:
         remote_songs: list[SongInAlbumForApiContract],
         remote_discs: list[AlbumDiscPropertiesContract],
         album_genre: str | None,
-    ) -> tuple[list[TrackInfo], str | None, str | None]:
+    ) -> list[TrackInfo]:
         """Extract track information from album data.
 
         Args:
@@ -212,15 +204,10 @@ class Mapper:
             album_genre: Default genre for tracks
 
         Returns:
-            Tuple containing:
-            - List of tracks in Beets TrackInfo format
-            - Script string
-            - Language string
+            List of tracks in Beets TrackInfo format
         """
-        language: str | None = None
         remote_disc: AlbumDiscPropertiesContract
         remote_song: SongInAlbumForApiContract
-        script: str | None = None
         # track_genres: set[str | None] = set()
         tracks: list[TrackInfo] = []
         tracks_by_disc: dict[
@@ -250,18 +237,11 @@ class Mapper:
                     )
                 ):
                     continue
-                if track_info.script and script != "Qaaa":  # pyright: ignore[reportAny]
-                    if not script:
-                        script = track_info.script  # pyright: ignore[reportAny]
-                        language = track_info.language  # pyright: ignore[reportAny]
-                    elif script != track_info.script:  # pyright: ignore[reportAny]
-                        script = "Qaaa"
-                        language = "mul"
                 if not track_info.genre:
                     track_info.genre = album_genre
 
                 tracks.append(track_info)
-        return tracks, script, language
+        return tracks
 
     def track_info(
         self,
