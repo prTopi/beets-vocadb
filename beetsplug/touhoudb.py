@@ -5,5 +5,5 @@ class TouhouDBPlugin(
     PluginBases.PluginBase,
     base_url="https://touhoudb.com/",
     api_url="https://touhoudb.com/api/",
-    subcommand="tdbsync",
+    subcommand_prefix="tdb",
 ): ...

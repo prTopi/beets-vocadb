@@ -5,5 +5,5 @@ class UtaiteDBPlugin(
     PluginBases.PluginBase,
     base_url="https://utaitedb.net/",
     api_url="https://utaitedb.net/api/",
-    subcommand="udbsync",
+    subcommand_prefix="udb",
 ): ...
