@@ -5,5 +5,5 @@ class VocaDBPlugin(
     PluginBases.PluginBase,
     base_url="https://vocadb.net/",
     api_url="https://vocadb.net/api/",
-    subcommand="vdbsync",
+    subcommand_prefix="vdb",
 ): ...
