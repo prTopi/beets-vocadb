@@ -2,6 +2,15 @@
 
 Plugins for beets to use VocaDB, UtaiteDB and TouhouDB as autotagger sources.
 
+## Maintenance mode
+
+The main branch of this plugin is mainly in maintenance mode, and won't receive
+major changes.
+
+If you wish to use a more complex version of the plugin with numerous
+improvements, check out the
+[experimental branch](https://github.com/prTopi/beets-vocadb/tree/experimental).
+
 ## Installation
 
 ```sh
