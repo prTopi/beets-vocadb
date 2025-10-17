@@ -1,14 +1,25 @@
-from unittest import TestCase
+import pytest
 
 from beetsplug.vocadb.plugin_config import InstanceConfig
 
 
-class TestInstanceConfig(TestCase):
-    instance_config: InstanceConfig = InstanceConfig()
-
-    def test_get_lang(self) -> None:
-        assert self.instance_config.get_lang(False, ["en", "jp"]) == "English"
-        assert self.instance_config.get_lang(False, ["jp", "en"]) == "Japanese"
-        assert self.instance_config.get_lang(True, ["jp", "en"]) == "Romaji"
-        assert self.instance_config.get_lang(True, ["en", "jp"]) == "English"
-        assert self.instance_config.get_lang(True, None) == "Default"
+class TestInstanceConfig:
+    @pytest.mark.parametrize(
+        argnames="prefer_romaji, languages, expected",
+        argvalues=[
+            (False, ["en", "jp"], "English"),
+            (False, ["jp", "en"], "Japanese"),
+            (True, ["jp", "en"], "Romaji"),
+            (True, ["en", "jp"], "English"),
+            (True, None, "Default"),
+        ],
+    )
+    def test_get_lang(
+        self, prefer_romaji: bool, languages: list[str], expected: str
+    ) -> None:
+        assert (
+            InstanceConfig.get_lang(
+                prefer_romaji=prefer_romaji, languages=languages
+            )
+            == expected
+        )
