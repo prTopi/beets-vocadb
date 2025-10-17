@@ -33,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          poetry install
+          poetry install --with test
 
       - name: Lint with flake8
         run: |
