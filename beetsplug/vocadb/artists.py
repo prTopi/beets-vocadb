@@ -26,12 +26,12 @@ class ProcessedArtistCategories(StrEnum):
 class CategorizedArtists(
     dict[
         ProcessedArtistCategories,
-        dict[str, str],
+        list[tuple[str, str]],
     ]
 ):
     def __init__(self) -> None:
         # Initialize all expected keys
-        super().__init__({key: {} for key in ProcessedArtistCategories})
+        super().__init__({key: [] for key in ProcessedArtistCategories})
 
 
 def get_album_artists(
@@ -63,7 +63,7 @@ def get_album_artists(
     if not remote_artists:
         return "", None, [], [], None
     artists_by_categories: CategorizedArtists
-    not_creditable_artists: set[str]
+    not_creditable_artists: set[tuple[str, str]]
     artists_by_categories, not_creditable_artists = _categorize_artists(
         remote_artists
     )
@@ -106,12 +106,12 @@ def get_track_artists(
     if not remote_artists:
         return "", None, [], [], "", "", ""
     artists_by_categories: CategorizedArtists
-    not_creditable_artists: set[str]
+    not_creditable_artists: set[tuple[str, str]]
     artists_by_categories, not_creditable_artists = _categorize_artists(
         remote_artists
     )
     arranger, composer, lyricist = (
-        ", ".join(artists_by_categories[category]) or None
+        ", ".join(name for name, _ in artists_by_categories[category]) or None
         for category in (
             ProcessedArtistCategories.ARRANGERS,
             ProcessedArtistCategories.COMPOSERS,
@@ -134,7 +134,7 @@ def get_track_artists(
 def _categorize_artists(
     remote_artists: list[ArtistForAlbumForApiContract]
     | list[ArtistForSongContract],
-) -> tuple[CategorizedArtists, set[str]]:
+) -> tuple[CategorizedArtists, set[tuple[str, str]]]:
     """Categorizes artists by their roles and identifies not creditable artists.
 
     Takes a list of artists and organizes them into categories like producers,
@@ -147,10 +147,10 @@ def _categorize_artists(
     Returns:
         Tuple containing:
         - ArtistsByCategories object with artists sorted into role categories
-        - Set of artist names that are not creditable
+        - Set of tuples of artist ids and names that are not creditable
     """
     artists_by_categories: CategorizedArtists = CategorizedArtists()
-    not_creditable_artists: set[str] = set()
+    not_creditable_artists: set[tuple[str, str]] = set()
 
     role_category_map: dict[
         ArtistCategories | ArtistRoles, ProcessedArtistCategories
@@ -168,35 +168,38 @@ def _categorize_artists(
         ArtistRoles.LYRICIST,
     }
 
-    remote_artist: ArtistForAlbumForApiContract | ArtistForSongContract
-    for remote_artist in remote_artists:
+    remote_album_or_song_artist: (
+        ArtistForAlbumForApiContract | ArtistForSongContract
+    )
+    for remote_album_or_song_artist in remote_artists:
         name: str | None
         id: str
         name, id = (
-            (remote_artist.artist.name, str(remote_artist.artist.id))
-            if remote_artist.artist
-            else (remote_artist.name, "")
+            (remote_artist.name, str(remote_artist.id))
+            if (remote_artist := remote_album_or_song_artist.artist)
+            else (remote_album_or_song_artist.name, "")
         )
-        assert name
-        if remote_artist.is_support or any(
+        if not name:
+            continue
+        if remote_album_or_song_artist.is_support or any(
             {
                 ArtistCategories.NOTHING,
                 ArtistCategories.LABEL,
             }
-            & remote_artist.categories
+            & remote_album_or_song_artist.categories
         ):
-            not_creditable_artists.add(name)
+            not_creditable_artists.add((name, id))
 
         # Handle producers/bands first
         if {
             ArtistCategories.PRODUCER,
             # ArtistCategories.CIRCLE,
             ArtistCategories.BAND,
-        } & remote_artist.categories:
-            if "Default" in remote_artist.effective_roles:
-                remote_artist.effective_roles |= producer_roles
-            artists_by_categories[ProcessedArtistCategories.PRODUCERS][name] = (
-                id
+        } & remote_album_or_song_artist.categories:
+            if "Default" in remote_album_or_song_artist.effective_roles:
+                remote_album_or_song_artist.effective_roles |= producer_roles
+            artists_by_categories[ProcessedArtistCategories.PRODUCERS].append(
+                (name, id)
             )
 
         # Apply role/category mappings
@@ -205,9 +208,9 @@ def _categorize_artists(
         for remote_role, category in role_category_map.items():
             if (
                 isinstance(remote_role, ArtistCategories)
-                and remote_role in remote_artist.categories
-            ) or remote_role in remote_artist.effective_roles:
-                artists_by_categories[category][name] = id
+                and remote_role in remote_album_or_song_artist.categories
+            ) or remote_role in remote_album_or_song_artist.effective_roles:
+                artists_by_categories[category].append((name, id))
 
     # Set producer fallbacks if needed
     if (
@@ -234,7 +237,7 @@ def _categorize_artists(
 
 def _get_artists(
     artists_by_categories: CategorizedArtists,
-    not_creditable_artists: set[str],
+    not_creditable_artists: set[tuple[str, str]],
     comp: bool,
     include_featured_artists: bool,
 ) -> tuple[str, str | None, list[str], list[str]]:
@@ -251,17 +254,17 @@ def _get_artists(
 
     main_artists: list[str] = [
         VA_NAME if comp else name
-        for name in (
-            *artists_by_categories[ProcessedArtistCategories.PRODUCERS].keys(),
-            *artists_by_categories[ProcessedArtistCategories.CIRCLES].keys(),
+        for name, id in (
+            *artists_by_categories[ProcessedArtistCategories.PRODUCERS],
+            *artists_by_categories[ProcessedArtistCategories.CIRCLES],
         )
-        if name not in not_creditable_artists
+        if (name, id) not in not_creditable_artists
     ] or [
         name
-        for name in artists_by_categories[
+        for name, id in artists_by_categories[
             ProcessedArtistCategories.VOCALISTS
-        ].keys()
-        if name not in not_creditable_artists
+        ]
+        if (name, id) not in not_creditable_artists
     ]
 
     artist_string: str = (
@@ -277,10 +280,10 @@ def _get_artists(
     ):
         featured_artists.extend(
             name
-            for name in artists_by_categories[
+            for name, id in artists_by_categories[
                 ProcessedArtistCategories.VOCALISTS
-            ].keys()
-            if name not in not_creditable_artists
+            ]
+            if (name, id) not in not_creditable_artists
         )
         if (
             featured_artists
@@ -328,7 +331,7 @@ def _extract_artists_from_categories(
         - List of corresponding artist IDs in same order as artist names
     """
 
-    category: dict[str, str]
+    category: list[tuple[str, str]]
     artists: dict[str, str] = {}
 
     for category in artist_by_categories.values():
