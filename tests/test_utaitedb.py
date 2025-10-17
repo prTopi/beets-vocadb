@@ -1,5 +1,8 @@
 from beetsplug.utaitedb import UtaiteDBPlugin
-from tests.test_vocadb import TestVocaDBPlugin
+from tests.abc import TestABC
 
 
-class TestUtaiteDBPlugin(TestVocaDBPlugin, plugin=UtaiteDBPlugin()): ...
+class TestUtaiteDBPlugin(
+    TestABC,
+    plugin=UtaiteDBPlugin(),
+): ...
