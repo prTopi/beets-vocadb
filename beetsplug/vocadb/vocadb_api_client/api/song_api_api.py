@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from httpx import QueryParams
 
@@ -16,6 +16,8 @@ from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract_partial_fin
 )
 
 if TYPE_CHECKING:
+    from typing import TypedDict
+
     from typing_extensions import NotRequired, Unpack
 
     from beetsplug.vocadb.vocadb_api_client.models.name_match_mode import (
@@ -30,14 +32,16 @@ if TYPE_CHECKING:
 
 
 class SongApiApi(ApiBase):
-    class _ApiSongsGetParams(TypedDict):
-        query: str
-        maxResults: NotRequired[int]
-        sort: NotRequired[SongSortRule]
-        preferAccurateMatches: NotRequired[bool]
-        nameMatchMode: NotRequired[NameMatchMode]
-        fields: NotRequired[SongOptionalFieldsSet]
-        lang: NotRequired[ContentLanguagePreference]
+    if TYPE_CHECKING:
+
+        class _ApiSongsGetParams(TypedDict):
+            query: str
+            maxResults: NotRequired[int]
+            sort: NotRequired[SongSortRule]
+            preferAccurateMatches: NotRequired[bool]
+            nameMatchMode: NotRequired[NameMatchMode]
+            fields: NotRequired[SongOptionalFieldsSet]
+            lang: NotRequired[ContentLanguagePreference]
 
     def api_songs_get(
         self,
@@ -49,9 +53,11 @@ class SongApiApi(ApiBase):
             return_type=SongForApiContractPartialFindResult,
         )
 
-    class _ApiSongsIdGetParams(TypedDict):
-        fields: NotRequired[SongOptionalFieldsSet]
-        lang: NotRequired[ContentLanguagePreference]
+    if TYPE_CHECKING:
+
+        class _ApiSongsIdGetParams(TypedDict):
+            fields: NotRequired[SongOptionalFieldsSet]
+            lang: NotRequired[ContentLanguagePreference]
 
     def api_songs_id_get(
         self, id: int, **params: Unpack[_ApiSongsIdGetParams]

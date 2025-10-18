@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from httpx import QueryParams
 
@@ -16,6 +16,8 @@ from beetsplug.vocadb.vocadb_api_client.models.content_language_preference impor
 )
 
 if TYPE_CHECKING:
+    from typing import TypedDict
+
     from typing_extensions import NotRequired, Unpack
 
     from beetsplug.vocadb.vocadb_api_client.models.album_optional_fields import (
@@ -30,10 +32,12 @@ if TYPE_CHECKING:
 
 
 class AlbumApiApi(ApiBase):
-    class _ApiAlbumsGetParams(TypedDict):
-        query: str
-        maxResults: NotRequired[int]
-        nameMatchMode: NotRequired[NameMatchMode]
+    if TYPE_CHECKING:
+
+        class _ApiAlbumsGetParams(TypedDict):
+            query: str
+            maxResults: NotRequired[int]
+            nameMatchMode: NotRequired[NameMatchMode]
 
     def api_albums_get(
         self, **params: Unpack[_ApiAlbumsGetParams]
@@ -44,10 +48,12 @@ class AlbumApiApi(ApiBase):
             return_type=AlbumForApiContractPartialFindResult,
         )
 
-    class _ApiAlbumsIdGetParams(TypedDict):
-        lang: NotRequired[ContentLanguagePreference]
-        fields: NotRequired[AlbumOptionalFieldsSet]
-        songFields: NotRequired[SongOptionalFieldsSet]
+    if TYPE_CHECKING:
+
+        class _ApiAlbumsIdGetParams(TypedDict):
+            lang: NotRequired[ContentLanguagePreference]
+            fields: NotRequired[AlbumOptionalFieldsSet]
+            songFields: NotRequired[SongOptionalFieldsSet]
 
     def api_albums_id_get(
         self, id: int, **params: Unpack[_ApiAlbumsIdGetParams]
