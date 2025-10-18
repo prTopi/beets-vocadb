@@ -134,3 +134,6 @@ pyrightconfig.json
 # mypy
 mypy.ini
 typings
+
+# Zed
+.zed
