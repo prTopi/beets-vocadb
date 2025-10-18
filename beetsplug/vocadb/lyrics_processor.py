@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from beetsplug.vocadb.vocadb_api_client import (
     ContentLanguagePreference,
-    LyricsForSongContract,
     TranslationType,
 )
+
+if TYPE_CHECKING:
+    from beetsplug.vocadb.vocadb_api_client import LyricsForSongContract
 
 
 class LyricsProcessor:
