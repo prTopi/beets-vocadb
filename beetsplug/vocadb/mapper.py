@@ -224,7 +224,7 @@ class Mapper:
             ):
                 continue
             track_info: TrackInfo | None
-            total: int = remote_disc.total or len(remote_disc_tracks)
+            total: int = len(remote_disc_tracks)
             for remote_song in remote_disc_tracks:
                 if not remote_song.song or not (
                     track_info := self.track_info(

@@ -11,4 +11,3 @@ class AlbumDiscPropertiesContract(TaggedBase):
     id: int
     media_type: DiscMediaType
     name: str | None = None
-    total: int | None = None  # Not provided by the API!
