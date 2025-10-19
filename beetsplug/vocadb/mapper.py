@@ -103,18 +103,18 @@ class Mapper:
         """
         if not remote_album.tracks:
             return
-        if not remote_album.discs:
-            remote_album.discs = discs_fallback(
-                disc_total=remote_album.tracks[-1].disc_number
-            )
+        remote_discs: tuple[AlbumDiscPropertiesContract, ...] = (
+            remote_album.discs
+            or discs_fallback(disc_total=remote_album.tracks[-1].disc_number)
+        )
         album_genre: str | None = get_genres(
-            remote_tags=remote_album.tags or []
+            remote_tags=remote_album.tags or ()
         )
         # track_genres: set[str | None] = set()
         tracks: list[TrackInfo]
         tracks = self.get_album_track_infos(
             remote_songs=remote_album.tracks,
-            remote_discs=remote_album.discs,
+            remote_discs=remote_discs,
             album_genre=album_genre,
         )
         remote_disc_type: DiscType
@@ -142,7 +142,6 @@ class Mapper:
         year: int | None = remote_date.year
         month: int | None = remote_date.month
         day: int | None = remote_date.day
-        remote_discs: list[AlbumDiscPropertiesContract] = remote_album.discs
         mediums: int = len(remote_discs)
         catalognum: str | None = remote_album.catalog_number
         media: str | None
@@ -192,8 +191,8 @@ class Mapper:
 
     def get_album_track_infos(
         self,
-        remote_songs: list[SongInAlbumForApiContract],
-        remote_discs: list[AlbumDiscPropertiesContract],
+        remote_songs: tuple[SongInAlbumForApiContract, ...],
+        remote_discs: tuple[AlbumDiscPropertiesContract, ...],
         album_genre: str | None,
     ) -> list[TrackInfo]:
         """Extract track information from album data.
@@ -212,7 +211,7 @@ class Mapper:
         tracks: list[TrackInfo] = []
         tracks_by_disc: dict[
             int,
-            list[SongInAlbumForApiContract],
+            tuple[SongInAlbumForApiContract, ...],
         ] = group_tracks_by_disc(remote_songs=remote_songs)
         ignore_video_tracks: bool = self.ignore_video_tracks
         for disc_number, remote_disc_tracks in tracks_by_disc.items():
@@ -318,7 +317,7 @@ class Mapper:
             composer=composer,
             arranger=arranger,
             bpm=get_bpm(remote_song.max_milli_bpm),
-            genre=get_genres(remote_tags=remote_song.tags or []),
+            genre=get_genres(remote_tags=remote_song.tags or ()),
             script=script,
             language=language,
             lyrics=lyrics,

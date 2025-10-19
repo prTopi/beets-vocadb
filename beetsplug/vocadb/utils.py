@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from itertools import groupby
 from re import match, search
 from typing import TYPE_CHECKING
 
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 
 def discs_fallback(
     disc_total: int,
-) -> list[AlbumDiscPropertiesContract]:
+) -> tuple[AlbumDiscPropertiesContract, ...]:
     """Create default disc properties for albums without disc information.
 
     Args:
@@ -32,7 +33,7 @@ def discs_fallback(
     Returns:
         List of default disc properties
     """
-    return [
+    return tuple(
         AlbumDiscPropertiesContract(
             disc_number=i + 1,
             id=0,
@@ -40,11 +41,11 @@ def discs_fallback(
             media_type=DiscMediaType.AUDIO,
         )
         for i in range(disc_total)
-    ]
+    )
 
 
 def get_asin(
-    web_links: list[WebLinkForApiContract] | None,
+    web_links: tuple[WebLinkForApiContract, ...] | None,
 ) -> str | None:
     """Extract ASIN (Amazon Standard Identification Number) from web links."""
     return next(
@@ -81,7 +82,7 @@ def get_bpm(max_milli_bpm: int | None) -> str | None:
     return str(max_milli_bpm // 1000) if max_milli_bpm else None
 
 
-def get_genres(remote_tags: list[TagUsageForApiContract]) -> str | None:
+def get_genres(remote_tags: tuple[TagUsageForApiContract, ...]) -> str | None:
     """Extract and format genre information from VocaDB tags.
 
     Processes VocaDB tags to find those categorized as "Genres", sorts them
@@ -133,12 +134,20 @@ def get_id(
 
 
 def group_tracks_by_disc(
-    remote_songs: list[SongInAlbumForApiContract],
-) -> dict[int, list[SongInAlbumForApiContract]]:
+    remote_songs: tuple[SongInAlbumForApiContract, ...],
+) -> dict[
+    int, tuple[SongInAlbumForApiContract, ...]
+]:  # First sort by disc number
     tracks_by_disc: defaultdict[
         int,
-        list[SongInAlbumForApiContract],
-    ] = defaultdict(list)
-    for remote_song in remote_songs:
-        tracks_by_disc[remote_song.disc_number].append(remote_song)
+        tuple[SongInAlbumForApiContract, ...],
+    ] = defaultdict(
+        tuple,
+        {
+            disc_number: tuple(songs)
+            for disc_number, songs in groupby(
+                remote_songs, key=lambda x: x.disc_number
+            )
+        },
+    )
     return tracks_by_disc

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
+from beetsplug.vocadb.vocadb_api_client.models import FrozenBase
 from beetsplug.vocadb.vocadb_api_client.models.album_disc_properties_contract import (
     AlbumDiscPropertiesContract,
 )
@@ -28,7 +28,7 @@ from beetsplug.vocadb.vocadb_api_client.models.web_link_for_api_contract import 
 )
 
 
-class AlbumForApiContract(TaggedBase):
+class AlbumForApiContract(FrozenBase, frozen=True):
     create_date: datetime
     default_name_language: ContentLanguageSelection
     disc_type: DiscType
@@ -38,12 +38,12 @@ class AlbumForApiContract(TaggedBase):
     release_date: OptionalDateTimeContract
     status: EntryStatus
     version: int
-    artists: list[ArtistForAlbumForApiContract] | None = None
+    artists: tuple[ArtistForAlbumForApiContract, ...] | None = None
     artist_string: str | None = None
     catalog_number: str | None = None
     default_name: str | None = None
-    discs: list[AlbumDiscPropertiesContract] | None = None
+    discs: tuple[AlbumDiscPropertiesContract, ...] | None = None
     name: str | None = None
-    tags: list[TagUsageForApiContract] | None = None
-    tracks: list[SongInAlbumForApiContract] | None = None
-    web_links: list[WebLinkForApiContract] | None = None
+    tags: tuple[TagUsageForApiContract, ...] | None = None
+    tracks: tuple[SongInAlbumForApiContract, ...] | None = None
+    web_links: tuple[WebLinkForApiContract, ...] | None = None

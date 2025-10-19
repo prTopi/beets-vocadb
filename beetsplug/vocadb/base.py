@@ -460,7 +460,7 @@ class PluginBases:
                 maxResults=self.instance_config.search_limit,
                 nameMatchMode=NameMatchMode.AUTO,
             )
-            remote_album_candidates: list[AlbumForApiContract] | None
+            remote_album_candidates: tuple[AlbumForApiContract, ...] | None
             if not remote_album_find_result or not (
                 remote_album_candidates := remote_album_find_result.items
             ):
@@ -496,7 +496,7 @@ class PluginBases:
                 sort=SongSortRule.SONG_TYPE,
                 lang=self.instance_config.language,
             )
-            remote_item_candidates: list[SongForApiContract] | None
+            remote_item_candidates: tuple[SongForApiContract, ...] | None
             if not remote_item_find_result or not (
                 remote_item_candidates := remote_item_find_result.items
             ):
