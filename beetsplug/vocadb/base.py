@@ -53,6 +53,7 @@ if TYPE_CHECKING:
     from beets.autotag.hooks import AlbumInfo, TrackInfo
     from beets.dbcore import Results
     from beets.library import Library
+    from typing_extensions import LiteralString
 
     from beetsplug.vocadb.vocadb_api_client import (
         AlbumForApiContract,
@@ -61,7 +62,7 @@ if TYPE_CHECKING:
         SongForApiContractPartialFindResult,
     )
 
-USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
+USER_AGENT: LiteralString = f"beets/{beets_version} +https://beets.io/"
 
 SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
     (
@@ -269,7 +270,7 @@ class PluginBases:
                         + f"for track {item_formatted}"
                     )
                     continue
-                with lib.transaction():
+                with lib.transaction():  # pyrefly: ignore[bad-context-manager]
                     apply_item_metadata(item, track_info)
                     if show_model_changes(new=item):
                         apply_item_changes(lib, item, move, pretend, write)
@@ -413,7 +414,7 @@ class PluginBases:
                     )
 
                 self._log.debug(msg=f"applying changes to {album_formatted}")
-                with lib.transaction():
+                with lib.transaction():  # pyrefly: ignore[bad-context-manager]
                     apply_metadata(album_info, mapping)
                     changed: bool = False
                     any_changed_item: library.Item | None = items.get()
@@ -465,9 +466,10 @@ class PluginBases:
                 remote_album_candidates := remote_album_find_result.items
             ):
                 return
-            self._log.debug(
-                msg=f"Found {len(remote_album_candidates)} result(s) for '{album}'"
-            )
+            else:
+                self._log.debug(
+                    msg=f"Found {len(remote_album_candidates)} result(s) for '{album}'"  # pyrefly: ignore[unbound-name] # noqa: E501
+                )
             # songFields parameter doesn't exist for album search
             # so we'll get albums by their id
             yield from filter(
@@ -476,7 +478,7 @@ class PluginBases:
                     lambda remote_album_candidate: self.album_for_id(
                         album_id=str(remote_album_candidate.id)
                     ),
-                    remote_album_candidates,
+                    remote_album_candidates,  # pyrefly: ignore[unbound-name]
                 ),
             )
 
@@ -503,10 +505,14 @@ class PluginBases:
                 self._log.debug(msg=f"Found 0 results for '{title}'")
                 return
             self._log.debug(
-                msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"
+                msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"  # pyrefly: ignore[unbound-name] # noqa: E501
             )
             yield from filter(
-                None, map(self.mapper.track_info, remote_item_candidates)
+                None,
+                map(
+                    self.mapper.track_info,
+                    remote_item_candidates,  # pyrefly: ignore[unbound-name]
+                ),
             )
 
         @override

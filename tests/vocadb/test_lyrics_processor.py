@@ -174,8 +174,8 @@ class TestLyricsProcessor:
         self,
         test_case: LyricsTestCase,
     ) -> None:
-        decoded_lyrics: list[LyricsForSongContract] = msgspec.json.decode(
-            test_case.lyrics, type=list[LyricsForSongContract]
+        decoded_lyrics: tuple[LyricsForSongContract, ...] = msgspec.json.decode(
+            test_case.lyrics, type=tuple[LyricsForSongContract, ...]
         )
         expected_language_code: str | None = test_case.expected_language_code
         expected_script: str | None = test_case.expected_script
