@@ -39,11 +39,12 @@ For usage information run `beet [subcommand] -h`.
 ## Configuration
 
 The other plugins (utaitedb and touhoudb) will use the same settings as vocadb
-as a fallback, so you don't have to repeat yourself. (except for source_weight)
+as a fallback, so you don't have to repeat yourself. (except for
+`data_source_mismatch_penalty` and `search_limit`)
 
 ```yaml
 vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
-  source_weight: 0.5 # Penalty to be added to all matches when using autotagger (0 disabled, 1 highest)
+  data_source_mismatch_penalty: 0.5 # Penalty to be added to all matches with different source when using autotagger (0 disabled, 1 highest)
   search_limit: 5 # Number of results to get from source. Consider increasing if correct song or album doesn't show up in the list of candidates
   prefer_romaji: false # Prefer romanized if they exist rather than Japanese
   translated_lyrics: false # Always get translated lyrics if they're available
