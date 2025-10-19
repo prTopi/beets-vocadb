@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
+from beetsplug.vocadb.vocadb_api_client.models import FrozenBase
 from beetsplug.vocadb.vocadb_api_client.models.song_for_api_contract import (
     SongForApiContract,
 )
 
 
-class SongInAlbumForApiContract(TaggedBase):
+class SongInAlbumForApiContract(FrozenBase, frozen=True):
     disc_number: int
     id: int
     track_number: int

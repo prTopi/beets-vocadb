@@ -17,7 +17,7 @@ class LyricsProcessor:
 
     def get_lyrics(
         self,
-        remote_lyrics_list: list[LyricsForSongContract] | None,
+        remote_lyrics_list: tuple[LyricsForSongContract, ...] | None,
     ) -> tuple[str | None, str | None, str | None]:
         """Extract lyrics information with language and script metadata.
 
@@ -92,7 +92,7 @@ class LyricsProcessor:
 
     def _get_fallback_lyrics(
         self,
-        remote_lyrics_list: list[LyricsForSongContract],
+        remote_lyrics_list: tuple[LyricsForSongContract, ...],
     ) -> str | None:
         """Internal fallback mechanism when preferred lyrics are not available.
 

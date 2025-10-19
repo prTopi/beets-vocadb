@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
+from beetsplug.vocadb.vocadb_api_client.models import FrozenBase
 
 
-class TagBaseContract(TaggedBase):
+class TagBaseContract(FrozenBase, frozen=True):
     id: int
     name: str | None = None
     additional_names: str | None = None

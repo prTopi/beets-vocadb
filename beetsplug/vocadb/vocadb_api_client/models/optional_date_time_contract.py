@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from beetsplug.vocadb.vocadb_api_client.models import TaggedBase
+from beetsplug.vocadb.vocadb_api_client.models import FrozenBase
 
 
-class OptionalDateTimeContract(TaggedBase):
+class OptionalDateTimeContract(FrozenBase, frozen=True):
     is_empty: bool
     day: int | None = None
     month: int | None = None

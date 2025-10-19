@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import auto
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from beetsplug.vocadb.plugin_config import VA_NAME
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
         ArtistForAlbumForApiContract,
         ArtistForSongContract,
     )
+    from beetsplug.vocadb.vocadb_api_client.models import StrEnumSet
 
 
 class ProcessedArtistCategories(StrEnum):
@@ -35,7 +37,7 @@ class CategorizedArtists(
 
 
 def get_album_artists(
-    remote_artists: list[ArtistForAlbumForApiContract] | None,
+    remote_artists: tuple[ArtistForAlbumForApiContract, ...] | None,
     comp: bool,
     include_featured_artists: bool = True,
 ) -> tuple[
@@ -63,7 +65,7 @@ def get_album_artists(
     if not remote_artists:
         return "", None, [], [], None
     artists_by_categories: CategorizedArtists
-    not_creditable_artists: set[tuple[str, str]]
+    not_creditable_artists: frozenset[tuple[str, str]]
     artists_by_categories, not_creditable_artists = _categorize_artists(
         remote_artists
     )
@@ -79,7 +81,7 @@ def get_album_artists(
 
 
 def get_track_artists(
-    remote_artists: list[ArtistForSongContract] | None,
+    remote_artists: tuple[ArtistForSongContract, ...] | None,
 ) -> tuple[
     str,
     str | None,
@@ -106,7 +108,7 @@ def get_track_artists(
     if not remote_artists:
         return "", None, [], [], "", "", ""
     artists_by_categories: CategorizedArtists
-    not_creditable_artists: set[tuple[str, str]]
+    not_creditable_artists: frozenset[tuple[str, str]]
     artists_by_categories, not_creditable_artists = _categorize_artists(
         remote_artists
     )
@@ -131,10 +133,11 @@ def get_track_artists(
     )
 
 
+@lru_cache(maxsize=128)
 def _categorize_artists(
-    remote_artists: list[ArtistForAlbumForApiContract]
-    | list[ArtistForSongContract],
-) -> tuple[CategorizedArtists, set[tuple[str, str]]]:
+    remote_artists_tuple: tuple[ArtistForAlbumForApiContract, ...]
+    | tuple[ArtistForSongContract, ...],
+) -> tuple[CategorizedArtists, frozenset[tuple[str, str]]]:
     """Categorizes artists by their roles and identifies not creditable artists.
 
     Takes a list of artists and organizes them into categories like producers,
@@ -149,6 +152,7 @@ def _categorize_artists(
         - ArtistsByCategories object with artists sorted into role categories
         - Set of tuples of artist ids and names that are not creditable
     """
+    remote_artists = list(remote_artists_tuple)
     artists_by_categories: CategorizedArtists = CategorizedArtists()
     not_creditable_artists: set[tuple[str, str]] = set()
 
@@ -191,13 +195,16 @@ def _categorize_artists(
             not_creditable_artists.add((name, id))
 
         # Handle producers/bands first
+        effective_roles: StrEnumSet[ArtistRoles] = (
+            remote_album_or_song_artist.effective_roles
+        )
         if {
             ArtistCategories.PRODUCER,
             # ArtistCategories.CIRCLE,
             ArtistCategories.BAND,
         } & remote_album_or_song_artist.categories:
             if "Default" in remote_album_or_song_artist.effective_roles:
-                remote_album_or_song_artist.effective_roles |= producer_roles
+                effective_roles |= producer_roles
             artists_by_categories[ProcessedArtistCategories.PRODUCERS].append(
                 (name, id)
             )
@@ -209,7 +216,7 @@ def _categorize_artists(
             if (
                 isinstance(remote_role, ArtistCategories)
                 and remote_role in remote_album_or_song_artist.categories
-            ) or remote_role in remote_album_or_song_artist.effective_roles:
+            ) or remote_role in effective_roles:
                 artists_by_categories[category].append((name, id))
 
     # Set producer fallbacks if needed
@@ -232,12 +239,12 @@ def _categorize_artists(
                 ProcessedArtistCategories.PRODUCERS
             ]
 
-    return artists_by_categories, not_creditable_artists
+    return artists_by_categories, frozenset(not_creditable_artists)
 
 
 def _get_artists(
     artists_by_categories: CategorizedArtists,
-    not_creditable_artists: set[tuple[str, str]],
+    not_creditable_artists: frozenset[tuple[str, str]],
     comp: bool,
     include_featured_artists: bool,
 ) -> tuple[str, str | None, list[str], list[str]]:
@@ -347,7 +354,7 @@ def _extract_artists_from_categories(
 
 
 def _get_label(
-    remote_artists: list[ArtistForAlbumForApiContract] | None,
+    remote_artists: tuple[ArtistForAlbumForApiContract, ...] | None,
 ) -> str | None:
     return next(
         (

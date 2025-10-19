@@ -48,12 +48,22 @@ class StrEnumSet(set[E]):
         return cls(strenum_cls(role.strip()) for role in csv.split(delimiter))
 
 
+class FrozenBase(
+    msgspec.Struct,
+    forbid_unknown_fields=True,
+    frozen=True,
+    omit_defaults=True,
+    rename="camel",
+): ...
+
+
 class TaggedBase(
     msgspec.Struct,
     forbid_unknown_fields=True,
     omit_defaults=True,
     rename="camel",
-): ...
+):
+    """Base for unhashable Structs"""
 
 
 # Explicitly export the public API
