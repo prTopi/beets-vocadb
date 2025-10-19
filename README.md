@@ -38,10 +38,6 @@ For usage information run `beet [subcommand] -h`.
 
 ## Configuration
 
-The other plugins (utaitedb and touhoudb) will use the same settings as vocadb
-as a fallback, so you don't have to repeat yourself. (except for
-`data_source_mismatch_penalty` and `search_limit`)
-
 ```yaml
 vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
   data_source_mismatch_penalty: 0.5 # Penalty to be added to all matches with different source when using autotagger (0 disabled, 1 highest)
@@ -49,7 +45,6 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   prefer_romaji: false # Prefer romanized if they exist rather than Japanese
   translated_lyrics: false # Always get translated lyrics if they're available
   include_featured_album_artists: false # Include featured artists in album artists string
-  va_string: "Various artists" # Album artist name to use when artist list contains many artists
 ```
 
 The plugins use beets' default import language list to determine which language
@@ -67,8 +62,9 @@ import:
 Adding new sources is easy as long as the site is based on VocaDB.
 
 A new source can be added by creating a new python file in the beetsplug folder
-with a class that inherits classes `VocaDBPlugin` and `VocaDBInstance` with the
-instance information (see `utaitedb.py` or `touhoudb.py` for reference.) The
-filename dictates the plugins name used for configuration.
+with a class that inherits from `beetsplug.vocadb.base.PluginBases.PluginBase`
+and passes the desired values to the required parameters. (see `utaitedb.py` or
+`touhoudb.py` for reference.) The filename dictates the plugins name used for
+configuration.
 
 Feel free to create an issue or pull request about adding new sources.

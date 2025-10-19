@@ -1,12 +1,9 @@
-from beetsplug import vocadb
+from beetsplug.vocadb.base import PluginBases
 
 
 class UtaiteDBPlugin(
-    vocadb.VocaDBPlugin,
-    instance_info=vocadb.InstanceInfo(
-        name="UtaiteDB",
-        base_url="https://utaiteadb.net/",
-        api_url="https://utaitedb.net/api/",
-        subcommand="udbsync",
-    ),
+    PluginBases.PluginBase,
+    base_url="https://utaitedb.net/",
+    api_url="https://utaitedb.net/api/",
+    subcommand_prefix="udb",
 ): ...
