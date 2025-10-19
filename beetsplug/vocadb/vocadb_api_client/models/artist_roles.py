@@ -1,6 +1,10 @@
 from enum import auto
 
-from beetsplug.vocadb.vocadb_api_client.models import PascalCaseStrEnum
+from beetsplug.vocadb.vocadb_api_client.models import (
+    PascalCaseStrEnum,
+    StrEnumSet,
+    TypeAlias,
+)
 
 
 class ArtistRoles(PascalCaseStrEnum):
@@ -25,3 +29,6 @@ class ArtistRoles(PascalCaseStrEnum):
 
     # UtaiteDB-specific
     ENCODER = auto()
+
+
+ArtistRolesSet: TypeAlias = StrEnumSet[ArtistRoles]

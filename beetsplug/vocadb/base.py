@@ -527,13 +527,13 @@ class PluginBases:
                 self.album_api.api_albums_id_get(
                     id=int(album_id),
                     fields=AlbumOptionalFieldsSet(
-                        {
+                        (
                             AlbumOptionalFields.ARTISTS,
                             AlbumOptionalFields.DISCS,
                             AlbumOptionalFields.TAGS,
                             AlbumOptionalFields.TRACKS,
                             AlbumOptionalFields.WEB_LINKS,
-                        }
+                        )
                     ),
                     songFields=SONG_FIELDS,
                     lang=self.instance_config.language,

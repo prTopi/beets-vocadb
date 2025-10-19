@@ -6,7 +6,7 @@ from functools import cached_property
 
 import msgspec
 
-from beetsplug.vocadb.vocadb_api_client.models import StrEnumSet, TaggedBase
+from beetsplug.vocadb.vocadb_api_client.models import FrozenBase, StrEnumSet
 from beetsplug.vocadb.vocadb_api_client.models.artist_for_song_contract import (
     ArtistForSongContract,
 )
@@ -17,7 +17,10 @@ from beetsplug.vocadb.vocadb_api_client.models.entry_status import EntryStatus
 from beetsplug.vocadb.vocadb_api_client.models.lyrics_for_song_contract import (
     LyricsForSongContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.pv_services import PVServices
+from beetsplug.vocadb.vocadb_api_client.models.pv_services import (
+    PVServices,
+    PVServicesSet,
+)
 from beetsplug.vocadb.vocadb_api_client.models.song_type import SongType
 from beetsplug.vocadb.vocadb_api_client.models.tag_usage_for_api_contract import (
     TagUsageForApiContract,
@@ -29,7 +32,7 @@ else:
     from typing_extensions import override
 
 
-class SongForApiContract(TaggedBase, dict=True):
+class SongForApiContract(FrozenBase, frozen=True, dict=True):
     create_date: datetime
     default_name_language: ContentLanguageSelection
     id: int
@@ -109,7 +112,5 @@ class SongForApiContract(TaggedBase, dict=True):
         )
 
     @cached_property
-    def pv_services(self) -> StrEnumSet[PVServices]:
-        return StrEnumSet[PVServices].from_delimited_str(
-            PVServices, self._pv_services
-        )
+    def pv_services(self) -> PVServicesSet:
+        return StrEnumSet.from_delimited_str(PVServices, self._pv_services)
