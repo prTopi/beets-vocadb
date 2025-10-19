@@ -72,7 +72,7 @@ def test_get_genres(remote_tags: str, expected: str | None) -> None:
     assert (
         get_genres(
             remote_tags=msgspec.json.decode(
-                remote_tags, type=list[TagUsageForApiContract]
+                remote_tags, type=tuple[TagUsageForApiContract, ...]
             )
         )
         == expected

@@ -229,17 +229,19 @@ class Mapper:
                     track_info := self.track_info(
                         remote_song=remote_song.song,
                         index=remote_song.track_number,
-                        media=remote_disc.name,
+                        media=remote_disc.name,  # pyrefly: ignore[unbound-name]
                         medium=disc_number,
                         medium_index=remote_song.track_number,
                         medium_total=total,
                     )
                 ):
                     continue
-                if not track_info.genre:
-                    track_info.genre = album_genre
+                if not track_info.genre:  # pyrefly: ignore[unbound-name]
+                    track_info.genre = (  # pyrefly: ignore[unbound-name]
+                        album_genre
+                    )
 
-                tracks.append(track_info)
+                tracks.append(track_info)  # pyrefly: ignore[unbound-name]
         return tracks
 
     def track_info(

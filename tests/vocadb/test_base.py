@@ -56,7 +56,7 @@ def test_init_subclass(
         subcommand_prefix=test_case.subcommand_prefix,
     )
     plugin = plugin_cls()
-    assert plugin.data_source == test_case.expected_data_source
+    assert plugin.data_source == test_case.expected_data_source  #  pyright: ignore[reportAny]
     assert plugin.base_url == test_case.expected_base_url
     assert plugin.api_url == test_case.expected_api_url
     assert plugin.sync_subcommand == test_case.expected_sync_subcommand
