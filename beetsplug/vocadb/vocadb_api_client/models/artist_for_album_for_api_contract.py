@@ -8,11 +8,15 @@ import msgspec
 from beetsplug.vocadb.vocadb_api_client.models import FrozenBase, StrEnumSet
 from beetsplug.vocadb.vocadb_api_client.models.artist_categories import (
     ArtistCategories,
+    ArtistCategoriesSet,
 )
 from beetsplug.vocadb.vocadb_api_client.models.artist_contract import (
     ArtistContract,
 )
-from beetsplug.vocadb.vocadb_api_client.models.artist_roles import ArtistRoles
+from beetsplug.vocadb.vocadb_api_client.models.artist_roles import (
+    ArtistRoles,
+    ArtistRolesSet,
+)
 
 if not sys.version_info < (3, 12):
     from typing import override  # pyright: ignore[reportUnreachable]
@@ -57,19 +61,13 @@ class ArtistForAlbumForApiContract(
         )
 
     @cached_property
-    def categories(self) -> StrEnumSet[ArtistCategories]:
-        return StrEnumSet[ArtistCategories].from_delimited_str(
-            ArtistCategories, self._categories
-        )
+    def categories(self) -> ArtistCategoriesSet:
+        return StrEnumSet.from_delimited_str(ArtistCategories, self._categories)
 
     @cached_property
-    def effective_roles(self) -> StrEnumSet[ArtistRoles]:
-        return StrEnumSet[ArtistRoles].from_delimited_str(
-            ArtistRoles, self._effective_roles
-        )
+    def effective_roles(self) -> ArtistRolesSet:
+        return StrEnumSet.from_delimited_str(ArtistRoles, self._effective_roles)
 
     @cached_property
-    def roles(self) -> StrEnumSet[ArtistRoles]:
-        return StrEnumSet[ArtistRoles].from_delimited_str(
-            ArtistRoles, self._roles
-        )
+    def roles(self) -> ArtistRolesSet:
+        return StrEnumSet.from_delimited_str(ArtistRoles, self._roles)

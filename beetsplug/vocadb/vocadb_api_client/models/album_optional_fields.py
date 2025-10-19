@@ -1,15 +1,10 @@
-import sys
 from enum import auto
 
 from beetsplug.vocadb.vocadb_api_client.models import (
     PascalCaseStrEnum,
     StrEnumSet,
+    TypeAlias,
 )
-
-if not sys.version_info < (3, 10):
-    from typing import TypeAlias  # pyright: ignore[reportUnreachable]
-else:
-    from typing_extensions import TypeAlias
 
 
 class AlbumOptionalFields(PascalCaseStrEnum):

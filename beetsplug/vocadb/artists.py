@@ -7,13 +7,15 @@ from typing import TYPE_CHECKING
 from beetsplug.vocadb.plugin_config import VA_NAME
 from beetsplug.vocadb.vocadb_api_client import ArtistCategories, ArtistRoles
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from beetsplug.vocadb.vocadb_api_client.models.artist_roles import (
+    ArtistRolesSet,
+)
 
 if TYPE_CHECKING:
     from beetsplug.vocadb.vocadb_api_client import (
         ArtistForAlbumForApiContract,
         ArtistForSongContract,
     )
-    from beetsplug.vocadb.vocadb_api_client.models import StrEnumSet
 
 
 class ProcessedArtistCategories(StrEnum):
@@ -195,7 +197,7 @@ def _categorize_artists(
             not_creditable_artists.add((name, id))
 
         # Handle producers/bands first
-        effective_roles: StrEnumSet[ArtistRoles] = (
+        effective_roles: ArtistRolesSet = (
             remote_album_or_song_artist.effective_roles
         )
         if {

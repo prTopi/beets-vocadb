@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 import msgspec
 
@@ -15,6 +15,11 @@ if not sys.version_info < (3, 11):
     from enum import StrEnum  # pyright: ignore[reportUnreachable]
 else:
     from backports.strenum import StrEnum
+
+if not sys.version_info < (3, 10):
+    from typing import TypeAlias  # pyright: ignore[reportUnreachable]
+else:
+    from typing_extensions import TypeAlias
 
 
 class PascalCaseStrEnum(StrEnum):
@@ -33,19 +38,24 @@ class PascalCaseStrEnum(StrEnum):
         return "".join(word.capitalize() for word in name.split("_"))
 
 
-E = TypeVar("E", bound=StrEnum)
+_E = TypeVar("_E", bound=StrEnum)
+_E2 = TypeVar("_E2", bound=StrEnum)
 
 
-class StrEnumSet(set[E]):
+class StrEnumSet(set[_E], Generic[_E]):
+    _enum_cls: type[_E]
+
     @override
     def __str__(self) -> str:
         return ",".join(self)
 
-    @classmethod
+    @staticmethod
     def from_delimited_str(
-        cls, strenum_cls: type[E], csv: str, delimiter: str = ","
-    ) -> StrEnumSet[E]:
-        return cls(strenum_cls(role.strip()) for role in csv.split(delimiter))
+        strenum_cls: type[_E2], csv: str, delimiter: str = ","
+    ) -> StrEnumSet[_E2]:
+        return StrEnumSet[_E2](
+            strenum_cls(role.strip()) for role in csv.split(delimiter)
+        )
 
 
 class FrozenBase(
@@ -67,4 +77,4 @@ class TaggedBase(
 
 
 # Explicitly export the public API
-__all__ = ["StrEnum"]
+__all__: list[str] = ["StrEnum", "TypeAlias"]
