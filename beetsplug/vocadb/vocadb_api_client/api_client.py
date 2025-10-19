@@ -1,31 +1,23 @@
 from __future__ import annotations
 
 import weakref
-from typing import TYPE_CHECKING, Protocol, TypeVar, cast
+from functools import cache
+from typing import TYPE_CHECKING, TypeVar
 
 import httpx
 import msgspec
 
 if TYPE_CHECKING:
     from logging import Logger
-    from typing import ClassVar
-
-    from typing_extensions import Buffer
 
 
 T = TypeVar("T")
-
-
-class Decodable(Protocol):
-    def decode(self, buf: Buffer | str, /) -> object: ...
 
 
 class ApiClient:
     """
     Generic API client using httpx and msgspec
     """
-
-    _decoders: ClassVar[dict[type, Decodable]] = {}
 
     def __init__(
         self,
@@ -59,21 +51,15 @@ class ApiClient:
         self.default_headers["User-Agent"] = value
 
     @classmethod
+    @cache
     def _get_decoder(cls, target_type: type[T]) -> msgspec.json.Decoder[T]:
         """Caches and returns a decoder for the specified type"""
-        decoder: msgspec.json.Decoder[T] = msgspec.json.Decoder(
-            type=target_type
-        )
-        cls._decoders[target_type] = decoder
-        return decoder
+        return msgspec.json.Decoder(type=target_type)
 
     def decode(self, content: str, target_type: type[T]) -> T:
-        decoder: msgspec.json.Decoder[T]
-        try:
-            decoder = cast(msgspec.json.Decoder[T], self._decoders[target_type])
-        except KeyError:
-            self._log.debug("Getting decoder for {}", target_type)
-            decoder = self._get_decoder(target_type=target_type)
+        decoder: msgspec.json.Decoder[T] = self._get_decoder(
+            target_type=target_type
+        )
         return decoder.decode(content)
 
     def call_api(
