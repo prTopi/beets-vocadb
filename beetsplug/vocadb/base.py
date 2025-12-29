@@ -432,6 +432,8 @@ class PluginBases:
                         "original_month",
                         "original_year",
                         "genre",
+                        "language",
+                        "script",
                     }:
                         album[key] = any_changed_item[key]
                     # Copy flexible attributes from album_info to album
