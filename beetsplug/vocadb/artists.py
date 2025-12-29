@@ -181,7 +181,10 @@ def _categorize_artists(
         name: str | None
         id: str
         name, id = (
-            (remote_artist.name, str(remote_artist.id))
+            (
+                remote_album_or_song_artist.name or remote_artist.name,
+                str(remote_artist.id),
+            )
             if (remote_artist := remote_album_or_song_artist.artist)
             else (remote_album_or_song_artist.name, "")
         )
