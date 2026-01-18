@@ -29,6 +29,7 @@ class ArtistRoles(PascalCaseStrEnum):
 
     # UtaiteDB-specific
     ENCODER = auto()
+    RECORDING_ENGINEER = auto()
 
 
 ArtistRolesSet: TypeAlias = StrEnumSet[ArtistRoles]
