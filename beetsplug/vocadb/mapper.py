@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import auto
+from logging import Logger
 from typing import TYPE_CHECKING
 
 import httpx
@@ -23,14 +24,21 @@ from beetsplug.vocadb.vocadb_api_client import (
     OptionalDateTimeContract,
 )
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
+from beetsplug.vocadb.vocadb_api_client.models.song_optional_fields import (
+    SongOptionalFields,
+    SongOptionalFieldsSet,
+)
 
 if TYPE_CHECKING:
     from datetime import datetime
 
     from beetsplug.vocadb.vocadb_api_client import (
+        AlbumApiApi,
         AlbumDiscPropertiesContract,
         AlbumForApiContract,
+        ArtistForSongContract,
         OptionalDateTimeContract,
+        SongApiApi,
         SongForApiContract,
         SongInAlbumForApiContract,
     )
@@ -77,7 +85,10 @@ class Mapper:
         ignore_video_tracks: bool,
         include_featured_album_artists: bool,
         language_preference: ContentLanguagePreference,
-    ):
+        album_api: AlbumApiApi,
+        song_api: SongApiApi,
+        logger: Logger,
+    ) -> None:
         self.base_url: str | httpx.URL = base_url
         self.data_source: str = data_source
         self.flexible_attributes: FlexibleAttributes = flexible_attributes
@@ -85,9 +96,15 @@ class Mapper:
         self.include_featured_album_artists: bool = (
             include_featured_album_artists
         )
+        self.language_preference: ContentLanguagePreference = (
+            language_preference
+        )
         self.lyrics_processor: LyricsProcessor = LyricsProcessor(
             language_preference=language_preference
         )
+        self.album_api: AlbumApiApi = album_api
+        self.song_api: SongApiApi = song_api
+        self._log: Logger = logger
 
     def album_info(
         self,
@@ -266,6 +283,30 @@ class Mapper:
         Returns:
             Track information in Beets TrackInfo format
         """
+        remote_artists: tuple[ArtistForSongContract, ...] | None = (
+            remote_song.artists
+        )
+        remote_original_version_id: int | None
+        if remote_original_version_id := remote_song.original_version_id:
+            # logic for derived songs
+            self._log.debug(
+                msg=f'Track "{remote_song.name}" with id '
+                + f"{remote_song.id} is a derivate of "
+                + f" a the track with id {remote_original_version_id}."
+            )
+            remote_original_song: SongForApiContract | None = (
+                self.song_api.api_songs_id_get(
+                    id=remote_original_version_id,
+                    fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
+                    lang=self.language_preference,
+                )
+            )
+            remote_original_artists: (
+                tuple[ArtistForSongContract, ...] | None
+            ) = remote_original_song.artists if remote_original_song else None
+
+        else:
+            remote_original_artists = None
         artist: str
         artists: list[str]
         artists_ids: list[str]
@@ -281,7 +322,10 @@ class Mapper:
             arranger,
             composer,
             lyricist,
-        ) = get_track_artists(remote_artists=remote_song.artists)
+        ) = get_track_artists(
+            remote_artists=remote_artists,
+            remote_original_artists=remote_original_artists,
+        )
         track_id: str = str(remote_song.id)
         script: str | None
         language: str | None

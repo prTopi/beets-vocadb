@@ -84,6 +84,7 @@ def get_album_artists(
 
 def get_track_artists(
     remote_artists: tuple[ArtistForSongContract, ...] | None,
+    remote_original_artists: tuple[ArtistForSongContract, ...] | None = None,
 ) -> tuple[
     str,
     str | None,
@@ -114,14 +115,72 @@ def get_track_artists(
     artists_by_categories, not_creditable_artists = _categorize_artists(
         remote_artists
     )
-    arranger, composer, lyricist = (
-        ", ".join(name for name, _ in artists_by_categories[category]) or None
-        for category in (
-            ProcessedArtistCategories.ARRANGERS,
-            ProcessedArtistCategories.COMPOSERS,
-            ProcessedArtistCategories.LYRICISTS,
+    original_artists_by_categories: CategorizedArtists | None
+    if remote_original_artists:
+        original_artists_by_categories, _ = _categorize_artists(
+            remote_original_artists
         )
+    else:
+        original_artists_by_categories = None
+
+    arranger: str | None = (
+        ", ".join(
+            name
+            for name, _ in artists_by_categories[
+                ProcessedArtistCategories.ARRANGERS
+            ]
+        )
+        or None
     )
+
+    if (
+        original_artists_by_categories
+        and original_artists_by_categories[ProcessedArtistCategories.COMPOSERS]
+    ):
+        composer: str | None = (
+            ", ".join(
+                name
+                for name, _ in original_artists_by_categories[
+                    ProcessedArtistCategories.COMPOSERS
+                ]
+            )
+            or None
+        )
+    else:
+        composer = (
+            ", ".join(
+                name
+                for name, _ in artists_by_categories[
+                    ProcessedArtistCategories.COMPOSERS
+                ]
+            )
+            or None
+        )
+
+    if (
+        original_artists_by_categories
+        and original_artists_by_categories[ProcessedArtistCategories.LYRICISTS]
+    ):
+        lyricist: str | None = (
+            ", ".join(
+                name
+                for name, _ in original_artists_by_categories[
+                    ProcessedArtistCategories.LYRICISTS
+                ]
+            )
+            or None
+        )
+    else:
+        lyricist = (
+            ", ".join(
+                name
+                for name, _ in artists_by_categories[
+                    ProcessedArtistCategories.LYRICISTS
+                ]
+            )
+            or None
+        )
+
     return (
         *_get_artists(
             artists_by_categories=artists_by_categories,

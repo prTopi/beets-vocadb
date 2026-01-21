@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import sys
 
-from beetsplug.vocadb.lyrics_processor import LyricsProcessor
 from beetsplug.vocadb.mapper import (
     AlbumFlexibleAttributes,
     FlexibleAttributes,
@@ -132,9 +131,6 @@ class PluginBases:
                 InstanceConfig.from_config_view(config=self.config)
             )
             self.config.add(value=(self.instance_config).to_dict())  # pyright: ignore[reportUnknownMemberType]
-            self.lyrics_processor: LyricsProcessor = LyricsProcessor(
-                language_preference=self.instance_config.language
-            )
             self.mapper: Mapper = Mapper(
                 base_url=self.base_url,
                 data_source=self.data_source,  # pyright: ignore[reportAny]
@@ -144,6 +140,9 @@ class PluginBases:
                 ].get(template=bool),
                 include_featured_album_artists=self.instance_config.include_featured_album_artists,
                 language_preference=self.instance_config.language,
+                album_api=self.album_api,
+                song_api=self.song_api,
+                logger=self._log,
             )
 
         def __init_subclass__(
