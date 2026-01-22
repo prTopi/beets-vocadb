@@ -196,9 +196,10 @@ class Mapper:
             year=year,
             data_url=data_url,
             cover_art_url=cover_art_url,
-        )
-        album_info.update(
-            {
+            original_day=None,
+            original_month=None,
+            original_year=None,
+            **{
                 self.flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUM_ID
                 ]: album_id,
@@ -208,7 +209,7 @@ class Mapper:
                 # self._flexible_attributes.album[
                 #     AlbumFlexibleAttributes.ALBUMARTIST_IDS
                 # ]: artists_ids,
-            }
+            },
         )
         return album_info
 
@@ -349,7 +350,7 @@ class Mapper:
             original_year = date.year
         track_info: TrackInfo = TrackInfo(
             title=remote_song.name,
-            # track_id=track_id,
+            track_id=None,
             artist=artist,
             artists=artists,
             # artist_id=artist_id,
@@ -376,9 +377,14 @@ class Mapper:
             original_day=original_day,
             original_month=original_month,
             original_year=original_year,
-        )
-        track_info.update(
-            {
+            composer_sort=None,
+            disctitle=None,
+            initial_key=None,
+            mb_workid=None,
+            release_track_id=None,
+            work=None,
+            work_disambig=None,
+            **{
                 self.flexible_attributes.item[
                     ItemFlexibleAttributes.TRACK_ID
                 ]: track_id,
@@ -388,6 +394,6 @@ class Mapper:
                 self.flexible_attributes.item[
                     ItemFlexibleAttributes.ARTIST_IDS
                 ]: artists_ids,
-            }
+            },
         )
         return track_info
