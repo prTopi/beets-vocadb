@@ -14,6 +14,9 @@ from beetsplug.vocadb.vocadb_api_client.models.content_language_selection import
 )
 from beetsplug.vocadb.vocadb_api_client.models.disc_type import DiscType
 from beetsplug.vocadb.vocadb_api_client.models.entry_status import EntryStatus
+from beetsplug.vocadb.vocadb_api_client.models.entry_thumb_for_api_contract import (
+    EntryThumbForApiContract,
+)
 from beetsplug.vocadb.vocadb_api_client.models.optional_date_time_contract import (
     OptionalDateTimeContract,
 )
@@ -43,6 +46,7 @@ class AlbumForApiContract(FrozenBase, frozen=True):
     catalog_number: str | None = None
     default_name: str | None = None
     discs: tuple[AlbumDiscPropertiesContract, ...] | None = None
+    main_picture: EntryThumbForApiContract | None = None
     name: str | None = None
     tags: tuple[TagUsageForApiContract, ...] | None = None
     tracks: tuple[SongInAlbumForApiContract, ...] | None = None

@@ -534,6 +534,7 @@ class PluginBases:
                             AlbumOptionalFields.TAGS,
                             AlbumOptionalFields.TRACKS,
                             AlbumOptionalFields.WEB_LINKS,
+                            AlbumOptionalFields.MAIN_PICTURE,
                         )
                     ),
                     songFields=SONG_FIELDS,

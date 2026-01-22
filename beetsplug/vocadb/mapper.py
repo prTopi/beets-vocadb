@@ -169,6 +169,11 @@ class Mapper:
         data_url: str = str(
             httpx.URL(url=self.base_url).join(url=f"Al/{album_id}")
         )
+        cover_art_url: str | None = (
+            remote_main_picture.url_original
+            if (remote_main_picture := remote_album.main_picture)
+            else None
+        )
         album_info: AlbumInfo = AlbumInfo(
             tracks=tracks,
             album=album,
@@ -190,6 +195,7 @@ class Mapper:
             va=va,
             year=year,
             data_url=data_url,
+            cover_art_url=cover_art_url,
         )
         album_info.update(
             {

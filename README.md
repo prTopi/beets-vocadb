@@ -70,6 +70,11 @@ import:
     - en
 ```
 
+## FetchArt integration
+
+The plugins integrate with [FetchArt](http://beets.readthedocs.org/en/latest/plugins/fetchart.html) using the flexible attribute field `cover_art_url`.
+Refer to the [relevant section in it's documentation](https://beets.readthedocs.io/en/latest/plugins/fetchart.html#cover-art-url).
+
 ## Advanced configuration
 
 Adding new sources is easy as long as the site is based on VocaDB.
