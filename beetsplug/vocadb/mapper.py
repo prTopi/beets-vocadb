@@ -9,7 +9,7 @@ from beets.autotag.hooks import AlbumInfo, TrackInfo
 
 from beetsplug.vocadb.artists import get_album_artists, get_track_artists
 from beetsplug.vocadb.lyrics_processor import LyricsProcessor
-from beetsplug.vocadb.plugin_config import VA_NAME
+from beetsplug.vocadb.plugin_config import VA_NAME, InstanceConfig
 from beetsplug.vocadb.utils import (
     discs_fallback,
     get_asin,
@@ -18,7 +18,6 @@ from beetsplug.vocadb.utils import (
     group_tracks_by_disc,
 )
 from beetsplug.vocadb.vocadb_api_client import (
-    ContentLanguagePreference,
     DiscMediaType,
     DiscType,
     OptionalDateTimeContract,
@@ -83,27 +82,21 @@ class Mapper:
         data_source: str,
         flexible_attributes: FlexibleAttributes,
         ignore_video_tracks: bool,
-        include_featured_album_artists: bool,
-        language_preference: ContentLanguagePreference,
         album_api: AlbumApiApi,
         song_api: SongApiApi,
+        instance_config: InstanceConfig,
         logger: Logger,
     ) -> None:
         self.base_url: str | httpx.URL = base_url
         self.data_source: str = data_source
         self.flexible_attributes: FlexibleAttributes = flexible_attributes
         self.ignore_video_tracks: bool = ignore_video_tracks
-        self.include_featured_album_artists: bool = (
-            include_featured_album_artists
-        )
-        self.language_preference: ContentLanguagePreference = (
-            language_preference
-        )
         self.lyrics_processor: LyricsProcessor = LyricsProcessor(
-            language_preference=language_preference
+            language_preference=instance_config.language
         )
         self.album_api: AlbumApiApi = album_api
         self.song_api: SongApiApi = song_api
+        self.instance_config: InstanceConfig = instance_config
         self._log: Logger = logger
 
     def album_info(
@@ -147,7 +140,7 @@ class Mapper:
         label: str | None
         artist, artist_id, artists, artists_ids, label = get_album_artists(
             remote_artists=remote_album.artists,
-            include_featured_artists=self.include_featured_album_artists,
+            include_featured_artists=self.instance_config.include_featured_album_artists,
             comp=va,
         )
         if artist == VA_NAME:
@@ -211,6 +204,8 @@ class Mapper:
                 # ]: artists_ids,
             },
         )
+        for field in self.instance_config.exclude_album_fields:
+            del album_info[field]
         return album_info
 
     def get_album_track_infos(
@@ -305,7 +300,7 @@ class Mapper:
                 self.song_api.api_songs_id_get(
                     id=remote_original_version_id,
                     fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
-                    lang=self.language_preference,
+                    lang=self.instance_config.language,
                 )
             )
             remote_original_artists: (
@@ -396,4 +391,6 @@ class Mapper:
                 ]: artists_ids,
             },
         )
+        for field in self.instance_config.exclude_item_fields:
+            del track_info[field]
         return track_info

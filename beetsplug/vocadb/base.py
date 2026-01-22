@@ -138,10 +138,9 @@ class PluginBases:
                 ignore_video_tracks=beets_config["match"][  # pyright: ignore[reportArgumentType]
                     "ignore_video_tracks"
                 ].get(template=bool),
-                include_featured_album_artists=self.instance_config.include_featured_album_artists,
-                language_preference=self.instance_config.language,
                 album_api=self.album_api,
                 song_api=self.song_api,
+                instance_config=self.instance_config,
                 logger=self._log,
             )
 

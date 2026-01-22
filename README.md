@@ -58,6 +58,8 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   prefer_romaji: false # Prefer romanized if they exist rather than Japanese
   translated_lyrics: false # Always get translated lyrics if they're available
   include_featured_album_artists: false # Include featured artists in album artists string
+  exclude_item_fields: [] # List of fields that you do not want to see in the metadata of items.
+  exclude_album_fields: [] # See above, but for albums
 ```
 
 The plugins use beets' default import language list to determine which language

@@ -25,17 +25,21 @@ class InstanceConfig(msgspec.Struct):
     include_featured_album_artists: bool = False
     search_limit: int = 5
     language: ContentLanguagePreference = ContentLanguagePreference.DEFAULT
+    exclude_item_fields: list[str] = []
+    exclude_album_fields: list[str] = []
 
     def __post_init__(self) -> None:
         self.language = self.get_lang(self.prefer_romaji, LANGUAGES)
 
     # convert fields to serilizable types
-    def to_dict(self) -> dict[str, int | bool | str]:
+    def to_dict(self) -> dict[str, int | bool | str | list[str]]:
         return {
             "prefer_romaji": self.prefer_romaji,
             "translated_lyrics": self.translated_lyrics,
             "include_featured_album_artists": self.include_featured_album_artists,
             "search_limit": self.search_limit,
+            "exclude_item_fields": self.exclude_item_fields,
+            "exclude_album_fields": self.exclude_album_fields,
         }
 
     @classmethod
@@ -61,6 +65,8 @@ class InstanceConfig(msgspec.Struct):
                 "include_featured_album_artists"
             ].get(bool),
             search_limit=config["search_limit"].get(int),  # pyright: ignore[reportArgumentType]
+            exclude_item_fields=config["exclude_item_fields"].get(list),  # pyright: ignore[reportArgumentType]
+            exclude_album_fields=config["exclude_album_fields"].get(list),  # pyright: ignore[reportArgumentType]
         )
 
     @staticmethod
