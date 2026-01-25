@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, TypeVar
 
 import httpx
 import msgspec
+from httpx_retries import Retry, RetryTransport
 
 if TYPE_CHECKING:
     from logging import Logger
@@ -24,7 +25,6 @@ class ApiClient:
         user_agent: str,
         base_url: httpx.URL | str,
         logger: Logger,
-        timeout: float = 10,
     ) -> None:
         self._log: Logger = logger
         self.default_headers: httpx.Headers = httpx.Headers(
@@ -37,7 +37,7 @@ class ApiClient:
         self.client: httpx.Client = httpx.Client(
             base_url=httpx.URL(url=self.base_url),
             http2=True,
-            timeout=timeout,
+            transport=RetryTransport(retry=Retry(total=6, backoff_factor=0.5)),
         )
         _ = weakref.finalize(self, self.close)
 
