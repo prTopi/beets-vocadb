@@ -63,13 +63,15 @@ if TYPE_CHECKING:
 
 USER_AGENT: LiteralString = f"beets/{beets_version} +https://beets.io/"
 
-SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
-    (
-        SongOptionalFields.ARTISTS,
-        SongOptionalFields.CULTURE_CODES,
-        SongOptionalFields.TAGS,
-        SongOptionalFields.BPM,
-        SongOptionalFields.LYRICS,
+SONG_FIELDS: SongOptionalFieldsSet = (
+    SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload]
+        (
+            SongOptionalFields.ARTISTS,
+            SongOptionalFields.CULTURE_CODES,
+            SongOptionalFields.TAGS,
+            SongOptionalFields.BPM,
+            SongOptionalFields.LYRICS,
+        )
     )
 )
 
@@ -362,7 +364,9 @@ class PluginBases:
                             ...  # Fall through to try mb_trackid
 
                     # Fall back to mb_trackid
-                    mb_trackid: str | None = item.get("mb_trackid")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    mb_trackid: str | None = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                        "mb_trackid"
+                    )
                     if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
                         try:
                             mapping[item] = track_index[mb_trackid]
@@ -526,7 +530,7 @@ class PluginBases:
             remote_album: AlbumForApiContract | None = (
                 self.album_api.api_albums_id_get(
                     id=int(album_id),
-                    fields=AlbumOptionalFieldsSet(
+                    fields=AlbumOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload] # noqa: E501
                         (
                             AlbumOptionalFields.ARTISTS,
                             AlbumOptionalFields.DISCS,

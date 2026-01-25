@@ -17,11 +17,7 @@ from beetsplug.vocadb.utils import (
     get_genres,
     group_tracks_by_disc,
 )
-from beetsplug.vocadb.vocadb_api_client import (
-    DiscMediaType,
-    DiscType,
-    OptionalDateTimeContract,
-)
+from beetsplug.vocadb.vocadb_api_client import DiscMediaType, DiscType
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
 from beetsplug.vocadb.vocadb_api_client.models.song_optional_fields import (
     SongOptionalFields,
@@ -299,7 +295,9 @@ class Mapper:
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
                     id=remote_original_version_id,
-                    fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
+                    fields=SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload] # noqa: E501
+                        (SongOptionalFields.ARTISTS,)
+                    ),
                     lang=self.instance_config.language,
                 )
             )
