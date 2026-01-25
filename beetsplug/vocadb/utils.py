@@ -99,7 +99,7 @@ def get_genres(remote_tags: tuple[TagUsageForApiContract, ...]) -> str | None:
     remote_tag_usage: TagUsageForApiContract
     for remote_tag_usage in sorted(
         remote_tags, key=lambda x: x.count, reverse=True
-    ):  # type: ignore[misc]
+    ):
         remote_tag: TagBaseContract = remote_tag_usage.tag
         if remote_tag.category_name == "Genres" and remote_tag.name:
             genres.append(remote_tag.name.title())

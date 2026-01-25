@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import msgspec
@@ -13,8 +14,10 @@ if TYPE_CHECKING:
     from confuse import ConfigView
 
 
-LANGUAGES: list[str] | None = beets_config["import"]["languages"].as_str_seq()  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
-VA_NAME: str = beets_config["va_name"].as_str()  # pyright: ignore[reportUnknownVariableType,reportAssignmentType]
+LANGUAGES: Sequence[str] | None = beets_config["import"][
+    "languages"
+].as_str_seq()
+VA_NAME: str = beets_config["va_name"].as_str()
 
 
 class InstanceConfig(msgspec.Struct):
@@ -29,7 +32,9 @@ class InstanceConfig(msgspec.Struct):
     exclude_album_fields: list[str] = []
 
     def __post_init__(self) -> None:
-        self.language = self.get_lang(self.prefer_romaji, LANGUAGES)
+        self.language = self.get_lang(
+            prefer_romaji=self.prefer_romaji, languages=LANGUAGES
+        )
 
     # convert fields to serilizable types
     def to_dict(self) -> dict[str, int | bool | str | list[str]]:
@@ -59,19 +64,19 @@ class InstanceConfig(msgspec.Struct):
         config.add(InstanceConfig().to_dict())  # pyright: ignore[reportUnknownMemberType]
 
         return cls(
-            prefer_romaji=config["prefer_romaji"].get(bool),  # pyright: ignore[reportArgumentType]
-            translated_lyrics=config["translated_lyrics"].get(bool),  # pyright: ignore[reportArgumentType]
-            include_featured_album_artists=config[  # pyright: ignore[reportArgumentType]
+            prefer_romaji=config["prefer_romaji"].get(bool),  # pyright: ignore[reportAny]
+            translated_lyrics=config["translated_lyrics"].get(bool),  # pyright: ignore[reportAny]
+            include_featured_album_artists=config[  # pyright: ignore[reportAny]
                 "include_featured_album_artists"
             ].get(bool),
-            search_limit=config["search_limit"].get(int),  # pyright: ignore[reportArgumentType]
-            exclude_item_fields=config["exclude_item_fields"].get(list),  # pyright: ignore[reportArgumentType]
-            exclude_album_fields=config["exclude_album_fields"].get(list),  # pyright: ignore[reportArgumentType]
+            search_limit=config["search_limit"].get(int),  # pyright: ignore[reportAny]
+            exclude_item_fields=config["exclude_item_fields"].get(list),  # pyright: ignore[reportAny]
+            exclude_album_fields=config["exclude_album_fields"].get(list),  # pyright: ignore[reportAny]
         )
 
     @staticmethod
     def get_lang(
-        prefer_romaji: bool, languages: list[str] | None
+        prefer_romaji: bool, languages: Sequence[str] | None
     ) -> ContentLanguagePreference:
         if languages:
             for language in languages:

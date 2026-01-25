@@ -135,7 +135,7 @@ class PluginBases:
                 base_url=self.base_url,
                 data_source=self.data_source,  # pyright: ignore[reportAny]
                 flexible_attributes=self._flexible_attributes,
-                ignore_video_tracks=beets_config["match"][  # pyright: ignore[reportArgumentType]
+                ignore_video_tracks=beets_config["match"][  # pyright: ignore[reportAny]
                     "ignore_video_tracks"
                 ].get(template=bool),
                 album_api=self.album_api,
@@ -521,7 +521,7 @@ class PluginBases:
                 self._log.debug(
                     msg=f"Skipping non-{self.data_source} album: {album_id}"  # pyright: ignore[reportAny]
                 )
-                return
+                return None
             self._log.debug(msg=f"Searching for album {album_id}")
             remote_album: AlbumForApiContract | None = (
                 self.album_api.api_albums_id_get(
@@ -554,7 +554,7 @@ class PluginBases:
                 self._log.debug(
                     msg=f"Skipping non-{self.data_source} singleton: {track_id}"  # pyright: ignore[reportAny]
                 )
-                return
+                return None
             self._log.debug(msg=f"Searching for track {track_id}")
             remote_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import weakref
+from collections.abc import Hashable
 from functools import cache
 from typing import TYPE_CHECKING, TypeVar
 
@@ -12,7 +13,7 @@ if TYPE_CHECKING:
     from logging import Logger
 
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Hashable)
 
 
 class ApiClient:
@@ -91,13 +92,14 @@ class ApiClient:
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
             self._log.error("Error fetching data - {}", e)
-            return
+            return None
         try:
             return self.decode(content=response.text, target_type=return_type)
         except msgspec.DecodeError:
             import json
 
             self._log.debug(json.dumps(response.json(), indent=2))
+            return None
 
     # TODO: better error handling
 

@@ -112,7 +112,7 @@ class Mapper:
             Album information in Beets format or None if conversion fails
         """
         if not remote_album.tracks:
-            return
+            return None
         remote_discs: tuple[AlbumDiscPropertiesContract, ...] = (
             remote_album.discs
             or discs_fallback(disc_total=remote_album.tracks[-1].disc_number)

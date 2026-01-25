@@ -47,7 +47,7 @@ class InitSubclassTestCase(NamedTuple):
 def test_init_subclass(
     test_case: InitSubclassTestCase,
 ) -> None:
-    plugin_cls = type(
+    plugin_cls: type[PluginBases.PluginBase] = type(
         test_case.cls_name,
         (PluginBases.PluginBase,),
         {},
@@ -55,7 +55,7 @@ def test_init_subclass(
         api_url=test_case.api_url,
         subcommand_prefix=test_case.subcommand_prefix,
     )
-    plugin = plugin_cls()
+    plugin: PluginBases.PluginBase = plugin_cls()
     assert plugin.data_source == test_case.expected_data_source  #  pyright: ignore[reportAny]
     assert plugin.base_url == test_case.expected_base_url
     assert plugin.api_url == test_case.expected_api_url
