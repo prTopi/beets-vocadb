@@ -290,7 +290,7 @@ class Mapper:
             self._log.debug(
                 msg=f'Track "{remote_song.name}" with id '
                 + f"{remote_song.id} is a derivate of "
-                + f" a the track with id {remote_original_version_id}."
+                + f"a the track with id {remote_original_version_id}."
             )
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
@@ -301,6 +301,8 @@ class Mapper:
                     lang=self.instance_config.language,
                 )
             )
+            if not remote_original_song:
+                return None
             remote_original_artists: (
                 tuple[ArtistForSongContract, ...] | None
             ) = remote_original_song.artists if remote_original_song else None
