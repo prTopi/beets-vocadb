@@ -5,7 +5,7 @@ from typing import NamedTuple
 import pytest
 from httpx import URL
 
-from beetsplug.vocadb.base import PluginBases
+from beetsplug.vocadb.base import PluginBase
 
 
 class InitSubclassTestCase(NamedTuple):
@@ -47,15 +47,15 @@ class InitSubclassTestCase(NamedTuple):
 def test_init_subclass(
     test_case: InitSubclassTestCase,
 ) -> None:
-    plugin_cls: type[PluginBases.PluginBase] = type(
+    plugin_cls: type[PluginBase] = type(
         test_case.cls_name,
-        (PluginBases.PluginBase,),
+        (PluginBase,),
         {},
         base_url=test_case.base_url,
         api_url=test_case.api_url,
         subcommand_prefix=test_case.subcommand_prefix,
     )
-    plugin: PluginBases.PluginBase = plugin_cls()
+    plugin: PluginBase = plugin_cls()
     assert plugin.data_source == test_case.expected_data_source  #  pyright: ignore[reportAny]
     assert plugin.base_url == test_case.expected_base_url
     assert plugin.api_url == test_case.expected_api_url

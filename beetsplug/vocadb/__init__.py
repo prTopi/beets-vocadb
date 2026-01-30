@@ -1,8 +1,8 @@
-from beetsplug.vocadb.base import PluginBases
+from beetsplug.vocadb.base import PluginBase
 
 
 class VocaDBPlugin(
-    PluginBases.PluginBase,
+    PluginBase,
     base_url="https://vocadb.net/",
     api_url="https://vocadb.net/api/",
     subcommand_prefix="vdb",

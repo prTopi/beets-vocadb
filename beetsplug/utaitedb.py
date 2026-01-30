@@ -1,8 +1,8 @@
-from beetsplug.vocadb.base import PluginBases
+from beetsplug.vocadb.base import PluginBase
 
 
 class UtaiteDBPlugin(
-    PluginBases.PluginBase,
+    PluginBase,
     base_url="https://utaitedb.net/",
     api_url="https://utaitedb.net/api/",
     subcommand_prefix="udb",
