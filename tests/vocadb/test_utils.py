@@ -66,6 +66,59 @@ from beetsplug.vocadb.vocadb_api_client import TagUsageForApiContract
 ]""",
             "Genre2",
         ),
+        (
+            """[
+    {
+        "count": 2,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "zgenre4"
+        }
+    },
+    {
+        "count": 1,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "Zgenre5"
+        }
+    },
+    {
+        "count": 2,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "genre3"
+        }
+    },
+    {
+        "count": 2,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "agenre1"
+        }
+    },
+    {
+        "count": 2,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "Agenre2"
+        }
+    },
+    {
+        "count": 1,
+        "tag": {
+            "categoryName": "Genres",
+            "id": 0,
+            "name": "zgenre6"
+        }
+    }
+]""",
+            "Agenre1; Agenre2; Genre3; Zgenre4; Zgenre5; Zgenre6",
+        ),
     ],
 )
 def test_get_genres(remote_tags: str, expected: str | None) -> None:
