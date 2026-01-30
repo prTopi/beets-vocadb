@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING
 
 import httpx
 from beets.autotag.hooks import AlbumInfo, TrackInfo
+from confuse import ConfigView
 
-from beetsplug.vocadb.artists import get_album_artists, get_track_artists
-from beetsplug.vocadb.lyrics_processor import LyricsProcessor
-from beetsplug.vocadb.plugin_config import VA_NAME, InstanceConfig
+from beetsplug.vocadb.artists import ArtistsProcessor
+from beetsplug.vocadb.lyrics import LyricsProcessor
 from beetsplug.vocadb.utils import (
     discs_fallback,
     get_asin,
@@ -17,7 +17,11 @@ from beetsplug.vocadb.utils import (
     get_genres,
     group_tracks_by_disc,
 )
-from beetsplug.vocadb.vocadb_api_client import DiscMediaType, DiscType
+from beetsplug.vocadb.vocadb_api_client import (
+    ContentLanguagePreference,
+    DiscMediaType,
+    DiscType,
+)
 from beetsplug.vocadb.vocadb_api_client.models import StrEnum
 from beetsplug.vocadb.vocadb_api_client.models.song_optional_fields import (
     SongOptionalFields,
@@ -80,19 +84,27 @@ class Mapper:
         ignore_video_tracks: bool,
         album_api: AlbumApiApi,
         song_api: SongApiApi,
-        instance_config: InstanceConfig,
+        config: ConfigView,
+        language_preference: ContentLanguagePreference,
+        va_name: str,
         logger: Logger,
     ) -> None:
         self.base_url: str | httpx.URL = base_url
         self.data_source: str = data_source
         self.flexible_attributes: FlexibleAttributes = flexible_attributes
         self.ignore_video_tracks: bool = ignore_video_tracks
+        self.artists_processor: ArtistsProcessor = ArtistsProcessor(
+            va_name=va_name
+        )
         self.lyrics_processor: LyricsProcessor = LyricsProcessor(
-            language_preference=instance_config.language
+            language_preference=language_preference
         )
         self.album_api: AlbumApiApi = album_api
         self.song_api: SongApiApi = song_api
-        self.instance_config: InstanceConfig = instance_config
+        self.config: ConfigView = config
+        self.language_preference: ContentLanguagePreference = (
+            language_preference
+        )
         self._log: Logger = logger
 
     def album_info(
@@ -134,12 +146,16 @@ class Mapper:
         artists_ids: list[str]
         artist_id: str | None
         label: str | None
-        artist, artist_id, artists, artists_ids, label = get_album_artists(
-            remote_artists=remote_album.artists,
-            include_featured_artists=self.instance_config.include_featured_album_artists,
-            comp=va,
+        artist, artist_id, artists, artists_ids, label = (
+            self.artists_processor.get_album_artists(
+                remote_artists=remote_album.artists,
+                include_featured_artists=self.config[
+                    "include_featured_album_artists"
+                ].get(bool),
+                comp=va,
+            )
         )
-        if artist == VA_NAME:
+        if artist == self.artists_processor.va_name:
             va = True
         asin: str | None = get_asin(web_links=remote_album.web_links)
         albumtype: str = remote_disc_type.lower()
@@ -200,7 +216,7 @@ class Mapper:
                 # ]: artists_ids,
             },
         )
-        for field in self.instance_config.exclude_album_fields:
+        for field in self.config["exclude_album_fields"].as_str_seq():
             del album_info[field]
         return album_info
 
@@ -298,7 +314,7 @@ class Mapper:
                     fields=SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload] # noqa: E501
                         (SongOptionalFields.ARTISTS,)
                     ),
-                    lang=self.instance_config.language,
+                    lang=self.language_preference,
                 )
             )
             if not remote_original_song:
@@ -324,7 +340,7 @@ class Mapper:
             arranger,
             composer,
             lyricist,
-        ) = get_track_artists(
+        ) = self.artists_processor.get_track_artists(
             remote_artists=remote_artists,
             remote_original_artists=remote_original_artists,
         )
@@ -391,6 +407,6 @@ class Mapper:
                 ]: artists_ids,
             },
         )
-        for field in self.instance_config.exclude_item_fields:
+        for field in self.config["exclude_item_fields"].as_str_seq():
             del track_info[field]
         return track_info

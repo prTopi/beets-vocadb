@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from beetsplug.vocadb.vocadb_api_client import (
     AlbumDiscPropertiesContract,
+    ContentLanguagePreference,
     DiscMediaType,
 )
 
@@ -20,6 +21,26 @@ if TYPE_CHECKING:
         TagUsageForApiContract,
         WebLinkForApiContract,
     )
+
+
+def get_language_preference(
+    prefer_romaji: bool, languages: list[str] | None
+) -> ContentLanguagePreference:
+    if languages:
+        for language in languages:
+            match language:
+                case "jp":
+                    return (
+                        ContentLanguagePreference.ROMAJI
+                        if prefer_romaji
+                        else ContentLanguagePreference.JAPANESE
+                    )
+                case "en":
+                    return ContentLanguagePreference.ENGLISH
+                case _:
+                    ...
+
+    return ContentLanguagePreference.DEFAULT
 
 
 def discs_fallback(

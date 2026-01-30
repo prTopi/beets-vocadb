@@ -3,7 +3,7 @@ from __future__ import annotations
 import msgspec
 import pytest
 
-from beetsplug.vocadb.utils import get_genres
+from beetsplug.vocadb.utils import get_genres, get_language_preference
 from beetsplug.vocadb.vocadb_api_client import TagUsageForApiContract
 
 
@@ -74,6 +74,27 @@ def test_get_genres(remote_tags: str, expected: str | None) -> None:
             remote_tags=msgspec.json.decode(
                 remote_tags, type=tuple[TagUsageForApiContract, ...]
             )
+        )
+        == expected
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="prefer_romaji, languages, expected",
+    argvalues=[
+        (False, ["en", "jp"], "English"),
+        (False, ["jp", "en"], "Japanese"),
+        (True, ["jp", "en"], "Romaji"),
+        (True, ["en", "jp"], "English"),
+        (True, None, "Default"),
+    ],
+)
+def test_get_language_preference(
+    prefer_romaji: bool, languages: list[str], expected: str
+) -> None:
+    assert (
+        get_language_preference(
+            prefer_romaji=prefer_romaji, languages=languages
         )
         == expected
     )

@@ -1,21 +1,15 @@
 from __future__ import annotations
 
-import sys
 from typing import NamedTuple
 
 import msgspec
 import pytest
 
-from beetsplug.vocadb.lyrics_processor import LyricsProcessor
+from beetsplug.vocadb.lyrics import LyricsProcessor
 from beetsplug.vocadb.vocadb_api_client import (
     ContentLanguagePreference,
     LyricsForSongContract,
 )
-
-if not sys.version_info < (3, 12):
-    pass  # pyright: ignore[reportUnreachable]
-else:
-    pass
 
 
 class LyricsTestCase(NamedTuple):

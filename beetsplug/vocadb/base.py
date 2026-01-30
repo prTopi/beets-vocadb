@@ -8,14 +8,14 @@ from beetsplug.vocadb.mapper import (
     ItemFlexibleAttributes,
     Mapper,
 )
-from beetsplug.vocadb.utils import get_id
+from beetsplug.vocadb.utils import get_id, get_language_preference
 
 if not sys.version_info < (3, 12):
     from typing import override  # pyright: ignore[reportUnreachable]
 else:
     from typing_extensions import override
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import httpx
 from beets import __version__ as beets_version
@@ -30,12 +30,12 @@ from beets.ui import (
     show_model_changes,  # pyright: ignore[reportUnknownVariableType]
 )
 
-from beetsplug.vocadb.plugin_config import InstanceConfig
 from beetsplug.vocadb.vocadb_api_client import (
     AlbumApiApi,
     AlbumOptionalFields,
     AlbumOptionalFieldsSet,
     ApiClient,
+    ContentLanguagePreference,
     NameMatchMode,
     SongApiApi,
     SongOptionalFields,
@@ -61,7 +61,28 @@ if TYPE_CHECKING:
         SongForApiContractPartialFindResult,
     )
 
+    class BaseConfig(TypedDict):
+        prefer_romaji: bool
+        translated_lyrics: bool
+        include_featured_album_artists: bool
+        search_limit: int
+        exclude_item_fields: list[str]
+        exclude_album_fields: list[str]
+
+
 USER_AGENT: LiteralString = f"beets/{beets_version} +https://beets.io/"
+
+DEFAULT_CONFIG: BaseConfig = {
+    "prefer_romaji": False,
+    "translated_lyrics": False,
+    "include_featured_album_artists": False,
+    "search_limit": 5,
+    "exclude_item_fields": [],
+    "exclude_album_fields": [],
+}
+
+LANGUAGES: list[str] | None = beets_config["import"]["languages"].as_str_seq()
+VA_NAME: str = beets_config["va_name"].as_str()
 
 SONG_FIELDS: SongOptionalFieldsSet = (
     SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload]
@@ -129,20 +150,25 @@ class PluginBases:
                     ItemFlexibleAttributes.ARTIST_IDS
                 ]: dbcore.types.MULTI_VALUE_DSV,
             }
-            self.instance_config: InstanceConfig = (
-                InstanceConfig.from_config_view(config=self.config)
+            self.config.add(value=DEFAULT_CONFIG)
+            self.language_preference: ContentLanguagePreference = (
+                get_language_preference(
+                    languages=LANGUAGES,
+                    prefer_romaji=self.config["prefer_romaji"].get(bool),
+                )
             )
-            self.config.add(value=(self.instance_config).to_dict())  # pyright: ignore[reportUnknownMemberType]
             self.mapper: Mapper = Mapper(
                 base_url=self.base_url,
                 data_source=self.data_source,  # pyright: ignore[reportAny]
                 flexible_attributes=self._flexible_attributes,
-                ignore_video_tracks=beets_config["match"][  # pyright: ignore[reportAny]
+                ignore_video_tracks=beets_config["match"][
                     "ignore_video_tracks"
                 ].get(template=bool),
                 album_api=self.album_api,
                 song_api=self.song_api,
-                instance_config=self.instance_config,
+                config=self.config,
+                language_preference=self.language_preference,
+                va_name=VA_NAME,
                 logger=self._log,
             )
 
@@ -462,7 +488,7 @@ class PluginBases:
                 AlbumForApiContractPartialFindResult | None
             ) = self.album_api.api_albums_get(
                 query=album,
-                maxResults=self.instance_config.search_limit,
+                maxResults=self.config["search_limit"].get(int),
                 nameMatchMode=NameMatchMode.AUTO,
             )
             remote_album_candidates: tuple[AlbumForApiContract, ...] | None
@@ -496,11 +522,11 @@ class PluginBases:
             ) = self.song_api.api_songs_get(
                 query=title,
                 fields=SONG_FIELDS,
-                maxResults=self.instance_config.search_limit,
+                maxResults=self.config["search_limit"].get(int),
                 nameMatchMode=NameMatchMode.AUTO,
                 preferAccurateMatches=True,
                 sort=SongSortRule.SONG_TYPE,
-                lang=self.instance_config.language,
+                lang=self.language_preference,
             )
             remote_item_candidates: tuple[SongForApiContract, ...] | None
             if not remote_item_find_result or not (
@@ -541,7 +567,7 @@ class PluginBases:
                         )
                     ),
                     songFields=SONG_FIELDS,
-                    lang=self.instance_config.language,
+                    lang=self.language_preference,
                 )
             )
             return (
@@ -564,7 +590,7 @@ class PluginBases:
                 self.song_api.api_songs_id_get(
                     id=int(track_id),
                     fields=SONG_FIELDS,
-                    lang=self.instance_config.language,
+                    lang=self.language_preference,
                 )
             )
             return (

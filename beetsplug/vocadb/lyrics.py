@@ -107,7 +107,8 @@ class LyricsProcessor:
             Lyrics text from the best available fallback option, or None if none
             found
         """
-        language_preference = self.language_preference
+
+        language_preference: str = self.language_preference
         remote_lyrics: LyricsForSongContract
         if language_preference == ContentLanguagePreference.ENGLISH:
             for remote_lyrics in remote_lyrics_list:
