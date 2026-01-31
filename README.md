@@ -56,7 +56,6 @@ vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb
   data_source_mismatch_penalty: 0.5 # Penalty to be added to all matches with different source when using autotagger (0 disabled, 1 highest)
   search_limit: 5 # Number of results to get from source. Consider increasing if correct song or album doesn't show up in the list of candidates
   prefer_romaji: false # Prefer romanized if they exist rather than Japanese
-  translated_lyrics: false # Always get translated lyrics if they're available
   include_featured_album_artists: false # Include featured artists in album artists string
   exclude_item_fields: [] # List of fields that you do not want to see in the metadata of items.
   exclude_album_fields: [] # See above, but for albums

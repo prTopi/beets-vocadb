@@ -63,7 +63,6 @@ if TYPE_CHECKING:
 
     class BaseConfig(TypedDict):
         prefer_romaji: bool
-        translated_lyrics: bool
         include_featured_album_artists: bool
         search_limit: int
         exclude_item_fields: list[str]
@@ -74,7 +73,6 @@ USER_AGENT: LiteralString = f"beets/{beets_version} +https://beets.io/"
 
 DEFAULT_CONFIG: BaseConfig = {
     "prefer_romaji": False,
-    "translated_lyrics": False,
     "include_featured_album_artists": False,
     "search_limit": 5,
     "exclude_item_fields": [],
@@ -83,6 +81,9 @@ DEFAULT_CONFIG: BaseConfig = {
 
 LANGUAGES: list[str] | None = beets_config["import"]["languages"].as_str_seq()
 VA_NAME: str = beets_config["va_name"].as_str()
+IGNORE_VIDEO_TRACKS: bool = beets_config["match"]["ignore_video_tracks"].get(
+    template=bool
+)
 
 SONG_FIELDS: SongOptionalFieldsSet = (
     SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload]
@@ -148,6 +149,7 @@ class PluginBase(MetadataSourcePlugin):
             ]: dbcore.types.MULTI_VALUE_DSV,
         }
         self.config.add(value=DEFAULT_CONFIG)
+        self.search_limit: int = self.config["search_limit"].get(int)
         self.language_preference: ContentLanguagePreference = (
             get_language_preference(
                 languages=LANGUAGES,
@@ -158,13 +160,17 @@ class PluginBase(MetadataSourcePlugin):
             base_url=self.base_url,
             data_source=self.data_source,  # pyright: ignore[reportAny]
             flexible_attributes=self._flexible_attributes,
-            ignore_video_tracks=beets_config["match"][
-                "ignore_video_tracks"
-            ].get(template=bool),
+            ignore_video_tracks=IGNORE_VIDEO_TRACKS,
             album_api=self.album_api,
             song_api=self.song_api,
-            config=self.config,
             language_preference=self.language_preference,
+            include_featured_album_artists=self.config[
+                "include_featured_album_artists"
+            ].get(bool),
+            exclude_item_fields=self.config["exclude_item_fields"].as_str_seq(),
+            exclude_album_fields=self.config[
+                "exclude_album_fields"
+            ].as_str_seq(),
             va_name=VA_NAME,
             logger=self._log,
         )
@@ -483,7 +489,7 @@ class PluginBase(MetadataSourcePlugin):
             AlbumForApiContractPartialFindResult | None
         ) = self.album_api.api_albums_get(
             query=album,
-            maxResults=self.config["search_limit"].get(int),
+            maxResults=self.search_limit,
             nameMatchMode=NameMatchMode.AUTO,
         )
         remote_album_candidates: tuple[AlbumForApiContract, ...] | None
@@ -516,7 +522,7 @@ class PluginBase(MetadataSourcePlugin):
             self.song_api.api_songs_get(
                 query=title,
                 fields=SONG_FIELDS,
-                maxResults=self.config["search_limit"].get(int),
+                maxResults=self.search_limit,
                 nameMatchMode=NameMatchMode.AUTO,
                 preferAccurateMatches=True,
                 sort=SongSortRule.SONG_TYPE,

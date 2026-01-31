@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import httpx
 from beets.autotag.hooks import AlbumInfo, TrackInfo
-from confuse import ConfigView
 
 from beetsplug.vocadb.artists import ArtistsProcessor
 from beetsplug.vocadb.lyrics import LyricsProcessor
@@ -84,8 +83,10 @@ class Mapper:
         ignore_video_tracks: bool,
         album_api: AlbumApiApi,
         song_api: SongApiApi,
-        config: ConfigView,
         language_preference: ContentLanguagePreference,
+        include_featured_album_artists: bool,
+        exclude_item_fields: list[str],
+        exclude_album_fields: list[str],
         va_name: str,
         logger: Logger,
     ) -> None:
@@ -97,11 +98,15 @@ class Mapper:
             va_name=va_name
         )
         self.lyrics_processor: LyricsProcessor = LyricsProcessor(
-            language_preference=language_preference
+            language_preference=language_preference,
         )
+        self.include_featured_album_artists: bool = (
+            include_featured_album_artists
+        )
+        self.exclude_item_fields: list[str] = exclude_item_fields
+        self.exclude_album_fields: list[str] = exclude_album_fields
         self.album_api: AlbumApiApi = album_api
         self.song_api: SongApiApi = song_api
-        self.config: ConfigView = config
         self.language_preference: ContentLanguagePreference = (
             language_preference
         )
@@ -149,9 +154,7 @@ class Mapper:
         artist, artist_id, artists, artists_ids, label = (
             self.artists_processor.get_album_artists(
                 remote_artists=remote_album.artists,
-                include_featured_artists=self.config[
-                    "include_featured_album_artists"
-                ].get(bool),
+                include_featured_artists=self.include_featured_album_artists,
                 comp=va,
             )
         )
@@ -182,14 +185,14 @@ class Mapper:
         album_info: AlbumInfo = AlbumInfo(
             tracks=tracks,
             album=album,
-            # album_id=album_id,
+            album_id=None,
             albumtype=albumtype,
             albumtypes=albumtypes,
             asin=asin,
             artist=artist,
             artists=artists,
             # artist_id=artist_id,
-            artists_ids=artists_ids,
+            # artists_ids=artists_ids,
             catalognum=catalognum,
             data_source=self.data_source,
             day=day,
@@ -204,6 +207,19 @@ class Mapper:
             original_day=None,
             original_month=None,
             original_year=None,
+            albumdisambig=None,
+            albumstatus=None,
+            barcode=None,
+            country=None,
+            discogs_albumid=None,
+            discogs_artistid=None,
+            discogs_labelid=None,
+            language=None,
+            release_group_title=None,
+            releasegroup_id=None,
+            releasegroupdisambig=None,
+            script=None,
+            style=None,
             **{
                 self.flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUM_ID
@@ -211,12 +227,13 @@ class Mapper:
                 self.flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUMARTIST_ID
                 ]: artist_id,
-                # self._flexible_attributes.album[
+                # upstream fix pending:
+                # self.flexible_attributes.album[
                 #     AlbumFlexibleAttributes.ALBUMARTIST_IDS
                 # ]: artists_ids,
             },
         )
-        for field in self.config["exclude_album_fields"].as_str_seq():
+        for field in self.exclude_album_fields:
             del album_info[field]
         return album_info
 
@@ -407,6 +424,6 @@ class Mapper:
                 ]: artists_ids,
             },
         )
-        for field in self.config["exclude_item_fields"].as_str_seq():
+        for field in self.exclude_item_fields:
             del track_info[field]
         return track_info
