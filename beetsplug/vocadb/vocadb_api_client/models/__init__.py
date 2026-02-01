@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 import msgspec
 
@@ -39,7 +39,7 @@ _E = TypeVar("_E", bound=StrEnum)
 _E2 = TypeVar("_E2", bound=StrEnum)
 
 
-class StrEnumSet(set[_E], Generic[_E]):
+class StrEnumSet(set[_E]):
     _enum_cls: type[_E]
 
     @override
