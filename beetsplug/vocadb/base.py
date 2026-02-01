@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sys
 
+from beets.library import Item
+
 from beetsplug.vocadb.mapper import (
     AlbumFlexibleAttributes,
     FlexibleAttributes,
@@ -27,7 +29,7 @@ from beets.ui import (
     Subcommand,
     should_move,  # pyright: ignore[reportUnknownVariableType]
     should_write,  # pyright: ignore[reportUnknownVariableType]
-    show_model_changes,  # pyright: ignore[reportUnknownVariableType]
+    show_model_changes,
 )
 
 from beetsplug.vocadb.vocadb_api_client import (
@@ -51,7 +53,7 @@ if TYPE_CHECKING:
     from beets.autotag.distance import Distance
     from beets.autotag.hooks import AlbumInfo, TrackInfo
     from beets.dbcore import Results
-    from beets.library import Library
+    from beets.library import Item, Library
     from typing_extensions import LiteralString
 
     from beetsplug.vocadb.vocadb_api_client import (
@@ -158,7 +160,7 @@ class PluginBase(MetadataSourcePlugin):
         )
         self.mapper: Mapper = Mapper(
             base_url=self.base_url,
-            data_source=self.data_source,  # pyright: ignore[reportAny]
+            data_source=self.data_source,
             flexible_attributes=self._flexible_attributes,
             ignore_video_tracks=IGNORE_VIDEO_TRACKS,
             album_api=self.album_api,
@@ -190,7 +192,7 @@ class PluginBase(MetadataSourcePlugin):
     def commands(self) -> Sequence[Subcommand]:
         sync_cmd: Subcommand = Subcommand(
             name=self.sync_subcommand,
-            help=f"update metadata from {self.data_source}",  # pyright: ignore[reportAny]
+            help=f"update metadata from {self.data_source}",
         )
         _ = sync_cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
             "-p",
@@ -285,9 +287,9 @@ class PluginBase(MetadataSourcePlugin):
                     + f" or mb_trackid: {item_formatted}"
                 )
                 continue
-            if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportAny,reportUnknownMemberType]
+            if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} singleton: "  # pyright: ignore[reportAny]
+                    msg=f"Skipping non-{self.data_source} singleton: "
                     + item_formatted
                 )
                 continue
@@ -344,9 +346,9 @@ class PluginBase(MetadataSourcePlugin):
                     + f" or mb_albumid: {album_formatted}"
                 )
                 continue
-            if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportAny,reportUnknownMemberType]
+            if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} album: {album_formatted}"  # pyright: ignore[reportAny]
+                    msg=f"Skipping non-{self.data_source} album: {album_formatted}"
                 )
                 continue
             album_info: AlbumInfo | None = self.album_for_id(album_id=album_id)
@@ -373,7 +375,7 @@ class PluginBase(MetadataSourcePlugin):
                     )
                 )
             }
-            mapping: dict[library.Item, TrackInfo] = {}
+            mapping: list[tuple[Item, TrackInfo]] = []
             item: library.Item
             for item in items:
                 # First, try to get track ID from flexible attributes
@@ -385,7 +387,9 @@ class PluginBase(MetadataSourcePlugin):
 
                 if plugin_track_id:
                     try:
-                        mapping[item] = track_index[str(plugin_track_id)]  # pyright: ignore[reportUnknownArgumentType]
+                        mapping.append(
+                            (item, track_index[str(plugin_track_id)])  # pyright: ignore[reportUnknownArgumentType]
+                        )
                         continue
                     except KeyError:
                         ...  # Fall through to try mb_trackid
@@ -396,7 +400,7 @@ class PluginBase(MetadataSourcePlugin):
                 )
                 if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
                     try:
-                        mapping[item] = track_index[mb_trackid]
+                        mapping.append((item, track_index[mb_trackid]))
                         item[
                             self._flexible_attributes.item[
                                 ItemFlexibleAttributes.TRACK_ID
@@ -437,14 +441,14 @@ class PluginBase(MetadataSourcePlugin):
                         ItemFlexibleAttributes.TRACK_ID
                     ]
                 ] = new_track_id
-                mapping[item] = track_index[new_track_id]
+                mapping.append((item, track_index[new_track_id]))
                 self._log.warning(
                     msg=f"Success, automatched to ID {new_track_id}"
                 )
 
             self._log.debug(msg=f"applying changes to {album_formatted}")
             with lib.transaction():  # pyrefly: ignore[bad-context-manager]
-                apply_metadata(album_info, mapping)
+                apply_metadata(album_info=album_info, item_info_pairs=mapping)
                 changed: bool = False
                 any_changed_item: library.Item | None = items.get()
                 for item in items:
@@ -550,7 +554,7 @@ class PluginBase(MetadataSourcePlugin):
     def album_for_id(self, album_id: str) -> AlbumInfo | None:
         if not album_id.isnumeric():
             self._log.debug(
-                msg=f"Skipping non-{self.data_source} album: {album_id}"  # pyright: ignore[reportAny]
+                msg=f"Skipping non-{self.data_source} album: {album_id}"
             )
             return None
         self._log.debug(msg=f"Searching for album {album_id}")
@@ -583,7 +587,7 @@ class PluginBase(MetadataSourcePlugin):
     def track_for_id(self, track_id: str) -> TrackInfo | None:
         if not track_id.isnumeric():
             self._log.debug(
-                msg=f"Skipping non-{self.data_source} singleton: {track_id}"  # pyright: ignore[reportAny]
+                msg=f"Skipping non-{self.data_source} singleton: {track_id}"
             )
             return None
         self._log.debug(msg=f"Searching for track {track_id}")
