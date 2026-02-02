@@ -64,14 +64,5 @@ class FrozenBase(
 ): ...
 
 
-class TaggedBase(
-    msgspec.Struct,
-    forbid_unknown_fields=True,
-    omit_defaults=True,
-    rename="camel",
-):
-    """Base for unhashable Structs"""
-
-
 # Explicitly export the public API
 __all__: list[str] = ["StrEnum", "TypeAlias"]
