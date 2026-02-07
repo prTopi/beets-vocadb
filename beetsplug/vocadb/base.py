@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from functools import cached_property
 
 from beets.library import Item
 
@@ -116,11 +117,6 @@ class PluginBase(MetadataSourcePlugin):
 
     def __init__(self) -> None:
         super().__init__()  # pyright: ignore[reportUnknownMemberType]
-        client: ApiClient = ApiClient(
-            user_agent=USER_AGENT, base_url=self.api_url, logger=self._log
-        )
-        self.album_api: AlbumApiApi = AlbumApiApi(api_client=client)
-        self.song_api: SongApiApi = SongApiApi(api_client=client)
         self._flexible_attributes = FlexibleAttributes(
             prefix=self.name,
         )
@@ -151,31 +147,17 @@ class PluginBase(MetadataSourcePlugin):
             ]: dbcore.types.MULTI_VALUE_DSV,
         }
         self.config.add(value=DEFAULT_CONFIG)
+        self.prefer_romaji: bool = self.config["prefer_romaji"].get(bool)
+        self.include_featured_album_artists: bool = self.config[
+            "include_featured_album_artists"
+        ].get(bool)
         self.search_limit: int = self.config["search_limit"].get(int)
-        self.language_preference: ContentLanguagePreference = (
-            get_language_preference(
-                languages=LANGUAGES,
-                prefer_romaji=self.config["prefer_romaji"].get(bool),
-            )
-        )
-        self.mapper: Mapper = Mapper(
-            base_url=self.base_url,
-            data_source=self.data_source,
-            flexible_attributes=self._flexible_attributes,
-            ignore_video_tracks=IGNORE_VIDEO_TRACKS,
-            album_api=self.album_api,
-            song_api=self.song_api,
-            language_preference=self.language_preference,
-            include_featured_album_artists=self.config[
-                "include_featured_album_artists"
-            ].get(bool),
-            exclude_item_fields=self.config["exclude_item_fields"].as_str_seq(),
-            exclude_album_fields=self.config[
-                "exclude_album_fields"
-            ].as_str_seq(),
-            va_name=VA_NAME,
-            logger=self._log,
-        )
+        self.exclude_album_fields: list[str] = self.config[
+            "exclude_album_fields"
+        ].as_str_seq()
+        self.exclude_item_fields: list[str] = self.config[
+            "exclude_item_fields"
+        ].as_str_seq()
 
     def __init_subclass__(
         cls,
@@ -187,6 +169,44 @@ class PluginBase(MetadataSourcePlugin):
         cls.base_url = base_url
         cls.api_url = api_url
         cls.sync_subcommand = f"{subcommand_prefix}sync"
+
+    @cached_property
+    def client(self) -> ApiClient:
+        return ApiClient(
+            user_agent=USER_AGENT, base_url=self.api_url, logger=self._log
+        )
+
+    @cached_property
+    def album_api(self) -> AlbumApiApi:
+        return AlbumApiApi(api_client=self.client)
+
+    @cached_property
+    def song_api(self) -> SongApiApi:
+        return SongApiApi(api_client=self.client)
+
+    @cached_property
+    def language_preference(self) -> ContentLanguagePreference:
+        return get_language_preference(
+            languages=LANGUAGES,
+            prefer_romaji=self.prefer_romaji,
+        )
+
+    @cached_property
+    def mapper(self) -> Mapper:
+        return Mapper(
+            base_url=self.base_url,
+            data_source=self.data_source,
+            flexible_attributes=self._flexible_attributes,
+            ignore_video_tracks=IGNORE_VIDEO_TRACKS,
+            album_api=self.album_api,
+            song_api=self.song_api,
+            language_preference=self.language_preference,
+            include_featured_album_artists=self.include_featured_album_artists,
+            exclude_item_fields=self.exclude_item_fields,
+            exclude_album_fields=self.exclude_album_fields,
+            va_name=VA_NAME,
+            logger=self._log,
+        )
 
     @override
     def commands(self) -> Sequence[Subcommand]:

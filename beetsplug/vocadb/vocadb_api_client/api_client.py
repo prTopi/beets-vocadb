@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import weakref
 from collections.abc import Hashable
-from functools import cache
+from functools import cache, cached_property
 from typing import TYPE_CHECKING, TypeVar
 
 import httpx
@@ -35,12 +35,15 @@ class ApiClient:
         )
         self.user_agent = user_agent
         self.base_url: str | httpx.URL = base_url
-        self.client: httpx.Client = httpx.Client(
+        _ = weakref.finalize(self, self.close)
+
+    @cached_property
+    def client(self) -> httpx.Client:
+        return httpx.Client(
             base_url=httpx.URL(url=self.base_url),
             http2=True,
             transport=RetryTransport(retry=Retry(total=6, backoff_factor=0.5)),
         )
-        _ = weakref.finalize(self, self.close)
 
     @property
     def user_agent(self) -> str:
