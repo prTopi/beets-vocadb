@@ -136,7 +136,7 @@ mypy.ini
 typings
 
 # Zed
-.zed
+#.zed
 
 # Pyrefly
 pyrefly.toml
