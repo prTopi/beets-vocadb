@@ -316,11 +316,15 @@ class Mapper:
             remote_song.artists
         )
         remote_original_version_id: int | None
-        if remote_original_version_id := remote_song.original_version_id:
+        remote_derivate_song: SongForApiContract = remote_song
+        while (
+            remote_original_version_id
+            := remote_derivate_song.original_version_id
+        ):
             # logic for derived songs
             self._log.debug(
-                msg=f'Track "{remote_song.name}" with id '
-                + f"{remote_song.id} is a derivate of "
+                msg=f'Track "{remote_derivate_song.name}" with id '
+                + f"{remote_derivate_song.id} is a derivate of "
                 + f"a the track with id {remote_original_version_id}."
             )
             remote_original_song: SongForApiContract | None = (
@@ -334,9 +338,13 @@ class Mapper:
             )
             if not remote_original_song:
                 return None
+            if remote_original_song.original_version_id:
+                remote_derivate_song = remote_original_song
+                continue
             remote_original_artists: (
                 tuple[ArtistForSongContract, ...] | None
             ) = remote_original_song.artists if remote_original_song else None
+            break
 
         else:
             remote_original_artists = None
