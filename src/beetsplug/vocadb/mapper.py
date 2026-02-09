@@ -130,9 +130,7 @@ class Mapper:
             remote_album.discs
             or discs_fallback(disc_total=remote_album.tracks[-1].disc_number)
         )
-        album_genre: str | None = get_genres(
-            remote_tags=remote_album.tags or ()
-        )
+        album_genre: str | None = get_genres(remote_tags=remote_album.tags)
         # track_genres: set[str | None] = set()
         tracks: list[TrackInfo]
         tracks = self.get_album_track_infos(
@@ -397,8 +395,8 @@ class Mapper:
             lyricist=lyricist,
             composer=composer,
             arranger=arranger,
-            bpm=get_bpm(remote_song.max_milli_bpm),
-            genre=get_genres(remote_tags=remote_song.tags or ()),
+            bpm=get_bpm(milli_bpm=remote_song.max_milli_bpm),
+            genre=get_genres(remote_tags=remote_song.tags),
             script=script,
             language=language,
             lyrics=lyrics,

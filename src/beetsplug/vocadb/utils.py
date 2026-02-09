@@ -88,7 +88,7 @@ def get_asin(
     )
 
 
-def get_bpm(max_milli_bpm: int | None) -> str | None:
+def get_bpm(milli_bpm: int | None) -> str | None:
     """Convert milli-BPM (beats per minute) to standard BPM format.
 
     VocaDB stores BPM values in milli-beats per minute (mBPM), so this
@@ -100,10 +100,12 @@ def get_bpm(max_milli_bpm: int | None) -> str | None:
     Returns:
         BPM as string or None if input is None
     """
-    return str(max_milli_bpm // 1000) if max_milli_bpm else None
+    return str(milli_bpm // 1000) if milli_bpm else None
 
 
-def get_genres(remote_tags: tuple[TagUsageForApiContract, ...]) -> str | None:
+def get_genres(
+    remote_tags: tuple[TagUsageForApiContract, ...] | None,
+) -> str | None:
     """Extract and format genre information from VocaDB tags.
 
     Processes VocaDB tags to find those categorized as "Genres", sorts them
@@ -116,6 +118,8 @@ def get_genres(remote_tags: tuple[TagUsageForApiContract, ...]) -> str | None:
     Returns:
         Semicolon-separated genre string or None if no genres found
     """
+    if not remote_tags:
+        return None
     genres: list[str] = []
     remote_tag_usage: TagUsageForApiContract
     for remote_tag_usage in sorted(
