@@ -5,7 +5,7 @@ from typing import NamedTuple
 import pytest
 from httpx import URL
 
-from beetsplug.vocadb.base import PluginBase
+from beetsplug._utils.vocadb.base import PluginBase
 
 
 class InitSubclassTestCase(NamedTuple):

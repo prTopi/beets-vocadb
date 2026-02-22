@@ -5,8 +5,8 @@ from typing import NamedTuple
 import msgspec
 import pytest
 
-from beetsplug.vocadb.lyrics import LyricsProcessor
-from beetsplug.vocadb.vocadb_api_client import (
+from beetsplug._utils.vocadb.lyrics import LyricsProcessor
+from beetsplug._utils.vocadb.vocadb_api_client import (
     ContentLanguagePreference,
     LyricsForSongContract,
 )

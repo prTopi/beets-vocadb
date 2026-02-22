@@ -3,8 +3,8 @@ from __future__ import annotations
 import msgspec
 import pytest
 
-from beetsplug.vocadb.utils import get_genres, get_language_preference
-from beetsplug.vocadb.vocadb_api_client import TagUsageForApiContract
+from beetsplug._utils.vocadb.utils import get_genres, get_language_preference
+from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
 
 
 @pytest.mark.parametrize(

@@ -1,4 +1,4 @@
-from beetsplug.vocadb.base import PluginBase
+from ._utils.vocadb import PluginBase
 
 
 class UtaiteDBPlugin(
