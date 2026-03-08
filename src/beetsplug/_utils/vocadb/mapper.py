@@ -130,13 +130,15 @@ class Mapper:
             remote_album.discs
             or discs_fallback(disc_total=remote_album.tracks[-1].disc_number)
         )
-        album_genre: str | None = get_genres(remote_tags=remote_album.tags)
+        album_genres: list[str] | None = get_genres(
+            remote_tags=remote_album.tags
+        )
         # track_genres: set[str | None] = set()
         tracks: list[TrackInfo]
         tracks = self.get_album_track_infos(
             remote_songs=remote_album.tracks,
             remote_discs=remote_discs,
-            album_genre=album_genre,
+            album_genres=album_genres,
         )
         remote_disc_type: DiscType
         va: bool = (
@@ -239,14 +241,14 @@ class Mapper:
         self,
         remote_songs: tuple[SongInAlbumForApiContract, ...],
         remote_discs: tuple[AlbumDiscPropertiesContract, ...],
-        album_genre: str | None,
+        album_genres: list[str] | None,
     ) -> list[TrackInfo]:
         """Extract track information from album data.
 
         Args:
             remote_songs: Track data from VocaDB API
             remote_discs: Disc data from VocaDB API
-            album_genre: Default genre for tracks
+            album_genres: Default genres for tracks
 
         Returns:
             List of tracks in Beets TrackInfo format
@@ -282,9 +284,9 @@ class Mapper:
                     )
                 ):
                     continue
-                if not track_info.genre:  # pyrefly: ignore[unbound-name]
-                    track_info.genre = (  # pyrefly: ignore[unbound-name]
-                        album_genre
+                if not track_info.genres:  # pyrefly: ignore[unbound-name]
+                    track_info.genres = (  # pyrefly: ignore[unbound-name]
+                        album_genres
                     )
 
                 tracks.append(track_info)  # pyrefly: ignore[unbound-name]
@@ -404,7 +406,7 @@ class Mapper:
             composer=composer,
             arranger=arranger,
             bpm=get_bpm(milli_bpm=remote_song.max_milli_bpm),
-            genre=get_genres(remote_tags=remote_song.tags),
+            genres=get_genres(remote_tags=remote_song.tags),
             script=script,
             language=language,
             lyrics=lyrics,

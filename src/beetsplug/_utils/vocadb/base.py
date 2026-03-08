@@ -484,7 +484,7 @@ class PluginBase(MetadataSourcePlugin):
                     "original_day",
                     "original_month",
                     "original_year",
-                    "genre",
+                    "genres",
                     "language",
                     "script",
                 }:

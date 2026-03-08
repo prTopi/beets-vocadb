@@ -22,7 +22,7 @@ from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
         }
     }
 ]""",
-            "Genre1",
+            ["Genre1"],
         ),
         (
             """[
@@ -43,7 +43,7 @@ from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
         }
     }
 ]""",
-            "Genre1; Genre2",
+            ["Genre1", "Genre2"],
         ),
         (
             """[
@@ -64,7 +64,7 @@ from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
         }
     }
 ]""",
-            "Genre2",
+            ["Genre2"],
         ),
         (
             """[
@@ -117,7 +117,7 @@ from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
         }
     }
 ]""",
-            "Agenre1; Agenre2; Genre3; Zgenre4; Zgenre5; Zgenre6",
+            ["Agenre1", "Agenre2", "Genre3", "Zgenre4", "Zgenre5", "Zgenre6"],
         ),
     ],
 )

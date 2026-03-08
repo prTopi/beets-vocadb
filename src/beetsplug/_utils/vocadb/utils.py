@@ -105,7 +105,7 @@ def get_bpm(milli_bpm: int | None) -> str | None:
 
 def get_genres(
     remote_tags: tuple[TagUsageForApiContract, ...] | None,
-) -> str | None:
+) -> list[str] | None:
     """Extract and format genre information from VocaDB tags.
 
     Processes VocaDB tags to find those categorized as "Genres", sorts them
@@ -116,7 +116,7 @@ def get_genres(
         remote_tags: List of tag usage data from VocaDB API
 
     Returns:
-        Semicolon-separated genre string or None if no genres found
+        List of genres
     """
     if not remote_tags:
         return None
@@ -128,7 +128,7 @@ def get_genres(
         remote_tag: TagBaseContract = remote_tag_usage.tag
         if remote_tag.category_name == "Genres" and remote_tag.name:
             genres.append(remote_tag.name.title())
-    return "; ".join(genres) if genres else None
+    return genres or None
 
 
 def get_id(
