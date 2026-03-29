@@ -138,7 +138,7 @@ def get_id(
     entity: LibModel | Info,
     preferred_key: str,
     fallback_key: str,
-) -> str | None:
+) -> int | str | None:
     """Extract identifier from entity with fallback support.
 
     Attempts to retrieve an ID from the entity using the preferred key first,
@@ -151,13 +151,13 @@ def get_id(
         fallback_key: Secondary key to check if preferred key fails
 
     Returns:
-        ID as string or None if no ID found or empty
+        ID as string, int or None if no ID found or empty
     """
-    plugin_id: int | None = entity.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+    plugin_id: int | str | None = entity.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
         preferred_key
     )
     if plugin_id:
-        return str(plugin_id)  # pyright: ignore[reportUnknownArgumentType]
+        return plugin_id  # pyright: ignore[reportUnknownVariableType]
     return entity.get(fallback_key, None)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
 

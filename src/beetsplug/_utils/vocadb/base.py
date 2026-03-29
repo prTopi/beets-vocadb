@@ -352,7 +352,7 @@ class PluginBase(MetadataSourcePlugin):
         album: library.Album
         for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
             album_formatted: str = format(album)
-            album_id: str | None = get_id(
+            album_id: str | int | None = get_id(
                 entity=album,
                 preferred_key=self._flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUM_ID
@@ -382,10 +382,10 @@ class PluginBase(MetadataSourcePlugin):
                 continue
             items: Results[library.Item] = album.items()
 
-            plugin_track_id: int | None
-            track_id: str | None
+            plugin_track_id: str | None
+            track_id: int | str | None
             track_index: dict[str, TrackInfo] = {
-                track_id: track_info
+                str(track_id): track_info
                 for track_info in album_info.tracks
                 if (
                     track_id := get_id(
@@ -409,7 +409,7 @@ class PluginBase(MetadataSourcePlugin):
 
                 if plugin_track_id:
                     with suppress(KeyError):
-                        mapping[item] = track_index[str(plugin_track_id)]  # pyright: ignore[reportUnknownArgumentType]
+                        mapping[item] = track_index[plugin_track_id]
 
                         continue
 
@@ -452,7 +452,7 @@ class PluginBase(MetadataSourcePlugin):
                     track_id: track_distance(item, track_info)
                     for track_id, track_info in track_index.items()
                 }
-                new_track_id: str = min(matches, key=lambda k: matches[k])
+                new_track_id: str = min(matches, key=matches.__getitem__)
                 item[
                     self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
@@ -529,7 +529,7 @@ class PluginBase(MetadataSourcePlugin):
         yield from filter(
             None,
             (
-                self.album_for_id(album_id=str(remote_album_candidate.id))
+                self.album_for_id(album_id=remote_album_candidate.id)
                 for remote_album_candidate in remote_album_candidates
             ),
         )
@@ -568,8 +568,8 @@ class PluginBase(MetadataSourcePlugin):
         )
 
     @override
-    def album_for_id(self, album_id: str) -> AlbumInfo | None:
-        if not album_id.isnumeric():
+    def album_for_id(self, album_id: int | str) -> AlbumInfo | None:
+        if isinstance(album_id, str) and not album_id.isnumeric():
             self._log.debug(
                 msg=f"Skipping non-{self.data_source} album: {album_id}"
             )
@@ -601,8 +601,8 @@ class PluginBase(MetadataSourcePlugin):
         )
 
     @override
-    def track_for_id(self, track_id: str) -> TrackInfo | None:
-        if not track_id.isnumeric():
+    def track_for_id(self, track_id: int | str) -> TrackInfo | None:
+        if isinstance(track_id, str) and not track_id.isnumeric():
             self._log.debug(
                 msg=f"Skipping non-{self.data_source} singleton: {track_id}"
             )
