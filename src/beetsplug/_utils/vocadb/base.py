@@ -11,7 +11,7 @@ from .mapper import (
     ItemFlexibleAttributes,
     Mapper,
 )
-from .utils import get_id, get_language_preference
+from .utils import get_language_preference
 
 if not sys.version_info < (3, 12):
     from typing import override  # pyright: ignore[reportUnreachable]
@@ -288,13 +288,12 @@ class PluginBase(MetadataSourcePlugin):
         item: library.Item
         for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
             item_formatted: str = format(item)
+            track_id: str
             if not (
-                track_id := get_id(
-                    entity=item,
-                    preferred_key=self._flexible_attributes.item[
+                track_id := item.get(  # pyright: ignore[reportAssignmentType,reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
+                    key=self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
-                    ],
-                    fallback_key="mb_trackid",
+                    ]
                 )
             ):
                 self._log.debug(
@@ -302,7 +301,7 @@ class PluginBase(MetadataSourcePlugin):
                     + self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
                     ]
-                    + f" or mb_trackid: {item_formatted}"
+                    + f": {item_formatted}"
                 )
                 continue
             if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
@@ -352,12 +351,10 @@ class PluginBase(MetadataSourcePlugin):
         album: library.Album
         for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
             album_formatted: str = format(album)
-            album_id: str | int | None = get_id(
-                entity=album,
-                preferred_key=self._flexible_attributes.album[
+            album_id: str | int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                key=self._flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUM_ID
-                ],
-                fallback_key="mb_albumid",
+                ]
             )
             if not album_id:
                 self._log.debug(
@@ -365,7 +362,7 @@ class PluginBase(MetadataSourcePlugin):
                     + self._flexible_attributes.album[
                         AlbumFlexibleAttributes.ALBUM_ID
                     ]
-                    + f" or mb_albumid: {album_formatted}"
+                    + f": {album_formatted}"
                 )
                 continue
             if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
@@ -373,7 +370,7 @@ class PluginBase(MetadataSourcePlugin):
                     msg=f"Skipping non-{self.data_source} album: {album_formatted}"
                 )
                 continue
-            album_info: AlbumInfo | None = self.album_for_id(album_id=album_id)
+            album_info: AlbumInfo | None = self.album_for_id(album_id=album_id)  # pyright: ignore[reportUnknownArgumentType]
             if not album_info:
                 self._log.info(
                     msg=f"Release ID {album_id} "
@@ -382,18 +379,15 @@ class PluginBase(MetadataSourcePlugin):
                 continue
             items: Results[library.Item] = album.items()
 
-            plugin_track_id: str | None
             track_id: int | str | None
             track_index: dict[str, TrackInfo] = {
                 str(track_id): track_info
                 for track_info in album_info.tracks
                 if (
-                    track_id := get_id(
-                        entity=track_info,
-                        preferred_key=self._flexible_attributes.item[
+                    track_id := track_info.get(
+                        self._flexible_attributes.item[
                             ItemFlexibleAttributes.TRACK_ID
-                        ],
-                        fallback_key="track_id",
+                        ]
                     )
                 )
             }
@@ -401,45 +395,21 @@ class PluginBase(MetadataSourcePlugin):
             item: library.Item
             for item in items:
                 # First, try to get track ID from flexible attributes
-                plugin_track_id = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                track_id = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     key=self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
                     ]
                 )
 
-                if plugin_track_id:
+                if track_id:
                     with suppress(KeyError):
-                        mapping[item] = track_index[plugin_track_id]
+                        mapping[item] = track_index[str(track_id)]  # pyright: ignore[reportUnknownArgumentType]
 
                         continue
 
-                # Fall back to mb_trackid
-                mb_trackid: str | None = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    "mb_trackid"
-                )
-                if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
-                    with suppress(KeyError):
-                        mapping[item] = track_index[mb_trackid]
-                        item[
-                            self._flexible_attributes.item[
-                                ItemFlexibleAttributes.TRACK_ID
-                            ]
-                        ] = mb_trackid
-                        continue
-
-                # If neither flexible attribute nor mb_trackid work,
                 # use automatic matching
-                current_track_id: str | None = (  # pyright: ignore[reportUnknownVariableType]
-                    str(plugin_track_id) or mb_trackid  # pyright: ignore[reportUnknownArgumentType]
-                )
-
                 self._log.warning(
-                    msg="No track found for "
-                    + f"{plugin_track_id=}, {mb_trackid=}, {current_track_id=}"
-                )
-
-                self._log.warning(
-                    msg=f"Trying to automatch missing track ID {current_track_id}"
+                    msg=f"Trying to automatch missing track ID {track_id}"
                     + f" in album info for {album_formatted}..."
                 )
                 # Unset track id so that it won't affect distance

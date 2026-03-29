@@ -16,9 +16,6 @@ from .vocadb_api_client import (
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
 
-    from beets.autotag.hooks import Info
-    from beets.library import LibModel
-
     from .vocadb_api_client import (
         TagBaseContract,
         TagUsageForApiContract,
@@ -132,33 +129,6 @@ def get_genres(
         if remote_tag.category_name == "Genres" and remote_tag.name:
             genres.append(remote_tag.name.title())
     return genres or None
-
-
-def get_id(
-    entity: LibModel | Info,
-    preferred_key: str,
-    fallback_key: str,
-) -> int | str | None:
-    """Extract identifier from entity with fallback support.
-
-    Attempts to retrieve an ID from the entity using the preferred key first,
-    then falls back to the fallback key if the preferred key is not available
-    or returns None.
-
-    Args:
-        entity: Entity to extract ID from (Item, Album, or TrackInfo)
-        preferred_key: Primary key to check for ID
-        fallback_key: Secondary key to check if preferred key fails
-
-    Returns:
-        ID as string, int or None if no ID found or empty
-    """
-    plugin_id: int | str | None = entity.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-        preferred_key
-    )
-    if plugin_id:
-        return plugin_id  # pyright: ignore[reportUnknownVariableType]
-    return entity.get(fallback_key, None)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
 
 def group_tracks_by_disc(
