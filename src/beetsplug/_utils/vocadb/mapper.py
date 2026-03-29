@@ -12,9 +12,9 @@ from .lyrics import LyricsProcessor
 from .utils import (
     discs_fallback,
     get_asin,
-    get_bpm,
     get_genres,
     group_tracks_by_disc,
+    normalize_bpm,
 )
 from .vocadb_api_client import (
     ContentLanguagePreference,
@@ -402,7 +402,7 @@ class Mapper:
             lyricist=lyricist,
             composer=composer,
             arranger=arranger,
-            bpm=get_bpm(milli_bpm=remote_song.max_milli_bpm),
+            bpm=normalize_bpm(milli_bpm=remote_song.max_milli_bpm),
             genres=get_genres(remote_tags=remote_song.tags),
             script=script,
             language=language,

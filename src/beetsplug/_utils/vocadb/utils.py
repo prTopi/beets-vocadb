@@ -91,7 +91,7 @@ def get_asin(
     )
 
 
-def get_bpm(milli_bpm: int | None) -> str | None:
+def normalize_bpm(milli_bpm: int | None) -> str | None:
     """Convert milli-BPM (beats per minute) to standard BPM format.
 
     VocaDB stores BPM values in milli-beats per minute (mBPM), so this
