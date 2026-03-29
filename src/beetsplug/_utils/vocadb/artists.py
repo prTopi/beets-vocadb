@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
@@ -380,11 +381,9 @@ class ArtistsProcessor:
 
         artist_id: str | None = None
         for x in *main_artists, *featured_artists:
-            try:
+            with suppress(IndexError, ValueError):
                 if artist_id := artists_ids[artists_names.index(x)]:
                     break
-            except (IndexError, ValueError):
-                ...
         if not artist_id:
             artist_id = next(filter(None, artists_ids), None)
 

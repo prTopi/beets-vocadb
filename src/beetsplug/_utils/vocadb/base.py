@@ -343,6 +343,8 @@ class PluginBase(MetadataSourcePlugin):
             pretend: Show changes without applying them
             write: Whether to write changes to files
         """
+        from contextlib import suppress
+
         from beets.autotag import apply_metadata
         from beets.autotag.distance import track_distance
         from beets.util import ancestry
@@ -406,20 +408,18 @@ class PluginBase(MetadataSourcePlugin):
                 )
 
                 if plugin_track_id:
-                    try:
+                    with suppress(KeyError):
                         mapping.append(
                             (item, track_index[str(plugin_track_id)])  # pyright: ignore[reportUnknownArgumentType]
                         )
                         continue
-                    except KeyError:
-                        ...  # Fall through to try mb_trackid
 
                 # Fall back to mb_trackid
                 mb_trackid: str | None = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                     "mb_trackid"
                 )
                 if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
-                    try:
+                    with suppress(KeyError):
                         mapping.append((item, track_index[mb_trackid]))
                         item[
                             self._flexible_attributes.item[
@@ -427,8 +427,6 @@ class PluginBase(MetadataSourcePlugin):
                             ]
                         ] = mb_trackid
                         continue
-                    except KeyError:
-                        ...  # Fall through to automatic matching
 
                 # If neither flexible attribute nor mb_trackid work,
                 # use automatic matching
