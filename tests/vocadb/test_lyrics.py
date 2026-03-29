@@ -181,7 +181,7 @@ class TestLyricsProcessor:
         ) in test_case.language_preference_expected_lyrics_mapping:
             assert LyricsProcessor(
                 language_preference=language_preference
-            ).get_lyrics(remote_lyrics_list=decoded_lyrics) == (
+            ).get_lyrics(remote_lyrics=decoded_lyrics) == (
                 expected_language_code,
                 expected_script,
                 expected_lyrics,

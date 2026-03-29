@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections.abc import Callable
 from itertools import groupby
 from operator import attrgetter
 from re import match, search
@@ -14,6 +14,8 @@ from .vocadb_api_client import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable
+
     from beets.autotag.hooks import Info
     from beets.library import LibModel
 
@@ -25,7 +27,7 @@ if TYPE_CHECKING:
 
 
 def get_language_preference(
-    prefer_romaji: bool, languages: list[str] | None
+    prefer_romaji: bool, languages: Iterable[str] | None
 ) -> ContentLanguagePreference:
     if languages:
         for language in languages:
@@ -67,7 +69,7 @@ def discs_fallback(
 
 
 def get_asin(
-    web_links: tuple[WebLinkForApiContract, ...] | None,
+    web_links: Iterable[WebLinkForApiContract] | None,
 ) -> str | None:
     """Extract ASIN (Amazon Standard Identification Number) from web links."""
     return next(
@@ -105,7 +107,7 @@ def get_bpm(milli_bpm: int | None) -> str | None:
 
 
 def get_genres(
-    remote_tags: tuple[TagUsageForApiContract, ...] | None,
+    remote_tags: Iterable[TagUsageForApiContract] | None,
 ) -> list[str] | None:
     """Extract and format genre information from VocaDB tags.
 
@@ -156,24 +158,26 @@ def get_id(
     )
     if plugin_id:
         return str(plugin_id)  # pyright: ignore[reportUnknownArgumentType]
-    return entity.get(fallback_key) or None  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+    return entity.get(fallback_key, None)  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
 
 
 def group_tracks_by_disc(
-    remote_songs: tuple[SongInAlbumForApiContract, ...],
+    remote_songs: Iterable[SongInAlbumForApiContract],
 ) -> dict[
-    int, tuple[SongInAlbumForApiContract, ...]
+    int, Collection[SongInAlbumForApiContract]
 ]:  # First sort by disc number
-    tracks_by_disc: defaultdict[
+    tracks_by_disc: dict[
         int,
-        tuple[SongInAlbumForApiContract, ...],
-    ] = defaultdict(
-        tuple,
-        {
-            disc_number: tuple(songs)
-            for disc_number, songs in groupby(
-                remote_songs, key=lambda x: x.disc_number
-            )
-        },
-    )
+        Collection[SongInAlbumForApiContract],
+    ] = {
+        disc_number: tuple(songs_iter)
+        for disc_number, songs_iter in groupby(
+            remote_songs,
+            key=cast(
+                Callable[[SongInAlbumForApiContract], int],
+                attrgetter("disc_number"),
+            ),
+        )
+    }
+
     return tracks_by_disc

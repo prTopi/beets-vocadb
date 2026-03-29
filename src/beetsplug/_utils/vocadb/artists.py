@@ -9,6 +9,8 @@ from .vocadb_api_client import ArtistCategories, ArtistRoles, ArtistRolesSet
 from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from .vocadb_api_client import (
         ArtistForAlbumForApiContract,
         ArtistForSongContract,
@@ -427,12 +429,12 @@ class ArtistsProcessor:
 
     @staticmethod
     def _get_label(
-        remote_artists: tuple[ArtistForAlbumForApiContract, ...] | None,
+        remote_artists: Iterable[ArtistForAlbumForApiContract] | None,
     ) -> str | None:
         return next(
             (
                 remote_albumartist.name
-                for remote_albumartist in (remote_artists or [])
+                for remote_albumartist in (remote_artists or ())
                 if ArtistCategories.LABEL in remote_albumartist.categories
             ),
             None,

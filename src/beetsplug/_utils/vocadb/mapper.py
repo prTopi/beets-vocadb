@@ -28,6 +28,7 @@ from .vocadb_api_client.models.song_optional_fields import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection, Iterable, Sequence
     from datetime import datetime
 
     from .vocadb_api_client import (
@@ -126,7 +127,7 @@ class Mapper:
         """
         if not remote_album.tracks:
             return None
-        remote_discs: tuple[AlbumDiscPropertiesContract, ...] = (
+        remote_discs: Sequence[AlbumDiscPropertiesContract] = (
             remote_album.discs
             or discs_fallback(disc_total=remote_album.tracks[-1].disc_number)
         )
@@ -239,8 +240,8 @@ class Mapper:
 
     def get_album_track_infos(
         self,
-        remote_songs: tuple[SongInAlbumForApiContract, ...],
-        remote_discs: tuple[AlbumDiscPropertiesContract, ...],
+        remote_songs: Iterable[SongInAlbumForApiContract],
+        remote_discs: Sequence[AlbumDiscPropertiesContract],
         album_genres: list[str] | None,
     ) -> list[TrackInfo]:
         """Extract track information from album data.
@@ -259,7 +260,7 @@ class Mapper:
         tracks: list[TrackInfo] = []
         tracks_by_disc: dict[
             int,
-            tuple[SongInAlbumForApiContract, ...],
+            Collection[SongInAlbumForApiContract],
         ] = group_tracks_by_disc(remote_songs=remote_songs)
         ignore_video_tracks: bool = self.ignore_video_tracks
         for disc_number, remote_disc_tracks in tracks_by_disc.items():
@@ -374,7 +375,7 @@ class Mapper:
         language: str | None
         lyrics: str | None
         script, language, lyrics = self.lyrics_processor.get_lyrics(
-            remote_lyrics_list=remote_song.lyrics,
+            remote_lyrics=remote_song.lyrics,
         )
         original_day: int | None = None
         original_month: int | None = None
