@@ -334,20 +334,25 @@ class ArtistsProcessor:
             - ArtistsByCategories object with artists sorted into role categories
         """
 
-        main_artists: list[str] = [
-            self.va_name if comp else name
-            for name, id in (
-                *artists_by_categories[ProcessedArtistCategories.PRODUCERS],
-                *artists_by_categories[ProcessedArtistCategories.CIRCLES],
-            )
-            if (name, id) not in not_creditable_artists
-        ] or [
-            name
-            for name, id in artists_by_categories[
-                ProcessedArtistCategories.VOCALISTS
+        main_artists: list[str] = (
+            [self.va_name]
+            if comp
+            else [
+                name
+                for name, id in (
+                    *artists_by_categories[ProcessedArtistCategories.PRODUCERS],
+                    *artists_by_categories[ProcessedArtistCategories.CIRCLES],
+                )
+                if (name, id) not in not_creditable_artists
             ]
-            if (name, id) not in not_creditable_artists
-        ]
+            or [
+                name
+                for name, id in artists_by_categories[
+                    ProcessedArtistCategories.VOCALISTS
+                ]
+                if (name, id) not in not_creditable_artists
+            ]
+        )
 
         artist_string: str = (
             ", ".join(main_artists)
