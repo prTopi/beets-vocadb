@@ -278,19 +278,17 @@ class Mapper:
                     track_info := self.track_info(
                         remote_song=remote_song.song,
                         index=remote_song.track_number,
-                        media=remote_disc.name,  # pyrefly: ignore[unbound-name]
+                        media=remote_disc.name,
                         medium=disc_number,
                         medium_index=remote_song.track_number,
                         medium_total=total,
                     )
                 ):
                     continue
-                if not track_info.genres:  # pyrefly: ignore[unbound-name]
-                    track_info.genres = (  # pyrefly: ignore[unbound-name]
-                        album_genres
-                    )
+                if not track_info.genres:
+                    track_info.genres = album_genres
 
-                tracks.append(track_info)  # pyrefly: ignore[unbound-name]
+                tracks.append(track_info)
         return tracks
 
     def track_info(
@@ -333,9 +331,7 @@ class Mapper:
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
                     id=remote_original_version_id,
-                    fields=SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload] # noqa: E501
-                        (SongOptionalFields.ARTISTS,)
-                    ),
+                    fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
                     lang=self.language_preference,
                 )
             )

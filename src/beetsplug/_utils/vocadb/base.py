@@ -88,15 +88,13 @@ IGNORE_VIDEO_TRACKS: bool = beets_config["match"]["ignore_video_tracks"].get(
     template=bool
 )
 
-SONG_FIELDS: SongOptionalFieldsSet = (
-    SongOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload]
-        (
-            SongOptionalFields.ARTISTS,
-            SongOptionalFields.CULTURE_CODES,
-            SongOptionalFields.TAGS,
-            SongOptionalFields.BPM,
-            SongOptionalFields.LYRICS,
-        )
+SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
+    (
+        SongOptionalFields.ARTISTS,
+        SongOptionalFields.CULTURE_CODES,
+        SongOptionalFields.TAGS,
+        SongOptionalFields.BPM,
+        SongOptionalFields.LYRICS,
     )
 )
 
@@ -524,17 +522,15 @@ class PluginBase(MetadataSourcePlugin):
             return
         else:
             self._log.debug(
-                msg=f"Found {len(remote_album_candidates)} result(s) for '{album}'"  # pyrefly: ignore[unbound-name] # noqa: E501
+                msg=f"Found {len(remote_album_candidates)} result(s) for '{album}'"
             )
         # songFields parameter doesn't exist for album search
         # so we'll get albums by their id
         yield from filter(
             None,
-            map(
-                lambda remote_album_candidate: self.album_for_id(
-                    album_id=str(remote_album_candidate.id)
-                ),
-                remote_album_candidates,  # pyrefly: ignore[unbound-name]
+            (
+                self.album_for_id(album_id=str(remote_album_candidate.id))
+                for remote_album_candidate in remote_album_candidates
             ),
         )
 
@@ -561,13 +557,13 @@ class PluginBase(MetadataSourcePlugin):
             self._log.debug(msg=f"Found 0 results for '{title}'")
             return
         self._log.debug(
-            msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"  # pyrefly: ignore[unbound-name] # noqa: E501
+            msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"
         )
         yield from filter(
             None,
             map(
                 self.mapper.track_info,
-                remote_item_candidates,  # pyrefly: ignore[unbound-name]
+                remote_item_candidates,
             ),
         )
 
@@ -582,7 +578,7 @@ class PluginBase(MetadataSourcePlugin):
         remote_album: AlbumForApiContract | None = (
             self.album_api.api_albums_id_get(
                 id=int(album_id),
-                fields=AlbumOptionalFieldsSet(  # pyrefly: ignore[no-matching-overload] # noqa: E501
+                fields=AlbumOptionalFieldsSet(
                     (
                         AlbumOptionalFields.ARTISTS,
                         AlbumOptionalFields.DISCS,
