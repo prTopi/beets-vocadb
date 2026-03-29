@@ -24,6 +24,7 @@ import httpx
 from beets import __version__ as beets_version
 from beets import config as beets_config
 from beets import dbcore
+from beets.autotag.distance import Distance
 from beets.metadata_plugins import MetadataSourcePlugin
 from beets.plugins import apply_item_changes
 from beets.ui import (
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
     from optparse import Values
 
     from beets import library
-    from beets.autotag.distance import Distance
     from beets.autotag.hooks import AlbumInfo, TrackInfo
     from beets.dbcore import Results
     from beets.library import Item, Library
@@ -285,7 +285,7 @@ class PluginBase(MetadataSourcePlugin):
             pretend: Show changes without applying them
             write: Whether to write changes to files
         """
-        from beets.autotag import apply_item_metadata
+        from beets.autotag import TrackMatch
 
         item: library.Item
         for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
@@ -321,8 +321,10 @@ class PluginBase(MetadataSourcePlugin):
                     + f"for track {item_formatted}"
                 )
                 continue
-            with lib.transaction():  # pyrefly: ignore[bad-context-manager]
-                apply_item_metadata(item, track_info)
+            with lib.transaction():
+                TrackMatch(
+                    distance=Distance(), info=track_info, item=item
+                ).apply_metadata()
                 if show_model_changes(new=item):
                     apply_item_changes(lib, item, move, pretend, write)
 
@@ -345,7 +347,7 @@ class PluginBase(MetadataSourcePlugin):
         """
         from contextlib import suppress
 
-        from beets.autotag import apply_metadata
+        from beets.autotag import AlbumMatch
         from beets.autotag.distance import track_distance
         from beets.util import ancestry
 
@@ -397,7 +399,7 @@ class PluginBase(MetadataSourcePlugin):
                     )
                 )
             }
-            mapping: list[tuple[Item, TrackInfo]] = []
+            mapping: dict[Item, TrackInfo] = {}
             item: library.Item
             for item in items:
                 # First, try to get track ID from flexible attributes
@@ -409,9 +411,8 @@ class PluginBase(MetadataSourcePlugin):
 
                 if plugin_track_id:
                     with suppress(KeyError):
-                        mapping.append(
-                            (item, track_index[str(plugin_track_id)])  # pyright: ignore[reportUnknownArgumentType]
-                        )
+                        mapping[item] = track_index[str(plugin_track_id)]  # pyright: ignore[reportUnknownArgumentType]
+
                         continue
 
                 # Fall back to mb_trackid
@@ -420,7 +421,7 @@ class PluginBase(MetadataSourcePlugin):
                 )
                 if mb_trackid and mb_trackid.isnumeric():  # pyright: ignore[reportUnknownMemberType]
                     with suppress(KeyError):
-                        mapping.append((item, track_index[mb_trackid]))
+                        mapping[item] = track_index[mb_trackid]
                         item[
                             self._flexible_attributes.item[
                                 ItemFlexibleAttributes.TRACK_ID
@@ -459,14 +460,16 @@ class PluginBase(MetadataSourcePlugin):
                         ItemFlexibleAttributes.TRACK_ID
                     ]
                 ] = new_track_id
-                mapping.append((item, track_index[new_track_id]))
+                mapping[item] = track_index[new_track_id]
                 self._log.warning(
                     msg=f"Success, automatched to ID {new_track_id}"
                 )
 
             self._log.debug(msg=f"applying changes to {album_formatted}")
-            with lib.transaction():  # pyrefly: ignore[bad-context-manager]
-                apply_metadata(album_info=album_info, item_info_pairs=mapping)
+            with lib.transaction():
+                AlbumMatch(
+                    distance=Distance(), info=album_info, mapping=mapping
+                ).apply_metadata()
                 changed: bool = False
                 any_changed_item: library.Item | None = items.get()
                 for item in items:

@@ -32,7 +32,7 @@ wheels = [
 
 [[package]]
 name = "beets"
-version = "2.7.1"
+version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -52,9 +52,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "unidecode" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ff/9d/4f72fc5f772ca958f48263ca688bc60752bc7d752a248d6191c62e3bafb1/beets-2.7.1.tar.gz", hash = "sha256:95f20c4087be2f4b2ab400be07cbea380bec2720e2a83180b025a972ee94bd22", size = 2189644, upload-time = "2026-03-08T08:31:30.568Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/01/69/cfb8188520f2b50988e71a2c3d451874b819395b01fc63fa583d14311e8b/beets-2.8.0.tar.gz", hash = "sha256:5db90eddffe640e42a76e5207adc0993d2ce3d96e6a64ce3f2bfbd12d7b3a3cf", size = 2195951, upload-time = "2026-03-28T13:11:31.076Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/30/3b/1ad6e0c1f3e3d3e6113634ec97f372b00f1caad5ead91b9744358964b4e2/beets-2.7.1-py3-none-any.whl", hash = "sha256:bbe5a6b29aa55f520e635ef9d4222d8f3d53431bd0d78c68ee5c8bb0f80426f1", size = 610663, upload-time = "2026-03-08T08:31:28.363Z" },
+    { url = "https://files.pythonhosted.org/packages/a7/8f/8cc7713b92842ec487d9801631cd61cb2e535f7144c2eb4a0bf06ad5f1f8/beets-2.8.0-py3-none-any.whl", hash = "sha256:10a4e19c6205d54060557b4ade82046cb9604f2c229f35d7a6b49074475383c0", size = 615487, upload-time = "2026-03-28T13:11:28.921Z" },
 ]
 
 [[package]]
@@ -351,7 +351,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [

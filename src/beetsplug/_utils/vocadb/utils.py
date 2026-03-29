@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from collections import defaultdict
 from itertools import groupby
+from operator import attrgetter
 from re import match, search
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .vocadb_api_client import (
     AlbumDiscPropertiesContract,
     ContentLanguagePreference,
     DiscMediaType,
+    SongInAlbumForApiContract,
 )
 
 if TYPE_CHECKING:
@@ -16,7 +18,6 @@ if TYPE_CHECKING:
     from beets.library import LibModel
 
     from .vocadb_api_client import (
-        SongInAlbumForApiContract,
         TagBaseContract,
         TagUsageForApiContract,
         WebLinkForApiContract,
