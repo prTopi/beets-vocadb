@@ -24,9 +24,8 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRead
 
 import beets
-from beets.autotag import apply_item_metadata, apply_metadata
 from beets.autotag.distance import Distance
-from beets.autotag.hooks import AlbumInfo, TrackInfo
+from beets.autotag.hooks import AlbumInfo, AlbumMatch, TrackInfo, TrackMatch
 from beets.autotag.match import track_distance
 from beets.library import Album, Item, Library
 from beets.metadata_plugins import MetadataSourcePlugin
@@ -330,7 +329,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                 )
                 continue
             with lib.transaction():
-                apply_item_metadata(item, track_info)
+                TrackMatch(Distance(), track_info, item).apply_metadata()
                 show_model_changes(item)
                 apply_item_changes(lib, item, move, pretend, write)
 
@@ -399,7 +398,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
 
             self._log.debug("applying changes to {}", album_formatted)
             with lib.transaction():
-                apply_metadata(album_info, mapping)
+                AlbumMatch(Distance(), album_info, mapping).apply_metadata()
                 changed: bool = False
                 any_changed_item: Item = items[0]
                 for item in items:
