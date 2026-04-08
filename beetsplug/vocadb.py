@@ -321,9 +321,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                     item_formatted,
                 )
                 continue
-            track_info: Optional[TrackInfo] = self.track_for_id(
-                item.mb_trackid
-            )
+            track_info: Optional[TrackInfo] = self.track_for_id(item.mb_trackid)
             if not (track_info):
                 self._log.info(
                     "Recording ID not found: {0} for track {1}",
@@ -387,9 +385,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                     old_track_id: str = item.mb_trackid
                     item.mb_trackid = None
                     matches: dict[str, Distance] = {
-                        track_info["track_id"]: track_distance(
-                            item, track_info
-                        )
+                        track_info["track_id"]: track_distance(item, track_info)
                         for track_info in track_index.values()
                     }
                     item.mb_trackid = min(matches, key=lambda k: matches[k])
@@ -422,6 +418,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                             "original_month",
                             "original_year",
                             "genre",
+                            "genres",
                         ]:
                             album[key] = any_changed_item[key]
                     album.store()
@@ -672,7 +669,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
                 break
         mediums: int = len(release["discs"])
         catalognum: Optional[str] = release.get("catalogNumber")
-        genre: Optional[str] = self.get_genres(release)
+        genres: Optional[list[str]] = self.get_genres(release)
         media: Optional[str]
         try:
             media = release["discs"][0].get("name")
@@ -699,7 +696,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
             catalognum=catalognum,
             script=script,
             language=language,
-            genre=genre,
+            genres=genres,
             media=media,
             data_source=self.data_source,
             data_url=data_url,
@@ -746,7 +743,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         bpm: Optional[str] = (
             str(max_milli_bpm // 1000) if max_milli_bpm else None
         )
-        genre: Optional[str] = self.get_genres(recording)
+        genres: Optional[list[str]] = self.get_genres(recording)
         script: Optional[str]
         language: Optional[str]
         lyrics: Optional[str]
@@ -783,7 +780,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
             composer=composer,
             arranger=arranger,
             bpm=bpm,
-            genre=genre,
+            genres=genres,
             script=script,
             language=language,
             lyrics=lyrics,
@@ -946,7 +943,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
         return artists_by_categories, is_support
 
     @staticmethod
-    def get_genres(info: InfoDict) -> Optional[str]:
+    def get_genres(info: InfoDict) -> Optional[list[str]]:
         genres: list[str] = []
         tag_usage: TagUsageDict
         for tag_usage in sorted(
@@ -955,7 +952,7 @@ class VocaDBPlugin(MetadataSourcePlugin):
             tag: TagDict = tag_usage.get("tag")
             if tag.get("categoryName") == "Genres":
                 genres.append(tag.get("name").title())
-        return "; ".join(genres) if len(genres) > 0 else None
+        return sorted(genres) if len(genres) > 0 else None
 
     @classmethod
     def get_lyrics(

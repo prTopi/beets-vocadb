@@ -4,7 +4,6 @@ from beetsplug.vocadb import InfoDict, LyricsDict, VocaDBPlugin
 
 
 class TestVocaDBPlugin(TestCase):
-
     plugin: VocaDBPlugin = VocaDBPlugin()
 
     def __init_subclass__(cls, plugin: VocaDBPlugin) -> None:
@@ -25,7 +24,7 @@ class TestVocaDBPlugin(TestCase):
                 },
             ]
         }
-        self.assertEqual(self.plugin.get_genres(info), "Genre1")
+        self.assertEqual(self.plugin.get_genres(info), ["Genre1"])
         info = {
             "tags": [
                 {
@@ -44,7 +43,7 @@ class TestVocaDBPlugin(TestCase):
                 },
             ]
         }
-        self.assertEqual(self.plugin.get_genres(info), "Genre1; Genre2")
+        self.assertEqual(self.plugin.get_genres(info), ["Genre1", "Genre2"])
         info = {
             "tags": [
                 {
@@ -63,7 +62,7 @@ class TestVocaDBPlugin(TestCase):
                 },
             ]
         }
-        self.assertEqual(self.plugin.get_genres(info), "Genre2")
+        self.assertEqual(self.plugin.get_genres(info), ["Genre2"])
 
     def test_language(self) -> None:
         self.plugin.languages = ["en", "jp"]
@@ -100,10 +99,12 @@ class TestVocaDBPlugin(TestCase):
             },
         ]
         self.assertEqual(
-            self.plugin.get_lyrics(lyrics, "Japanese"), ("Jpan", "jpn", "lyrics1")
+            self.plugin.get_lyrics(lyrics, "Japanese"),
+            ("Jpan", "jpn", "lyrics1"),
         )
         self.assertEqual(
-            self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics2")
+            self.plugin.get_lyrics(lyrics, "English"),
+            ("Jpan", "jpn", "lyrics2"),
         )
         self.assertEqual(
             self.plugin.get_lyrics(lyrics, "Romaji"), ("Jpan", "jpn", "lyrics3")
@@ -124,10 +125,12 @@ class TestVocaDBPlugin(TestCase):
             },
         ]
         self.assertEqual(
-            self.plugin.get_lyrics(lyrics, "Japanese"), ("Latn", "eng", "lyrics1")
+            self.plugin.get_lyrics(lyrics, "Japanese"),
+            ("Latn", "eng", "lyrics1"),
         )
         self.assertEqual(
-            self.plugin.get_lyrics(lyrics, "English"), ("Latn", "eng", "lyrics2")
+            self.plugin.get_lyrics(lyrics, "English"),
+            ("Latn", "eng", "lyrics2"),
         )
         lyrics = [
             {
@@ -137,7 +140,8 @@ class TestVocaDBPlugin(TestCase):
             },
         ]
         self.assertEqual(
-            self.plugin.get_lyrics(lyrics, "English"), ("Jpan", "jpn", "lyrics1")
+            self.plugin.get_lyrics(lyrics, "English"),
+            ("Jpan", "jpn", "lyrics1"),
         )
 
     def test_get_fallback_lyrics(self) -> None:
@@ -170,7 +174,9 @@ class TestVocaDBPlugin(TestCase):
             self.plugin.get_fallback_lyrics(lyrics, "Romaji"),
             "lyrics3",
         )
-        self.assertEqual(self.plugin.get_fallback_lyrics(lyrics, None), "lyrics1")
+        self.assertEqual(
+            self.plugin.get_fallback_lyrics(lyrics, None), "lyrics1"
+        )
         lyrics = [
             {
                 "cultureCodes": ["ja"],
