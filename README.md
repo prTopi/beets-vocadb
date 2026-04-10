@@ -68,7 +68,7 @@ Refer to the [relevant section in it's documentation](https://beets.readthedocs.
 Adding new sources is easy as long as the site is based on VocaDB.
 
 A new source can be added by creating a new python file in the beetsplug folder
-with a class that inherits from `beetsplug.vocadb.base.PluginBases.PluginBase`
+with a class that inherits from `beetsplug._utils.vocadb.PluginBase`
 and passes the desired values to the required parameters. (see `utaitedb.py` or
 `touhoudb.py` for reference.) The filename dictates the plugins name used for
 configuration.
