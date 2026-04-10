@@ -55,7 +55,6 @@ if TYPE_CHECKING:
     from beets.autotag.hooks import AlbumInfo, TrackInfo
     from beets.dbcore import Results
     from beets.library import Item, Library
-    from typing_extensions import LiteralString
 
     from .vocadb_api_client import (
         AlbumForApiContract,
@@ -72,7 +71,7 @@ if TYPE_CHECKING:
         exclude_album_fields: list[str]
 
 
-USER_AGENT: LiteralString = f"beets/{beets_version} +https://beets.io/"
+USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 
 DEFAULT_CONFIG: BaseConfig = {
     "prefer_romaji": False,

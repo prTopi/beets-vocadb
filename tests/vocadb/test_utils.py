@@ -121,7 +121,7 @@ from beetsplug._utils.vocadb.vocadb_api_client import TagUsageForApiContract
         ),
     ],
 )
-def test_get_genres(remote_tags: str, expected: str | None) -> None:
+def test_get_genres(remote_tags: str, expected: list[str] | None) -> None:
     assert (
         get_genres(
             remote_tags=msgspec.json.decode(
