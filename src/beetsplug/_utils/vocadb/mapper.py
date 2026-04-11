@@ -20,6 +20,7 @@ from .vocadb_api_client import (
     ContentLanguagePreference,
     DiscMediaType,
     DiscType,
+    SongType,
 )
 from .vocadb_api_client.models import StrEnum
 from .vocadb_api_client.models.song_optional_fields import (
@@ -53,6 +54,10 @@ class ItemFlexibleAttributes(StrEnum):
     TRACK_ID = auto()
     ARTIST_ID = auto()
     ARTIST_IDS = auto()
+    ARRANGER_IDS = auto()
+    COMPOSER_IDS = auto()
+    LYRICIST_IDS = auto()
+    REMIXER_IDS = auto()
 
 
 # TODO: this sucks
@@ -350,21 +355,34 @@ class Mapper:
         artist: str
         artist_id: str | None
         artists: list[str]
-        artists_ids: list[str]
+        artist_ids: list[str]
         arrangers: list[str] | None
+        arranger_ids: list[str] | None
         composers: list[str] | None
+        composer_ids: list[str] | None
         lyricists: list[str] | None
+        lyricist_ids: list[str] | None
         (
             artist,
             artist_id,
             artists,
-            artists_ids,
+            artist_ids,
             arrangers,
+            arranger_ids,
             composers,
+            composer_ids,
             lyricists,
+            lyricist_ids,
         ) = self.artists_processor.get_track_artists(
             remote_artists=remote_artists,
             remote_original_artists=remote_original_artists,
+        )
+        remixers: list[str] | None
+        remixers_ids: list[str] | None
+        remixers, remixers_ids = (
+            (arrangers, arranger_ids)
+            if remote_song.song_type is SongType.REMIX
+            else (None, None)
         )
         track_id: str = str(remote_song.id)
         script: str | None
@@ -405,7 +423,7 @@ class Mapper:
             composers_ids=None,
             arrangers=arrangers,
             arrangers_ids=None,
-            remixers=None,
+            remixers=remixers,
             remixers_ids=None,
             bpm=normalize_bpm(milli_bpm=remote_song.max_milli_bpm),
             genres=get_genres(remote_tags=remote_song.tags),
@@ -431,7 +449,19 @@ class Mapper:
                 ]: artist_id,
                 self.flexible_attributes.item[
                     ItemFlexibleAttributes.ARTIST_IDS
-                ]: artists_ids,
+                ]: artist_ids,
+                self.flexible_attributes.item[
+                    ItemFlexibleAttributes.ARRANGER_IDS
+                ]: arranger_ids,
+                self.flexible_attributes.item[
+                    ItemFlexibleAttributes.COMPOSER_IDS
+                ]: composer_ids,
+                self.flexible_attributes.item[
+                    ItemFlexibleAttributes.LYRICIST_IDS
+                ]: lyricist_ids,
+                self.flexible_attributes.item[
+                    ItemFlexibleAttributes.REMIXER_IDS
+                ]: remixers_ids,
             },
         )
         for field in self.exclude_item_fields:

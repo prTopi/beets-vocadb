@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import suppress
 from enum import auto
 from functools import lru_cache
@@ -26,15 +27,41 @@ class ProcessedArtistCategories(StrEnum):
     VOCALISTS = auto()
 
 
+class ArtistCategory:
+    def __init__(self) -> None:
+        self._names: list[str] = []
+        self._ids: list[str] = []
+
+    def add(self, name: str, id: str) -> None:
+        self._names.append(name)
+        self._ids.append(id)
+
+    @property
+    def names(self) -> list[str] | None:
+        return self._names or None
+
+    @property
+    def ids(self) -> list[str] | None:
+        return self._ids or None
+
+    def items(self) -> zip[tuple[str, str]]:
+        return zip(self._names, self._ids)
+
+    def __iter__(self) -> Iterator[tuple[str, str]]:
+        return iter(self.items())
+
+
 class CategorizedArtists(
     dict[
         ProcessedArtistCategories,
-        list[tuple[str, str]],
+        ArtistCategory,
     ]
 ):
     def __init__(self) -> None:
         # Initialize all expected keys
-        super().__init__({key: [] for key in ProcessedArtistCategories})
+        super().__init__(
+            {key: ArtistCategory() for key in ProcessedArtistCategories}
+        )
 
 
 class ArtistsProcessor:
@@ -73,7 +100,7 @@ class ArtistsProcessor:
         artists_by_categories: CategorizedArtists
         not_creditable_artists: frozenset[tuple[str, str]]
         artists_by_categories, not_creditable_artists = (
-            self._categorize_artists(remote_artists)
+            self._categorize_artists(remote_artists=remote_artists)
         )
         return (
             *self._get_artists(
@@ -98,6 +125,9 @@ class ArtistsProcessor:
         list[str] | None,
         list[str] | None,
         list[str] | None,
+        list[str] | None,
+        list[str] | None,
+        list[str] | None,
     ]:
         """
         Calls _get_artists with comp=False and include_featured_artists=True.
@@ -109,31 +139,45 @@ class ArtistsProcessor:
             or the first non-empty artist if available
             - List of unique artist names in order of first appearance
             - List of corresponding artist IDs in same order as artist names
-            - Arrangers list
-            - Composers list
-            - Lyricists list
+            - Arrangers
+            - Arrangers IDs
+            - Composers
+            - Composers IDs
+            - Lyricists
+            - Lyricists IDs
         """
         if not remote_artists:
-            return "", None, [], [], [], [], []
+            return (
+                "",
+                None,
+                [],
+                [],
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
         artists_by_categories: CategorizedArtists
         not_creditable_artists: frozenset[tuple[str, str]]
         artists_by_categories, not_creditable_artists = (
-            self._categorize_artists(remote_artists)
+            self._categorize_artists(remote_artists=remote_artists)
         )
         original_artists_by_categories: CategorizedArtists | None
         if remote_original_artists:
             original_artists_by_categories, _ = self._categorize_artists(
-                remote_original_artists
+                remote_artists=remote_original_artists
             )
         else:
             original_artists_by_categories = None
 
-        arrangers: list[str] | None = [
-            name
-            for name, _ in artists_by_categories[
-                ProcessedArtistCategories.ARRANGERS
-            ]
-        ] or None
+        arrangers: list[str] | None = artists_by_categories[
+            ProcessedArtistCategories.ARRANGERS
+        ].names
+        arranger_ids: list[str] | None = artists_by_categories[
+            ProcessedArtistCategories.ARRANGERS
+        ].ids
 
         if (
             original_artists_by_categories
@@ -141,19 +185,20 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.COMPOSERS
             ]
         ):
-            composers: list[str] | None = [
-                name
-                for name, _ in original_artists_by_categories[
-                    ProcessedArtistCategories.COMPOSERS
-                ]
-            ] or None
+            composers: list[str] | None = original_artists_by_categories[
+                ProcessedArtistCategories.COMPOSERS
+            ].names
+            composer_ids: list[str] | None = original_artists_by_categories[
+                ProcessedArtistCategories.COMPOSERS
+            ].ids
+
         else:
-            composers = [
-                name
-                for name, _ in artists_by_categories[
-                    ProcessedArtistCategories.COMPOSERS
-                ]
-            ] or None
+            composers = artists_by_categories[
+                ProcessedArtistCategories.COMPOSERS
+            ].names
+            composer_ids = artists_by_categories[
+                ProcessedArtistCategories.COMPOSERS
+            ].ids
 
         if (
             original_artists_by_categories
@@ -161,19 +206,20 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.LYRICISTS
             ]
         ):
-            lyricists: list[str] | None = [
-                name
-                for name, _ in original_artists_by_categories[
-                    ProcessedArtistCategories.LYRICISTS
-                ]
-            ] or None
+            lyricists: list[str] | None = original_artists_by_categories[
+                ProcessedArtistCategories.LYRICISTS
+            ].names
+            lyricist_ids: list[str] | None = original_artists_by_categories[
+                ProcessedArtistCategories.LYRICISTS
+            ].ids
+
         else:
-            lyricists = [
-                name
-                for name, _ in artists_by_categories[
-                    ProcessedArtistCategories.LYRICISTS
-                ]
-            ] or None
+            lyricists = artists_by_categories[
+                ProcessedArtistCategories.LYRICISTS
+            ].names
+            lyricist_ids = artists_by_categories[
+                ProcessedArtistCategories.LYRICISTS
+            ].ids
 
         return (
             *self._get_artists(
@@ -183,14 +229,17 @@ class ArtistsProcessor:
                 include_featured_artists=True,
             ),
             arrangers,
+            arranger_ids,
             composers,
+            composer_ids,
             lyricists,
+            lyricist_ids,
         )
 
     @staticmethod
     @lru_cache(maxsize=128)
     def _categorize_artists(
-        remote_artists_tuple: tuple[ArtistForAlbumForApiContract, ...]
+        remote_artists: tuple[ArtistForAlbumForApiContract, ...]
         | tuple[ArtistForSongContract, ...],
     ) -> tuple[CategorizedArtists, frozenset[tuple[str, str]]]:
         """Categorizes artists by their roles and identifies not creditable artists.
@@ -207,9 +256,6 @@ class ArtistsProcessor:
             - ArtistsByCategories object with artists sorted into role categories
             - Set of tuples of artist ids and names that are not creditable
         """
-        remote_artists: (
-            list[ArtistForAlbumForApiContract] | list[ArtistForSongContract]
-        ) = list(remote_artists_tuple)
         artists_by_categories: CategorizedArtists = CategorizedArtists()
         not_creditable_artists: set[tuple[str, str]] = set()
 
@@ -265,9 +311,9 @@ class ArtistsProcessor:
             } & remote_album_or_song_artist.categories:
                 if "Default" in remote_album_or_song_artist.effective_roles:
                     effective_roles |= producer_roles
-                artists_by_categories[
-                    ProcessedArtistCategories.PRODUCERS
-                ].append((name, id))
+                artists_by_categories[ProcessedArtistCategories.PRODUCERS].add(
+                    name, id
+                )
 
             # Apply role/category mappings
             remote_role: ArtistCategories | ArtistRoles
@@ -277,7 +323,7 @@ class ArtistsProcessor:
                     isinstance(remote_role, ArtistCategories)
                     and remote_role in remote_album_or_song_artist.categories
                 ) or remote_role in effective_roles:
-                    artists_by_categories[category].append((name, id))
+                    artists_by_categories[category].add(name, id)
 
         # Set producer fallbacks if needed
         if (
@@ -294,7 +340,7 @@ class ArtistsProcessor:
             ProcessedArtistCategories.COMPOSERS,
             ProcessedArtistCategories.LYRICISTS,
         ):
-            if not any(artists_by_categories[category]):
+            if not artists_by_categories[category].names:
                 artists_by_categories[category] = artists_by_categories[
                     ProcessedArtistCategories.PRODUCERS
                 ]
@@ -403,13 +449,13 @@ class ArtistsProcessor:
             - List of corresponding artist IDs in same order as artist names
         """
 
-        category: list[tuple[str, str]]
+        category: ArtistCategory
         artists: dict[str, str] = {}
 
         for category in artist_by_categories.values():
             # Merge each category's artists into the dict while preserving order
             # and preventing duplicates
-            artists |= category
+            artists |= category.items()
 
         # Convert dict to separate lists of artists and IDs
         artists_names: list[str] = list(artists.keys())

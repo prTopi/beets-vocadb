@@ -142,6 +142,18 @@ class PluginBase(MetadataSourcePlugin):
             self._flexible_attributes.item[
                 ItemFlexibleAttributes.ARTIST_IDS
             ]: dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes.item[
+                ItemFlexibleAttributes.ARRANGER_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes.item[
+                ItemFlexibleAttributes.COMPOSER_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes.item[
+                ItemFlexibleAttributes.LYRICIST_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes.item[
+                ItemFlexibleAttributes.REMIXER_IDS
+            ]: dbcore.types.MULTI_VALUE_DSV,
         }
         self.config.add(value=DEFAULT_CONFIG)
         self.prefer_romaji: bool = self.config["prefer_romaji"].get(bool)
