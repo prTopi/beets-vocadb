@@ -95,9 +95,9 @@ class ArtistsProcessor:
         str | None,
         list[str],
         list[str],
-        str | None,
-        str | None,
-        str | None,
+        list[str] | None,
+        list[str] | None,
+        list[str] | None,
     ]:
         """
         Calls _get_artists with comp=False and include_featured_artists=True.
@@ -109,12 +109,12 @@ class ArtistsProcessor:
             or the first non-empty artist if available
             - List of unique artist names in order of first appearance
             - List of corresponding artist IDs in same order as artist names
-            - Arranger string
-            - Composer string
-            - Lyricist string
+            - Arrangers list
+            - Composers list
+            - Lyricists list
         """
         if not remote_artists:
-            return "", None, [], [], "", "", ""
+            return "", None, [], [], [], [], []
         artists_by_categories: CategorizedArtists
         not_creditable_artists: frozenset[tuple[str, str]]
         artists_by_categories, not_creditable_artists = (
@@ -128,15 +128,12 @@ class ArtistsProcessor:
         else:
             original_artists_by_categories = None
 
-        arranger: str | None = (
-            ", ".join(
-                name
-                for name, _ in artists_by_categories[
-                    ProcessedArtistCategories.ARRANGERS
-                ]
-            )
-            or None
-        )
+        arrangers: list[str] | None = [
+            name
+            for name, _ in artists_by_categories[
+                ProcessedArtistCategories.ARRANGERS
+            ]
+        ] or None
 
         if (
             original_artists_by_categories
@@ -144,25 +141,19 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.COMPOSERS
             ]
         ):
-            composer: str | None = (
-                ", ".join(
-                    name
-                    for name, _ in original_artists_by_categories[
-                        ProcessedArtistCategories.COMPOSERS
-                    ]
-                )
-                or None
-            )
+            composers: list[str] | None = [
+                name
+                for name, _ in original_artists_by_categories[
+                    ProcessedArtistCategories.COMPOSERS
+                ]
+            ] or None
         else:
-            composer = (
-                ", ".join(
-                    name
-                    for name, _ in artists_by_categories[
-                        ProcessedArtistCategories.COMPOSERS
-                    ]
-                )
-                or None
-            )
+            composers = [
+                name
+                for name, _ in artists_by_categories[
+                    ProcessedArtistCategories.COMPOSERS
+                ]
+            ] or None
 
         if (
             original_artists_by_categories
@@ -170,25 +161,19 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.LYRICISTS
             ]
         ):
-            lyricist: str | None = (
-                ", ".join(
-                    name
-                    for name, _ in original_artists_by_categories[
-                        ProcessedArtistCategories.LYRICISTS
-                    ]
-                )
-                or None
-            )
+            lyricists: list[str] | None = [
+                name
+                for name, _ in original_artists_by_categories[
+                    ProcessedArtistCategories.LYRICISTS
+                ]
+            ] or None
         else:
-            lyricist = (
-                ", ".join(
-                    name
-                    for name, _ in artists_by_categories[
-                        ProcessedArtistCategories.LYRICISTS
-                    ]
-                )
-                or None
-            )
+            lyricists = [
+                name
+                for name, _ in artists_by_categories[
+                    ProcessedArtistCategories.LYRICISTS
+                ]
+            ] or None
 
         return (
             *self._get_artists(
@@ -197,9 +182,9 @@ class ArtistsProcessor:
                 comp=False,
                 include_featured_artists=True,
             ),
-            arranger,
-            composer,
-            lyricist,
+            arrangers,
+            composers,
+            lyricists,
         )
 
     @staticmethod

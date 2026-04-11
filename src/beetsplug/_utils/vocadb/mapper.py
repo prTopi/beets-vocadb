@@ -348,20 +348,20 @@ class Mapper:
         else:
             remote_original_artists = None
         artist: str
+        artist_id: str | None
         artists: list[str]
         artists_ids: list[str]
-        artist_id: str | None
-        arranger: str | None
-        composer: str | None
-        lyricist: str | None
+        arrangers: list[str] | None
+        composers: list[str] | None
+        lyricists: list[str] | None
         (
             artist,
             artist_id,
             artists,
             artists_ids,
-            arranger,
-            composer,
-            lyricist,
+            arrangers,
+            composers,
+            lyricists,
         ) = self.artists_processor.get_track_artists(
             remote_artists=remote_artists,
             remote_original_artists=remote_original_artists,
@@ -399,9 +399,14 @@ class Mapper:
             data_url=str(
                 httpx.URL(url=self.base_url).join(url=f"S/{track_id}")
             ),
-            lyricist=lyricist,
-            composer=composer,
-            arranger=arranger,
+            lyricists=lyricists,
+            lyricists_ids=None,
+            composers=composers,
+            composers_ids=None,
+            arrangers=arrangers,
+            arrangers_ids=None,
+            remixers=None,
+            remixers_ids=None,
             bpm=normalize_bpm(milli_bpm=remote_song.max_milli_bpm),
             genres=get_genres(remote_tags=remote_song.tags),
             script=script,
