@@ -134,3 +134,12 @@ pyrightconfig.json
 # mypy
 mypy.ini
 typings
+
+# Zed
+#.zed
+
+# Pyrefly
+pyrefly.toml
+
+# ty
+ty.toml

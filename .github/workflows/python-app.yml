@@ -1,37 +1,48 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 name: Python application
-on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+on: [push, pull_request_target]
 permissions:
   contents: read
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+        beets: ["2.9.0"]
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v6
         with:
-          python-version: "3.9"
-          cache: "pip"
-      - name: Install dependencies
+          # Disabling shallow clone is recommended for improving relevancy of reporting
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set beets to version ${{ matrix.beets }}
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 pytest coverage
-          pip install .
+          uv add beets==${{ matrix.beets }}
+
+      - name: Install the project
+        run: |
+          uv sync --locked --all-extras --dev
+
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          uv run flake8 . --count --extend-exclude .venv --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --count --extend-ignore=E701 --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          uv run flake8 . --count --extend-exclude .venv --extend-ignore=E701 --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
       - name: Test with pytest
         run: |
-          coverage run -m pytest
+          uv run coverage run -m pytest
+
       - name: Print coverage report
         run: |
-          coverage report -m
+          uv run coverage report -m
