@@ -143,3 +143,6 @@ pyrefly.toml
 
 # ty
 ty.toml
+
+# complexipy
+.complexipy_cache
