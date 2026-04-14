@@ -6,6 +6,8 @@ from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
+from beets import metadata_plugins
+
 from .vocadb_api_client import ArtistCategories, ArtistRoles, ArtistRolesSet
 from .vocadb_api_client.models import StrEnum
 
@@ -365,51 +367,64 @@ class ArtistsProcessor:
             - ArtistsByCategories object with artists sorted into role categories
         """
 
-        main_artists: list[str] = (
-            [self.va_name]
-            if comp
-            else [
+        def get_filtered_artists(
+            category: ProcessedArtistCategories,
+        ) -> list[str]:
+            return [
                 name
-                for name, id in (
-                    *artists_by_categories[ProcessedArtistCategories.PRODUCERS],
-                    *artists_by_categories[ProcessedArtistCategories.CIRCLES],
+                for name, id in artists_by_categories[category]
+                if (name, id) not in not_creditable_artists
+            ]
+
+        if comp:
+            main_artists: list[str] = [self.va_name]
+        else:
+            if not (
+                main_artists := get_filtered_artists(
+                    category=ProcessedArtistCategories.PRODUCERS
                 )
-                if (name, id) not in not_creditable_artists
-            ]
-            or [
-                name
-                for name, id in artists_by_categories[
-                    ProcessedArtistCategories.VOCALISTS
-                ]
-                if (name, id) not in not_creditable_artists
-            ]
-        )
-
-        artist_string: str = (
-            ", ".join(main_artists)
-            if not len(main_artists) > 5
-            else self.va_name
-        )
-
-        featured_artists: list[str] = []
+                + get_filtered_artists(
+                    category=ProcessedArtistCategories.CIRCLES
+                )
+            ):
+                main_artists = get_filtered_artists(
+                    category=ProcessedArtistCategories.VOCALISTS
+                )
 
         if (
             include_featured_artists
             and artists_by_categories[ProcessedArtistCategories.VOCALISTS]
             and (comp or main_artists)
         ):
-            featured_artists.extend(
-                name
-                for name, id in artists_by_categories[
-                    ProcessedArtistCategories.VOCALISTS
-                ]
-                if (name, id) not in not_creditable_artists
+            featured_artists: list[str] = get_filtered_artists(
+                category=ProcessedArtistCategories.VOCALISTS
             )
-            if (
-                featured_artists
-                and not len(main_artists) + len(featured_artists) > 5
-            ):
-                artist_string += f" feat. {', '.join(featured_artists)}"
+        else:
+            featured_artists = []
+
+        if len(main_artists) > 5:
+            artist_string: str = self.va_name
+        else:
+
+            def create_artists_dict_list(
+                artists: list[str],
+            ) -> list[dict[str | int, str]]:
+                return [{"name": artist, "id": ""} for artist in artists]
+
+            artists_dict_list: list[dict[str | int, str]] = (
+                create_artists_dict_list(artists=main_artists)
+            )
+            join_key: str = "join"
+            artists_dict_list[-1][join_key] = "feat."
+
+            if len(main_artists + featured_artists) <= 5:
+                artists_dict_list += create_artists_dict_list(
+                    artists=featured_artists
+                )
+            artist_string, _ = metadata_plugins.MetadataSourcePlugin.get_artist(
+                artists=artists_dict_list,
+                join_key=join_key,
+            )
 
         artists_names: list[str]
         artists_ids: list[str]
@@ -418,9 +433,9 @@ class ArtistsProcessor:
         )
 
         artist_id: str | None = None
-        for x in *main_artists, *featured_artists:
+        for artist in main_artists + featured_artists:
             with suppress(IndexError, ValueError):
-                if artist_id := artists_ids[artists_names.index(x)]:
+                if artist_id := artists_ids[artists_names.index(artist)]:
                     break
         if not artist_id:
             artist_id = next(filter(None, artists_ids), None)
