@@ -38,56 +38,52 @@ class LyricsProcessor:
         lyrics: str | None = None
 
         remote_lyrics_item: LyricsForSongContract
-        if remote_lyrics:
-            for remote_lyrics_item in remote_lyrics:
-                remote_translation_type: TranslationType = (
-                    remote_lyrics_item.translation_type
-                )
-                value: str | None = remote_lyrics_item.value
-                # get the intersection
-                culture_codes: set[str] | None = (
-                    remote_lyrics_item.culture_codes
-                )
-                if culture_codes:
-                    culture_codes &= {
-                        "en",
-                        "ja",
-                    }
+        for remote_lyrics_item in remote_lyrics or ():
+            remote_translation_type: TranslationType = (
+                remote_lyrics_item.translation_type
+            )
+            value: str | None = remote_lyrics_item.value
+            # get the intersection
+            culture_codes: set[str] | None = remote_lyrics_item.culture_codes
+            if culture_codes:
+                culture_codes &= {
+                    "en",
+                    "ja",
+                }
 
-                if not culture_codes:
-                    if (
-                        self.language_preference
-                        == ContentLanguagePreference.ROMAJI
-                        and remote_translation_type == TranslationType.ROMANIZED
-                    ):
-                        lyrics = value
-                    continue
+            if not culture_codes:
+                if (
+                    self.language_preference == ContentLanguagePreference.ROMAJI
+                    and remote_translation_type == TranslationType.ROMANIZED
+                ):
+                    lyrics = value
+                continue
 
-                if "en" in culture_codes:
-                    if remote_translation_type == TranslationType.ORIGINAL:
-                        script = "Latn"
-                        language = "eng"
-                    if (
-                        self.language_preference
-                        == ContentLanguagePreference.ENGLISH
-                    ):
-                        lyrics = value
-                    continue
+            if "en" in culture_codes:
+                if remote_translation_type == TranslationType.ORIGINAL:
+                    script = "Latn"
+                    language = "eng"
+                if (
+                    self.language_preference
+                    == ContentLanguagePreference.ENGLISH
+                ):
+                    lyrics = value
+                continue
 
-                if "ja" in culture_codes:
-                    if remote_translation_type == TranslationType.ORIGINAL:
-                        script = "Jpan"
-                        language = "jpn"
-                    if (
-                        self.language_preference
-                        == ContentLanguagePreference.JAPANESE
-                    ):
-                        lyrics = value
+            if "ja" in culture_codes:
+                if remote_translation_type == TranslationType.ORIGINAL:
+                    script = "Jpan"
+                    language = "jpn"
+                if (
+                    self.language_preference
+                    == ContentLanguagePreference.JAPANESE
+                ):
+                    lyrics = value
 
-            if not lyrics and remote_lyrics:
-                lyrics = self._get_fallback_lyrics(
-                    remote_lyrics,
-                )
+        if not lyrics and remote_lyrics:
+            lyrics = self._get_fallback_lyrics(
+                remote_lyrics,
+            )
 
         return script, language, lyrics
 
@@ -108,29 +104,37 @@ class LyricsProcessor:
             Lyrics text from the best available fallback option, or None if none
             found
         """
+        if not remote_lyrics:
+            return None
 
-        language_preference: str = self.language_preference
-        remote_lyrics_item: LyricsForSongContract
-        if language_preference == ContentLanguagePreference.ENGLISH:
-            for remote_lyrics_item in remote_lyrics:
-                culture_codes: set[str] | None
-                if (
-                    culture_codes := remote_lyrics_item.culture_codes
-                ) and "en" in culture_codes:
-                    return remote_lyrics_item.value
-            language_preference = ContentLanguagePreference.ROMAJI
-        if language_preference == ContentLanguagePreference.ROMAJI:
-            for remote_lyrics_item in remote_lyrics:
-                if (
-                    remote_lyrics_item.translation_type
-                    == TranslationType.ROMANIZED
-                ):
-                    return remote_lyrics_item.value
-        if language_preference == ContentLanguagePreference.DEFAULT:
-            for remote_lyrics_item in remote_lyrics:
-                if (
-                    remote_lyrics_item.translation_type
-                    == TranslationType.ORIGINAL
-                ):
-                    return remote_lyrics_item.value
-        return next(iter(remote_lyrics)).value if remote_lyrics else None
+        preference_to_translation_type: dict[
+            ContentLanguagePreference, TranslationType
+        ] = {
+            ContentLanguagePreference.ENGLISH: TranslationType.ORIGINAL,
+            ContentLanguagePreference.ROMAJI: TranslationType.ROMANIZED,
+            ContentLanguagePreference.DEFAULT: TranslationType.ORIGINAL,
+        }
+
+        preference: ContentLanguagePreference
+        for preference in [
+            ContentLanguagePreference(value=self.language_preference),
+            ContentLanguagePreference.ROMAJI,
+            ContentLanguagePreference.DEFAULT,
+        ]:
+            translation_type: TranslationType | None
+            if (
+                translation_type := (
+                    preference_to_translation_type.get(preference)
+                )
+            ) is None:
+                continue
+
+            for item in remote_lyrics:
+                if item.translation_type == translation_type:
+                    if preference == ContentLanguagePreference.ENGLISH:
+                        if item.culture_codes and "en" in item.culture_codes:
+                            return item.value
+                    else:
+                        return item.value
+
+        return next(iter(remote_lyrics)).value
