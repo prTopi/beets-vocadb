@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from . import FrozenBase
+from . import PartialFindResult
 from .song_for_api_contract import SongForApiContract
 
 
-class SongForApiContractPartialFindResult(FrozenBase, frozen=True):
-    total_count: int
-    term: str | None = None
-    items: tuple[SongForApiContract, ...] | None = None
+class SongForApiContractPartialFindResult(
+    PartialFindResult[SongForApiContract], frozen=True
+): ...

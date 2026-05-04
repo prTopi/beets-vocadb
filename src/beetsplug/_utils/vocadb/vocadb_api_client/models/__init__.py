@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TypeVar
+from typing import Generic, TypeVar
 
 import msgspec
 
@@ -62,6 +62,15 @@ class FrozenBase(
     omit_defaults=True,
     rename="camel",
 ): ...
+
+
+F = TypeVar("F", bound=FrozenBase)
+
+
+class PartialFindResult(FrozenBase, Generic[F], frozen=True):
+    total_count: int
+    term: str | None = None
+    items: tuple[F, ...] | None = None
 
 
 # Explicitly export the public API
