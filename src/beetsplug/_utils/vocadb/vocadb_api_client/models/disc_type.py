@@ -1,6 +1,6 @@
 from enum import auto
 
-from . import PascalCaseStrEnum
+from . import PascalCaseStrEnum, StrEnumSet, TypeAlias
 
 
 class DiscType(PascalCaseStrEnum):
@@ -16,3 +16,6 @@ class DiscType(PascalCaseStrEnum):
     FANMADE = auto()
     INSTRUMENTAL = auto()
     OTHER = auto()
+
+
+DiscTypeSet: TypeAlias = StrEnumSet[DiscType]

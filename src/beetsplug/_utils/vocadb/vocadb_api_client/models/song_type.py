@@ -1,6 +1,6 @@
 from enum import auto
 
-from . import PascalCaseStrEnum
+from . import PascalCaseStrEnum, StrEnumSet, TypeAlias
 
 
 class SongType(PascalCaseStrEnum):
@@ -21,3 +21,6 @@ class SongType(PascalCaseStrEnum):
 
     # TouhouDB-specific
     REARRANGEMENT = auto()
+
+
+SongTypeSet: TypeAlias = StrEnumSet[SongType]

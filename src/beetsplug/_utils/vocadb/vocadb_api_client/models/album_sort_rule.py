@@ -1,6 +1,6 @@
 from enum import auto
 
-from . import PascalCaseStrEnum, StrEnumSet, TypeAlias
+from . import PascalCaseStrEnum
 
 
 class AlbumSortRule(PascalCaseStrEnum):
@@ -13,6 +13,3 @@ class AlbumSortRule(PascalCaseStrEnum):
     RATING_TOTAL = auto()
     NAME_THEN_RELEASE_DATE = auto()
     COLLECTION_COUNT = auto()
-
-
-AlbumSortRuleSet: TypeAlias = StrEnumSet[AlbumSortRule]

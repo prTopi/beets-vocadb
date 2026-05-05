@@ -1,37 +1,51 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from httpx import QueryParams
 
-from ..models.content_language_preference import ContentLanguagePreference
+from ..models.pv_services import PVServicesSet
 from ..models.song_for_api_contract import SongForApiContract
-from ..models.song_for_api_contract_partial_find_result import (  # noqa: E501
+from ..models.song_for_api_contract_partial_find_result import (
     SongForApiContractPartialFindResult,
 )
+from ..models.song_type import SongTypeSet
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
-    from typing import TypedDict
+    from typing_extensions import Unpack
 
-    from typing_extensions import NotRequired, Unpack
-
-    from ..models.name_match_mode import NameMatchMode
-    from ..models.song_optional_fields import SongOptionalFieldsSet
+    from ..models.song_optional_fields import SongOptionalFields
     from ..models.song_sort_rule import SongSortRule
+    from ._api_base import AlbumsOrSongsGetParams, ParamsBase
 
 
 class SongApiApi(ApiBase):
     if TYPE_CHECKING:
 
-        class _ApiSongsGetParams(TypedDict):
-            query: str
-            maxResults: NotRequired[int]
-            sort: NotRequired[SongSortRule]
-            preferAccurateMatches: NotRequired[bool]
-            nameMatchMode: NotRequired[NameMatchMode]
-            fields: NotRequired[SongOptionalFieldsSet]
-            lang: NotRequired[ContentLanguagePreference]
+        class _ApiSongsGetParams(
+            AlbumsOrSongsGetParams[SongOptionalFields, SongSortRule],
+            total=False,
+        ):
+            songTypes: SongTypeSet  # noqa: N815
+            afterDate: datetime  # noqa: N815
+            beforeDate: datetime  # noqa: N815
+            unifyTypesAndTags: bool  # noqa: N815
+            # artistId[]: Iterable[int]
+            onlyWithPvs: bool  # noqa: N815
+            pvServices: PVServicesSet  # noqa: N815
+            since: int
+            minScore: int  # noqa: N815
+            userCollectionId: int  # noqa: N815
+            releaseEventId: int  # noqa: N815
+            parentSongId: int  # noqa: N815
+            minMilliBpm: int  # noqa: N815
+            maxMilliBpm: int  # noqa: N815
+            minLength: int  # noqa: N815
+            maxLength: int  # noqa: N815
+            # languages[]: Iterable[ContentLanguagePreference]
+            # excludedTagIds[]: Iterable[int]
 
     def api_songs_get(
         self,
@@ -45,9 +59,9 @@ class SongApiApi(ApiBase):
 
     if TYPE_CHECKING:
 
-        class _ApiSongsIdGetParams(TypedDict):
-            fields: NotRequired[SongOptionalFieldsSet]
-            lang: NotRequired[ContentLanguagePreference]
+        class _ApiSongsIdGetParams(
+            ParamsBase[SongOptionalFields], total=False
+        ): ...
 
     def api_songs_id_get(
         self, id: int, **params: Unpack[_ApiSongsIdGetParams]
