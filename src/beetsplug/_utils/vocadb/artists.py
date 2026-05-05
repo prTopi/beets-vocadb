@@ -6,9 +6,9 @@ from enum import auto
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
-from beets import metadata_plugins
 
 from .vocadb_api_client import ArtistCategories, ArtistRoles, ArtistRolesSet
+from beets.metadata_plugins import MetadataSourcePlugin
 from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
@@ -421,7 +421,7 @@ class ArtistsProcessor:
                 artists_dict_list += create_artists_dict_list(
                     artists=featured_artists
                 )
-            artist_string, _ = metadata_plugins.MetadataSourcePlugin.get_artist(
+            artist_string, _ = MetadataSourcePlugin.get_artist(
                 artists=artists_dict_list,
                 join_key=join_key,
             )
