@@ -16,9 +16,7 @@ else:
     from typing_extensions import override
 
 
-class ArtistForAlbumForApiContract(
-    FrozenBase, dict=True, frozen=True, kw_only=True
-):
+class ArtistForAlbumForApiContract(FrozenBase, dict=True, frozen=True):
     _categories: str = msgspec.field(name="categories")
     _effective_roles: str = msgspec.field(name="effectiveRoles")
     is_support: bool
