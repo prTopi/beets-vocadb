@@ -44,12 +44,10 @@ class LyricsProcessor:
             )
             value: str | None = remote_lyrics_item.value
             # get the intersection
-            culture_codes: set[str] | None = remote_lyrics_item.culture_codes
-            if culture_codes:
-                culture_codes &= {
-                    "en",
-                    "ja",
-                }
+            culture_codes: set[str] | None = {
+                "en",
+                "ja",
+            } & (remote_lyrics_item.culture_codes or set())
 
             if not culture_codes:
                 if (
@@ -68,7 +66,7 @@ class LyricsProcessor:
                     == ContentLanguagePreference.ENGLISH
                 ):
                     lyrics = value
-                continue
+                    continue
 
             if "ja" in culture_codes:
                 if remote_translation_type == TranslationType.ORIGINAL:
