@@ -327,8 +327,8 @@ class Mapper:
             # logic for derived songs
             self._log.debug(
                 msg=f'Track "{remote_derivate_song.name}" with id '
-                + f"{remote_derivate_song.id} is a derivate of "
-                + f"a the track with id {remote_original_version_id}."
+                + f"{remote_derivate_song.id} is a derivative of "
+                + f"the track with id {remote_original_version_id}."
             )
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
