@@ -35,15 +35,17 @@ class ApiClient:
         )
         self.user_agent = user_agent
         self.base_url: str | httpx.URL = base_url
-        _ = weakref.finalize(self, self.close)
+        self._finalizer: weakref.finalize[[], ApiClient] | None = None
 
     @cached_property
     def client(self) -> httpx.Client:
-        return httpx.Client(
+        client: httpx.Client = httpx.Client(
             base_url=httpx.URL(url=self.base_url),
             http2=True,
             transport=RetryTransport(retry=Retry(total=6, backoff_factor=0.5)),
         )
+        self._finalizer = weakref.finalize(self, self._close)
+        return client
 
     @property
     def user_agent(self) -> str:
@@ -90,7 +92,7 @@ class ApiClient:
             request: httpx.Request = self.client.build_request(
                 method="GET", url=relative_path, headers=headers, params=params
             )
-            self._log.debug(f"url: {request.url}")
+            self._log.debug(msg=f"url: {request.url}")
             response: httpx.Response = self.client.send(request=request)
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
@@ -98,14 +100,13 @@ class ApiClient:
             return None
         try:
             return self.decode(content=response.text, target_type=return_type)
-        except msgspec.DecodeError:
-            import json
-
-            self._log.debug(json.dumps(response.json(), indent=2))
+        except msgspec.DecodeError as e:
+            self._log.info("Error decoding data: {}", e)
+            self._log.debug("{}", msgspec.json.format(response.text))
             return None
 
     # TODO: better error handling
 
-    def close(self) -> None:
+    def _close(self) -> None:
         self._log.debug("Closing {}", self.client)
         self.client.close()
