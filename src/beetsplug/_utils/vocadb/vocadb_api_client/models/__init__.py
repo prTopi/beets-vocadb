@@ -40,8 +40,6 @@ _E2 = TypeVar("_E2", bound=StrEnum)
 
 
 class StrEnumSet(set[_E]):
-    _enum_cls: type[_E]
-
     @override
     def __str__(self) -> str:
         return ",".join(self)
