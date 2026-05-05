@@ -33,7 +33,6 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from .vocadb_api_client import (
-        AlbumApiApi,
         AlbumDiscPropertiesContract,
         AlbumForApiContract,
         ArtistForSongContract,
@@ -87,7 +86,6 @@ class Mapper:
         data_source: str,
         flexible_attributes: FlexibleAttributes,
         ignore_video_tracks: bool,
-        album_api: AlbumApiApi,
         song_api: SongApiApi,
         language_preference: ContentLanguagePreference,
         include_featured_album_artists: bool,
@@ -111,7 +109,6 @@ class Mapper:
         )
         self.exclude_item_fields: list[str] = exclude_item_fields
         self.exclude_album_fields: list[str] = exclude_album_fields
-        self.album_api: AlbumApiApi = album_api
         self.song_api: SongApiApi = song_api
         self.language_preference: ContentLanguagePreference = (
             language_preference

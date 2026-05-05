@@ -207,7 +207,6 @@ class PluginBase(MetadataSourcePlugin):
             data_source=self.data_source,
             flexible_attributes=self._flexible_attributes,
             ignore_video_tracks=IGNORE_VIDEO_TRACKS,
-            album_api=self.album_api,
             song_api=self.song_api,
             language_preference=self.language_preference,
             include_featured_album_artists=self.include_featured_album_artists,
