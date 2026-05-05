@@ -297,7 +297,6 @@ class PluginBase(MetadataSourcePlugin):
 
         item: library.Item
         for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
-            item_formatted: str = format(item)
             track_id: str
             if not (
                 track_id := item.get(  # pyright: ignore[reportAssignmentType,reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
@@ -307,25 +306,25 @@ class PluginBase(MetadataSourcePlugin):
                 )
             ):
                 self._log.debug(
-                    msg="Skipping singleton with no "
+                    "Skipping singleton with no "
                     + self._flexible_attributes.item[
                         ItemFlexibleAttributes.TRACK_ID
                     ]
-                    + f": {item_formatted}"
+                    + ": {}",
+                    item,
                 )
                 continue
             if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} singleton: "
-                    + item_formatted
+                    f"Skipping non-{self.data_source} singleton: {{}}", item
                 )
                 continue
-            self._log.debug("Searching for track {0}", item_formatted)
+            self._log.debug("Searching for track {0}", item)
             track_info: TrackInfo | None = self.track_for_id(track_id)
             if not track_info:
                 self._log.info(
-                    msg=f"Recording ID not found: {track_id} "
-                    + f"for track {item_formatted}"
+                    f"Recording ID not found: {track_id} " + "for track {}",
+                    item,
                 )
                 continue
             with lib.transaction():
@@ -360,7 +359,6 @@ class PluginBase(MetadataSourcePlugin):
 
         album: library.Album
         for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
-            album_formatted: str = format(album)
             album_id: str | int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
                 key=self._flexible_attributes.album[
                     AlbumFlexibleAttributes.ALBUM_ID
@@ -368,23 +366,23 @@ class PluginBase(MetadataSourcePlugin):
             )
             if not album_id:
                 self._log.debug(
-                    msg="Skipping album with no "
+                    "Skipping album with no "
                     + self._flexible_attributes.album[
                         AlbumFlexibleAttributes.ALBUM_ID
                     ]
-                    + f": {album_formatted}"
+                    + ": {}",
+                    album,
                 )
                 continue
             if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
                 self._log.debug(
-                    msg=f"Skipping non-{self.data_source} album: {album_formatted}"
+                    f"Skipping non-{self.data_source} album: {{}}", album
                 )
                 continue
             album_info: AlbumInfo | None = self.album_for_id(album_id=album_id)  # pyright: ignore[reportUnknownArgumentType]
             if not album_info:
                 self._log.info(
-                    msg=f"Release ID {album_id} "
-                    + f"not found for album {album_formatted}"
+                    f"Release ID {album_id} not found for album {{}}", album
                 )
                 continue
             items: Results[library.Item] = album.items()
@@ -419,8 +417,9 @@ class PluginBase(MetadataSourcePlugin):
 
                 # use automatic matching
                 self._log.warning(
-                    msg=f"Trying to automatch missing track ID {track_id}"
-                    + f" in album info for {album_formatted}..."
+                    f"Trying to automatch missing track ID {track_id}"
+                    + " in album info for {}...",
+                    album,
                 )
                 # Unset track id so that it won't affect distance
                 item[
@@ -443,7 +442,7 @@ class PluginBase(MetadataSourcePlugin):
                     msg=f"Success, automatched to ID {new_track_id}"
                 )
 
-            self._log.debug(msg=f"applying changes to {album_formatted}")
+            self._log.debug("applying changes to {}", album)
             with lib.transaction():
                 AlbumMatch(
                     distance=Distance(), info=album_info, mapping=mapping
@@ -476,7 +475,7 @@ class PluginBase(MetadataSourcePlugin):
                 if move and lib.directory in ancestry(
                     path=any_changed_item.path
                 ):
-                    self._log.debug(msg=f"moving album {album_formatted}")
+                    self._log.debug("moving album {}", album)
                     album.move()  # pyright: ignore[reportUnknownMemberType]
 
     @override
