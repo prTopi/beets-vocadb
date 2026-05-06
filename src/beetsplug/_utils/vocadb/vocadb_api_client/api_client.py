@@ -96,12 +96,12 @@ class ApiClient:
             response: httpx.Response = self.client.send(request=request)
             _ = response.raise_for_status()
         except httpx.HTTPError as e:
-            self._log.error("Error fetching data - {}", e)
+            self._log.error("Error fetching {} - {}", return_type.__name__, e)
             return None
         try:
             return self.decode(content=response.text, target_type=return_type)
         except msgspec.DecodeError as e:
-            self._log.info("Error decoding data: {}", e)
+            self._log.info("Error decoding {}: {}", return_type.__name__, e)
             self._log.debug("{}", msgspec.json.format(response.text))
             return None
 
