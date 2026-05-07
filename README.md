@@ -39,21 +39,34 @@ For usage information run `beet [subcommand] -h`.
 ## Configuration
 
 ```yaml
-vocadb: # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
-  data_source_mismatch_penalty: 0.5 # Penalty to be added to all matches with different source when using autotagger (0 disabled, 1 highest)
-  search_limit: 5 # Number of results to get from source. Consider increasing if correct song or album doesn't show up in the list of candidates
-  prefer_romaji: false # Prefer romanized if they exist rather than Japanese
-  include_featured_album_artists: false # Include featured artists in album artists string
-  exclude_item_fields: [] # List of fields that you do not want to see in the metadata of items.
-  exclude_album_fields: [] # See above, but for albums
+ # Name of the plugin you want to configure (vocadb, utaitedb or touhoudb)
+vocadb:
+   # Penalty to be added to all matches with different source
+   # when using autotagger (0 disabled, 1 highest)
+  data_source_mismatch_penalty: 0.5
+   # Number of results to get from source. Consider increasing
+   # if the correct song or album doesn't show up in the list of candidates
+  search_limit: 5
+   # Prefer romanized if they exist rather than Japanese
+  prefer_romaji: false
+   # Include featured artists in album artists string
+  include_featured_album_artists: false
+   # When encountering a specific voicebank, replace it with it's
+   # base voicebank (e. g. Hatsune Miku V4X (Original) -> Hatsune Miku)
+  use_base_voicebank: false
+   # List of fields that you do not want to see in the metadata of items.
+  exclude_item_fields: []
+   # Same as above, but for albums
+  exclude_album_fields: []
 ```
 
 The plugins use beets' default import language list to determine which language
-to use for tags. (English is used as a fallback)
+to use for tags.
 
 ```yaml
 import:
-  languages: # Example: Prefer Japanese language for tags
+  # Example: Prefer Japanese language for tags
+  languages:
     - jp
     - en
 ```
