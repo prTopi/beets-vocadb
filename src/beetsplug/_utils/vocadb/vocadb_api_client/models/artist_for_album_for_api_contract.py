@@ -52,12 +52,18 @@ class ArtistForAlbumForApiContract(FrozenBase, dict=True, frozen=True):
 
     @cached_property
     def categories(self) -> ArtistCategoriesSet:
-        return StrEnumSet.from_delimited_str(ArtistCategories, self._categories)
+        return StrEnumSet[ArtistCategories].from_delimited_str(
+            ArtistCategories, self._categories
+        )
 
     @cached_property
     def effective_roles(self) -> ArtistRolesSet:
-        return StrEnumSet.from_delimited_str(ArtistRoles, self._effective_roles)
+        return StrEnumSet[ArtistRoles].from_delimited_str(
+            ArtistRoles, self._effective_roles
+        )
 
     @cached_property
     def roles(self) -> ArtistRolesSet:
-        return StrEnumSet.from_delimited_str(ArtistRoles, self._roles)
+        return StrEnumSet[ArtistRoles].from_delimited_str(
+            ArtistRoles, self._roles
+        )

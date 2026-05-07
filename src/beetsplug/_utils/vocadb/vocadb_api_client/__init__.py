@@ -3,6 +3,7 @@ __version__ = "0.0.1"
 # Define package exports
 __all__ = [
     "AlbumApiApi",
+    "AlbumContract",
     "AlbumDiscPropertiesContract",
     "AlbumForApiContract",
     "AlbumForApiContractPartialFindResult",
@@ -39,6 +40,7 @@ __all__ = [
     "OptionalDateTimeContract",
     "PVServices",
     "SongApiApi",
+    "SongContract",
     "SongForApiContract",
     "SongForApiContractPartialFindResult",
     "SongInAlbumForApiContract",
@@ -56,12 +58,14 @@ __all__ = [
     "TagUsageForApiContract",
     "TranslationType",
     "WebLinkCategory",
+    "WebLinkContract",
     "WebLinkForApiContract",
 ]
 
 # import apis into sdk package
 from .api import AlbumApiApi, ArtistApiApi, SongApiApi, TagApiApi
 from .api_client import ApiClient
+from .models.album_contract import AlbumContract
 from .models.album_disc_properties_contract import AlbumDiscPropertiesContract
 from .models.album_for_api_contract import AlbumForApiContract
 from .models.album_for_api_contract_partial_find_result import (
@@ -110,6 +114,7 @@ from .models.lyrics_for_song_contract import LyricsForSongContract
 from .models.name_match_mode import NameMatchMode
 from .models.optional_date_time_contract import OptionalDateTimeContract
 from .models.pv_services import PVServices
+from .models.song_contract import SongContract
 from .models.song_for_api_contract import SongForApiContract
 from .models.song_for_api_contract_partial_find_result import (
     SongForApiContractPartialFindResult,
@@ -131,4 +136,5 @@ from .models.tag_sort_rule import TagSortRule
 from .models.tag_usage_for_api_contract import TagUsageForApiContract
 from .models.translation_type import TranslationType
 from .models.web_link_category import WebLinkCategory
+from .models.web_link_contract import WebLinkContract
 from .models.web_link_for_api_contract import WebLinkForApiContract

@@ -8,6 +8,7 @@ class SongInAlbumForApiContract(FrozenBase, frozen=True):
     disc_number: int
     id: int
     track_number: int
+    # rating: SongVoteRating | None = None
     song: SongForApiContract | None = None
-    computed_culture_codes: set[str] | None = None
+    computed_culture_codes: tuple[str, ...] | None = None
     name: str | None = None

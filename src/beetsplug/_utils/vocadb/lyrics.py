@@ -47,7 +47,11 @@ class LyricsProcessor:
             culture_codes: set[str] | None = {
                 "en",
                 "ja",
-            } & (remote_lyrics_item.culture_codes or set())
+            } & set(
+                remote_culture_codes
+                if (remote_culture_codes := remote_lyrics_item.culture_codes)
+                else ()
+            )
 
             if not culture_codes:
                 if (

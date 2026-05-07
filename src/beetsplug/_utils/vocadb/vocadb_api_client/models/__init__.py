@@ -36,7 +36,6 @@ class PascalCaseStrEnum(StrEnum):
 
 
 _E = TypeVar("_E", bound=StrEnum)
-_E2 = TypeVar("_E2", bound=StrEnum)
 
 
 class StrEnumSet(set[_E]):
@@ -44,13 +43,11 @@ class StrEnumSet(set[_E]):
     def __str__(self) -> str:
         return ",".join(self)
 
-    @staticmethod
+    @classmethod
     def from_delimited_str(
-        strenum_cls: type[_E2], csv: str, delimiter: str = ","
-    ) -> StrEnumSet[_E2]:
-        return StrEnumSet[_E2](
-            strenum_cls(role.strip()) for role in csv.split(delimiter)
-        )
+        cls, strenum_cls: type[_E], csv: str, delimiter: str = ","
+    ) -> StrEnumSet[_E]:
+        return cls(strenum_cls(role.strip()) for role in csv.split(delimiter))
 
 
 class FrozenBase(
