@@ -1,28 +1,28 @@
 from __future__ import annotations
 
+import posixpath
 from typing import TYPE_CHECKING
-
-import httpx
 
 from ..models.tag_for_api_contract import TagForApiContract
 from ..models.tag_for_api_contract_partial_find_result import (
     TagForApiContractPartialFindResult,  # noqa: E501
 )
-from ..models.tag_optional_fields import TagOptionalFields
-from ..models.tag_sort_rule import TagSortRule
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
-    from ._api_base import ParamsBase, QueryParamsBase
+    from ..models.tag_optional_fields import TagOptionalFields
+    from ..models.tag_sort_rule import TagSortRule
+    from ._types import ParamsBase, QueryParamsBase
 
 
-class TagApiApi(ApiBase):
+class TagApiApi(ApiBase, path="tags"):
     if TYPE_CHECKING:
 
         class _ApiTagsGetParams(
-            QueryParamsBase[TagOptionalFields, TagSortRule], total=False
+            QueryParamsBase[TagOptionalFields, TagSortRule],
+            total=False,
         ):
             allowChildren: bool  # noqa: N815
             categoryName: str  # noqa: N815
@@ -34,7 +34,7 @@ class TagApiApi(ApiBase):
     ) -> TagForApiContractPartialFindResult | None:
         return self.api_client.call_api(
             relative_path="tags",
-            params=httpx.QueryParams(**params),
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=TagForApiContractPartialFindResult,
         )
 
@@ -48,7 +48,7 @@ class TagApiApi(ApiBase):
         self, id: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
     ) -> tuple[TagForApiContract, ...] | None:
         return self.api_client.call_api(
-            relative_path=f"tags/{id}/children",
-            params=httpx.QueryParams(**params),
+            relative_path=posixpath.join(self.path, str(id), "children"),
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=tuple[TagForApiContract, ...],
         )

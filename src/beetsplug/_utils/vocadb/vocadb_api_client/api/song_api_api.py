@@ -1,27 +1,27 @@
 from __future__ import annotations
 
-from datetime import datetime
+import posixpath
 from typing import TYPE_CHECKING
 
-from httpx import QueryParams
-
-from ..models.pv_services import PVServicesSet
 from ..models.song_for_api_contract import SongForApiContract
 from ..models.song_for_api_contract_partial_find_result import (
     SongForApiContractPartialFindResult,
 )
-from ..models.song_type import SongTypeSet
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from typing_extensions import Unpack
 
+    from ..models.pv_services import PVServicesSet
     from ..models.song_optional_fields import SongOptionalFields
     from ..models.song_sort_rule import SongSortRule
-    from ._api_base import AlbumsOrSongsGetParams, ParamsBase
+    from ..models.song_type import SongTypeSet
+    from ._types import AlbumsOrSongsGetParams, ParamsBase
 
 
-class SongApiApi(ApiBase):
+class SongApiApi(ApiBase, path="songs"):
     if TYPE_CHECKING:
 
         class _ApiSongsGetParams(
@@ -52,8 +52,8 @@ class SongApiApi(ApiBase):
         **params: Unpack[_ApiSongsGetParams],
     ) -> SongForApiContractPartialFindResult | None:
         return self.api_client.call_api(
-            relative_path="songs",
-            params=QueryParams(**params),
+            relative_path=self.path,
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=SongForApiContractPartialFindResult,
         )
 
@@ -67,7 +67,7 @@ class SongApiApi(ApiBase):
         self, id: int, **params: Unpack[_ApiSongsIdGetParams]
     ) -> SongForApiContract | None:
         return self.api_client.call_api(
-            relative_path=f"songs/{id}",
-            params=QueryParams(**params),
+            relative_path=posixpath.join(self.path, str(id)),
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=SongForApiContract,
         )

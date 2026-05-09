@@ -1,21 +1,20 @@
 from __future__ import annotations
 
+import posixpath
 from typing import TYPE_CHECKING
 
-from httpx import QueryParams
-
 from ..models.artist_for_api_contract import ArtistForApiContract
-from ..models.artist_optional_fields import ArtistOptionalFields
-from ..models.artist_relations_fields import ArtistRelationsFieldsSet
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
 
-    from ._api_base import ParamsBase
+    from ..models.artist_optional_fields import ArtistOptionalFields
+    from ..models.artist_relations_fields import ArtistRelationsFieldsSet
+    from ._types import ParamsBase
 
 
-class ArtistApiApi(ApiBase):
+class ArtistApiApi(ApiBase, path="artists"):
     if TYPE_CHECKING:
 
         class _ApiArtistsIdGetParams(
@@ -27,7 +26,7 @@ class ArtistApiApi(ApiBase):
         self, id: int, **params: Unpack[_ApiArtistsIdGetParams]
     ) -> ArtistForApiContract | None:
         return self.api_client.call_api(
-            relative_path=f"artists/{id}",
-            params=QueryParams(**params),
+            relative_path=posixpath.join(self.path, str(id)),
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=ArtistForApiContract,
         )

@@ -20,7 +20,6 @@ else:
 
 from typing import TYPE_CHECKING, TypedDict
 
-import httpx
 from beets import __version__ as beets_version
 from beets import config as beets_config
 from beets import dbcore
@@ -112,8 +111,8 @@ class PluginBase(MetadataSourcePlugin):
 
     _flexible_attributes: FlexibleAttributes
 
-    base_url: httpx.URL | str
-    api_url: httpx.URL | str
+    base_url: str
+    api_url: str
     sync_subcommand: str
 
     def __init__(self) -> None:
@@ -177,8 +176,8 @@ class PluginBase(MetadataSourcePlugin):
 
     def __init_subclass__(
         cls,
-        base_url: httpx.URL | str,
-        api_url: httpx.URL | str,
+        base_url: str,
+        api_url: str,
         subcommand_prefix: str,
     ) -> None:
         super().__init_subclass__()
@@ -188,9 +187,11 @@ class PluginBase(MetadataSourcePlugin):
 
     @cached_property
     def client(self) -> ApiClient:
-        return ApiClient(
+        client: ApiClient = ApiClient(
             user_agent=USER_AGENT, base_url=self.api_url, logger=self._log
         )
+        self.register_listener(event="cli_exit", func=client.close)
+        return client
 
     @cached_property
     def album_api(self) -> AlbumApiApi:

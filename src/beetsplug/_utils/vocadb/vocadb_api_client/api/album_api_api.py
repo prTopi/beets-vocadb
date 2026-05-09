@@ -1,32 +1,33 @@
 from __future__ import annotations
 
-from datetime import datetime
+import posixpath
 from typing import TYPE_CHECKING
-
-import httpx
 
 from ..models.album_for_api_contract import AlbumForApiContract
 from ..models.album_for_api_contract_partial_find_result import (
     AlbumForApiContractPartialFindResult,
 )
-from ..models.album_sort_rule import AlbumSortRule
-from ..models.disc_type import DiscTypeSet
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from typing_extensions import Unpack
 
     from ..models.album_optional_fields import AlbumOptionalFields
+    from ..models.album_sort_rule import AlbumSortRule
+    from ..models.disc_type import DiscTypeSet
     from ..models.song_optional_fields import SongOptionalFieldsSet
-    from ._api_base import AlbumsOrSongsGetParams, ParamsBase
+    from ._types import AlbumsOrSongsGetParams, ParamsBase
 
 
-class AlbumApiApi(ApiBase):
+class AlbumApiApi(ApiBase, path="albums"):
     if TYPE_CHECKING:
 
         class _ApiAlbumsGetParams(
             AlbumsOrSongsGetParams[AlbumOptionalFields, AlbumSortRule],
             total=False,
+            closed=True,
         ):
             discTypes: DiscTypeSet  # noqa: N815
             barcode: str
@@ -38,8 +39,8 @@ class AlbumApiApi(ApiBase):
         self, **params: Unpack[_ApiAlbumsGetParams]
     ) -> AlbumForApiContractPartialFindResult | None:
         return self.api_client.call_api(
-            relative_path="albums",
-            params=httpx.QueryParams(**params),
+            relative_path=self.path,
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=AlbumForApiContractPartialFindResult,
         )
 
@@ -54,7 +55,7 @@ class AlbumApiApi(ApiBase):
         self, id: int, **params: Unpack[_ApiAlbumsIdGetParams]
     ) -> AlbumForApiContract | None:
         return self.api_client.call_api(
-            relative_path=f"albums/{id}",
-            params=httpx.QueryParams(**params),
+            relative_path=posixpath.join(self.path, str(id)),
+            params=params,  # pyrefly: ignore[bad-argument-type]
             return_type=AlbumForApiContract,
         )

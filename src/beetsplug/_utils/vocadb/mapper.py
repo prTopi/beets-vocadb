@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import posixpath
 from enum import auto
 from logging import Logger
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
-import httpx
 from beets.autotag.hooks import AlbumInfo, TrackInfo
 
 from .artists import ArtistsProcessor
@@ -82,7 +83,7 @@ class FlexibleAttributes:
 class Mapper:
     def __init__(
         self,
-        base_url: httpx.URL | str,
+        base_url: str,
         data_source: str,
         flexible_attributes: FlexibleAttributes,
         ignore_video_tracks: bool,
@@ -97,7 +98,7 @@ class Mapper:
         va_name: str,
         logger: Logger,
     ) -> None:
-        self.base_url: str | httpx.URL = base_url
+        self.base_url: str = base_url
         self.data_source: str = data_source
         self.flexible_attributes: FlexibleAttributes = flexible_attributes
         self.ignore_video_tracks: bool = ignore_video_tracks
@@ -186,8 +187,8 @@ class Mapper:
             media = remote_discs[0].name
         except IndexError:
             media = None
-        data_url: str = str(
-            httpx.URL(url=self.base_url).join(url=f"Al/{album_id}")
+        data_url: str = urljoin(
+            base=self.base_url, url=posixpath.join("Al", album_id)
         )
         cover_art_url: str | None = (
             remote_main_picture.url_original
@@ -420,8 +421,8 @@ class Mapper:
             medium_index=medium_index,
             medium_total=medium_total,
             data_source=self.data_source,
-            data_url=str(
-                httpx.URL(url=self.base_url).join(url=f"S/{track_id}")
+            data_url=urljoin(
+                base=self.base_url, url=posixpath.join("S", track_id)
             ),
             lyricists=lyricists,
             lyricists_ids=None,
