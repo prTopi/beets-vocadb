@@ -5,9 +5,10 @@ from contextlib import suppress
 from enum import auto
 from functools import cache, cached_property, lru_cache
 from logging import Logger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from beets.metadata_plugins import MetadataSourcePlugin
+from beets.util import unique_list
 
 from .vocadb_api_client import (
     ArtistApiApi,
@@ -79,6 +80,21 @@ class CategorizedArtists(
             {key: ArtistCategory() for key in ProcessedArtistCategories}
         )
 
+    def _collect_unique_items(self, attr: str) -> list[str]:
+        return unique_list(
+            item
+            for category in self.values()
+            for item in cast(list[str], getattr(category, attr) or [])
+        )
+
+    @property
+    def names(self) -> list[str]:
+        return self._collect_unique_items("names")
+
+    @property
+    def ids(self) -> list[str]:
+        return self._collect_unique_items("ids")
+
 
 class ArtistsProcessor:
     def __init__(
@@ -114,7 +130,8 @@ class ArtistsProcessor:
                 )
             )
         ) and (remote_tag_candidates := remote_tag_find_result.items):
-            id = next(iter(remote_tag_candidates)).id
+            with suppress(IndexError):
+                id = remote_tag_candidates[0].id
 
         if not id:
             self._log.info('no "vocal synthesizer" tag found')
@@ -477,10 +494,11 @@ class ArtistsProcessor:
         """
 
         def get_filtered_artists(
-            category: ProcessedArtistCategories,
+            *categories: ProcessedArtistCategories,
         ) -> list[str]:
             return [
                 name
+                for category in categories
                 for name, id in artists_by_categories[category]
                 if (name, id) not in not_creditable_artists
             ]
@@ -490,14 +508,12 @@ class ArtistsProcessor:
         else:
             if not (
                 main_artists := get_filtered_artists(
-                    category=ProcessedArtistCategories.PRODUCERS
-                )
-                + get_filtered_artists(
-                    category=ProcessedArtistCategories.CIRCLES
+                    ProcessedArtistCategories.PRODUCERS,
+                    ProcessedArtistCategories.CIRCLES,
                 )
             ):
                 main_artists = get_filtered_artists(
-                    category=ProcessedArtistCategories.VOCALISTS
+                    ProcessedArtistCategories.VOCALISTS
                 )
 
         if (
@@ -506,7 +522,7 @@ class ArtistsProcessor:
             and (comp or main_artists)
         ):
             featured_artists: list[str] = get_filtered_artists(
-                category=ProcessedArtistCategories.VOCALISTS
+                ProcessedArtistCategories.VOCALISTS
             )
         else:
             featured_artists = []
@@ -535,12 +551,8 @@ class ArtistsProcessor:
                 join_key=join_key,
             )
 
-        artists_names: list[str]
-        artists_ids: list[str]
-        artists_names, artists_ids = self._extract_artists_from_categories(
-            artist_by_categories=artists_by_categories
-        )
-
+        artists_names: list[str] = artists_by_categories.names
+        artists_ids: list[str] = artists_by_categories.ids
         artist_id: str | None = None
         for artist in main_artists + featured_artists:
             with suppress(IndexError, ValueError):
@@ -555,37 +567,6 @@ class ArtistsProcessor:
             artists_names,
             artists_ids,
         )
-
-    @staticmethod
-    def _extract_artists_from_categories(
-        artist_by_categories: CategorizedArtists,
-    ) -> tuple[list[str], list[str]]:
-        """
-        Extracts relevant artists and their IDs.
-
-        Args:
-            artist_by_categories:
-                ArtistsByCategories object containing categorized artists
-
-        Returns:
-            Tuple containing:
-            - List of artist names in order of first appearance
-            - List of corresponding artist IDs in same order as artist names
-        """
-
-        category: ArtistCategory
-        artists: dict[str, str] = {}
-
-        for category in artist_by_categories.values():
-            # Merge each category's artists into the dict while preserving order
-            # and preventing duplicates
-            artists |= category.items()
-
-        # Convert dict to separate lists of artists and IDs
-        artists_names: list[str] = list(artists.keys())
-        artists_ids: list[str] = list(artists.values())
-
-        return artists_names, artists_ids
 
     @staticmethod
     def _get_label(
