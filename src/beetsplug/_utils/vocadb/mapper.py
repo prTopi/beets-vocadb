@@ -17,16 +17,16 @@ from .utils import (
     normalize_bpm,
 )
 from .vocadb_api_client import (
+    ArtistApiApi,
     ContentLanguagePreference,
     DiscMediaType,
     DiscType,
-    SongType,
-)
-from .vocadb_api_client.models import StrEnum
-from .vocadb_api_client.models.song_optional_fields import (
     SongOptionalFields,
     SongOptionalFieldsSet,
+    SongType,
+    TagApiApi,
 )
+from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable, Sequence
@@ -86,9 +86,12 @@ class Mapper:
         data_source: str,
         flexible_attributes: FlexibleAttributes,
         ignore_video_tracks: bool,
+        artist_api: ArtistApiApi,
         song_api: SongApiApi,
+        tag_api: TagApiApi,
         language_preference: ContentLanguagePreference,
         include_featured_album_artists: bool,
+        use_base_voicebank: bool,
         exclude_item_fields: list[str],
         exclude_album_fields: list[str],
         va_name: str,
@@ -99,7 +102,12 @@ class Mapper:
         self.flexible_attributes: FlexibleAttributes = flexible_attributes
         self.ignore_video_tracks: bool = ignore_video_tracks
         self.artists_processor: ArtistsProcessor = ArtistsProcessor(
-            va_name=va_name
+            va_name=va_name,
+            artist_api=artist_api,
+            tag_api=tag_api,
+            use_base_voicebank=use_base_voicebank,
+            language_preference=language_preference,
+            logger=logger,
         )
         self.lyrics_processor: LyricsProcessor = LyricsProcessor(
             language_preference=language_preference,
@@ -107,6 +115,7 @@ class Mapper:
         self.include_featured_album_artists: bool = (
             include_featured_album_artists
         )
+        self.use_base_voicebank: bool = use_base_voicebank
         self.exclude_item_fields: list[str] = exclude_item_fields
         self.exclude_album_fields: list[str] = exclude_album_fields
         self.song_api: SongApiApi = song_api

@@ -3,12 +3,26 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import suppress
 from enum import auto
-from functools import lru_cache
+from functools import cache, cached_property, lru_cache
+from logging import Logger
 from typing import TYPE_CHECKING
 
-
-from .vocadb_api_client import ArtistCategories, ArtistRoles, ArtistRolesSet
 from beets.metadata_plugins import MetadataSourcePlugin
+
+from .vocadb_api_client import (
+    ArtistApiApi,
+    ArtistCategories,
+    ArtistContract,
+    ArtistForApiContract,
+    ArtistOptionalFields,
+    ArtistOptionalFieldsSet,
+    ArtistRoles,
+    ArtistRolesSet,
+    ContentLanguagePreference,
+    TagApiApi,
+    TagForApiContract,
+    TagForApiContractPartialFindResult,
+)
 from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
@@ -67,8 +81,60 @@ class CategorizedArtists(
 
 
 class ArtistsProcessor:
-    def __init__(self, va_name: str) -> None:
+    def __init__(
+        self,
+        va_name: str,
+        use_base_voicebank: bool,
+        artist_api: ArtistApiApi,
+        tag_api: TagApiApi,
+        language_preference: ContentLanguagePreference,
+        logger: Logger,
+    ) -> None:
         self.va_name: str = va_name
+        self.use_base_voicebank: bool = use_base_voicebank
+        self.artist_api: ArtistApiApi = artist_api
+        self.tag_api: TagApiApi = tag_api
+        self.language_preference: ContentLanguagePreference = (
+            language_preference
+        )
+        self._log: Logger = logger
+
+    @cached_property
+    def voicebank_artist_types(self) -> set[str]:
+        remote_tag_find_result: TagForApiContractPartialFindResult | None
+        remote_tag_candidates: tuple[TagForApiContract, ...] | None
+        id: int | None = None
+        if (
+            remote_tag_find_result := (
+                self.tag_api.api_tags_get(
+                    query="vocal synthesizer",
+                    lang=self.language_preference,
+                    maxResults=1,
+                    preferAccurateMatches=True,
+                )
+            )
+        ) and (remote_tag_candidates := remote_tag_find_result.items):
+            id = next(iter(remote_tag_candidates)).id
+
+        if not id:
+            self._log.info('no "vocal synthesizer" tag found')
+            return set()
+
+        types = set(
+            filter(
+                None,
+                (
+                    child.name
+                    for child in self.tag_api.api_tags_id_children_get(
+                        id=id,
+                        lang=self.language_preference,
+                    )
+                    or ()
+                ),
+            )
+        )
+        self._log.debug("Voicebank Artist Types: {}", types)
+        return types
 
     def get_album_artists(
         self,
@@ -238,9 +304,9 @@ class ArtistsProcessor:
             lyricist_ids,
         )
 
-    @staticmethod
     @lru_cache(maxsize=128)
     def _categorize_artists(
+        self,
         remote_artists: tuple[ArtistForAlbumForApiContract, ...]
         | tuple[ArtistForSongContract, ...],
     ) -> tuple[CategorizedArtists, frozenset[tuple[str, str]]]:
@@ -281,16 +347,35 @@ class ArtistsProcessor:
             ArtistForAlbumForApiContract | ArtistForSongContract
         )
         for remote_album_or_song_artist in remote_artists:
-            name: str | None
-            id: str
-            name, id = (
-                (
-                    remote_album_or_song_artist.name or remote_artist.name,
-                    str(remote_artist.id),
+            remote_artist: ArtistContract | ArtistForApiContract | None
+            if (
+                (remote_artist := remote_album_or_song_artist.artist)
+                and self.use_base_voicebank
+                and (
+                    str(remote_artist.artist_type)
+                    in self.voicebank_artist_types
                 )
-                if (remote_artist := remote_album_or_song_artist.artist)
-                else (remote_album_or_song_artist.name, "")
-            )
+                and (
+                    remote_artist := self.get_base_voicebank(
+                        voicebank=remote_artist
+                    )
+                )
+            ):
+                name: str | None = (
+                    name.removesuffix(" (Unknown)")
+                    if (name := remote_artist.name)
+                    else None
+                )
+                id: str = str(remote_artist.id)
+            else:
+                name, id = (
+                    (
+                        remote_album_or_song_artist.name or remote_artist.name,
+                        str(remote_artist.id),
+                    )
+                    if remote_artist
+                    else (remote_album_or_song_artist.name, "")
+                )
             if not name:
                 continue
             if remote_album_or_song_artist.is_support or any(
@@ -348,6 +433,30 @@ class ArtistsProcessor:
                 ]
 
         return artists_by_categories, frozenset(not_creditable_artists)
+
+    @cache
+    def get_base_voicebank(
+        self, voicebank: ArtistContract | ArtistForApiContract
+    ) -> ArtistForApiContract | ArtistContract:
+        remote_full_artist: ArtistForApiContract | ArtistContract | None
+        base_voicebank: ArtistContract | None
+        if (
+            remote_full_artist := self.artist_api.api_artists_id_get(
+                id=voicebank.id,
+                fields=ArtistOptionalFieldsSet(
+                    (ArtistOptionalFields.BASE_VOICEBANK,)
+                ),
+                lang=self.language_preference,
+            )
+        ) and (base_voicebank := remote_full_artist.base_voicebank):
+            self._log.debug(
+                msg=f'Voicebank "{voicebank.name}" with id '
+                + f"{voicebank.id} is a derivative of "
+                + f"the voicebank {base_voicebank.name} with id "
+                + f"{base_voicebank.id}."
+            )
+            return self.get_base_voicebank(voicebank=base_voicebank)
+        return voicebank
 
     def _get_artists(
         self,

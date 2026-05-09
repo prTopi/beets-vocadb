@@ -39,12 +39,14 @@ from .vocadb_api_client import (
     AlbumOptionalFields,
     AlbumOptionalFieldsSet,
     ApiClient,
+    ArtistApiApi,
     ContentLanguagePreference,
     NameMatchMode,
     SongApiApi,
     SongOptionalFields,
     SongOptionalFieldsSet,
     SongSortRule,
+    TagApiApi,
 )
 
 if TYPE_CHECKING:
@@ -66,6 +68,7 @@ if TYPE_CHECKING:
     class BaseConfig(TypedDict):
         prefer_romaji: bool
         include_featured_album_artists: bool
+        use_base_voicebank: bool
         search_limit: int
         exclude_item_fields: list[str]
         exclude_album_fields: list[str]
@@ -76,6 +79,7 @@ USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
 DEFAULT_CONFIG: BaseConfig = {
     "prefer_romaji": False,
     "include_featured_album_artists": False,
+    "use_base_voicebank": False,
     "search_limit": 5,
     "exclude_item_fields": [],
     "exclude_album_fields": [],
@@ -160,6 +164,9 @@ class PluginBase(MetadataSourcePlugin):
         self.include_featured_album_artists: bool = self.config[
             "include_featured_album_artists"
         ].get(bool)
+        self.use_base_voicebank: bool = self.config["use_base_voicebank"].get(
+            bool
+        )
         self.search_limit: int = self.config["search_limit"].get(int)
         self.exclude_album_fields: list[str] = self.config[
             "exclude_album_fields"
@@ -190,8 +197,16 @@ class PluginBase(MetadataSourcePlugin):
         return AlbumApiApi(api_client=self.client)
 
     @cached_property
+    def artist_api(self) -> ArtistApiApi:
+        return ArtistApiApi(api_client=self.client)
+
+    @cached_property
     def song_api(self) -> SongApiApi:
         return SongApiApi(api_client=self.client)
+
+    @cached_property
+    def tag_api(self) -> TagApiApi:
+        return TagApiApi(api_client=self.client)
 
     @cached_property
     def language_preference(self) -> ContentLanguagePreference:
@@ -207,9 +222,12 @@ class PluginBase(MetadataSourcePlugin):
             data_source=self.data_source,
             flexible_attributes=self._flexible_attributes,
             ignore_video_tracks=IGNORE_VIDEO_TRACKS,
+            artist_api=self.artist_api,
             song_api=self.song_api,
+            tag_api=self.tag_api,
             language_preference=self.language_preference,
             include_featured_album_artists=self.include_featured_album_artists,
+            use_base_voicebank=self.use_base_voicebank,
             exclude_item_fields=self.exclude_item_fields,
             exclude_album_fields=self.exclude_album_fields,
             va_name=VA_NAME,
