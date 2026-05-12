@@ -240,6 +240,7 @@ class Mapper:
             ),
             album=remote_album.name,
             asin=get_asin(web_links=remote_album.web_links),
+            barcode=remote_album.barcode,
             catalognum=remote_album.catalog_number,
             # country=remote_album.release_event.venue.adress_country_code,
             cover_art_url=(
