@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, TypedDict
 from urllib.parse import urljoin
 
 from beets.autotag.hooks import AlbumInfo, TrackInfo
+from strip_markdown import strip_markdown
 
 from .artists import ArtistsProcessor
 from .lyrics import LyricsProcessor
@@ -243,6 +244,9 @@ class Mapper:
             asin=get_asin(web_links=remote_album.web_links),
             barcode=remote_album.barcode,
             catalognum=remote_album.catalog_number,
+            comments=strip_markdown(md=remote_album.description)
+            if remote_album.description
+            else None,
             # country=remote_album.release_event.venue.adress_country_code,
             cover_art_url=(
                 remote_main_picture.url_original
