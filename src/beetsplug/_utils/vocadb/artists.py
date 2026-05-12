@@ -196,21 +196,6 @@ class ArtistsProcessor:
         is_comp: bool,
         include_featured_artists: bool = True,
     ) -> AlbumArtistInfo:
-        """Extract and format album artist information.
-
-        Args:
-            remote_artists: Artist data from VocaDB API
-            comp: Whether this is a compilation album
-            include_featured_artists: Whether to include featured artists
-        Returns:
-            Tuple containing:
-            - Locally generated artist string
-            - Artist ID of the first main artist
-            or the first non-empty artist if available
-            - List of unique artist names in order of first appearance
-            - List of corresponding artist IDs in same order as artist names
-            - Label string
-        """
         if not remote_artists:
             return {
                 "va": is_comp,
@@ -239,23 +224,6 @@ class ArtistsProcessor:
         remote_original_artists: tuple[ArtistForSongContract, ...]
         | None = None,
     ) -> TrackArtistInfo:
-        """
-        Calls _get_artists with comp=False and include_featured_artists=True.
-
-        Returns:
-            Tuple containing:
-            - Locally generated artist string
-            - Artist ID of the first main artist
-            or the first non-empty artist if available
-            - List of unique artist names in order of first appearance
-            - List of corresponding artist IDs in same order as artist names
-            - Arrangers
-            - Arrangers IDs
-            - Composers
-            - Composers IDs
-            - Lyricists
-            - Lyricists IDs
-        """
         if not remote_artists:
             return {}
         artists_by_categories: CategorizedArtists
@@ -504,17 +472,6 @@ class ArtistsProcessor:
         comp: bool,
         include_featured_artists: bool,
     ) -> ArtistInfo:
-        """
-        Returns:
-            Tuple containing:
-            - Locally generated artist string
-            - Artist ID of the first main artist
-            or the first non-empty artist if available
-            - List of unique artist names in order of first appearance
-            - List of corresponding artist IDs in same order as artist names
-            - ArtistsByCategories object with artists sorted into role categories
-        """
-
         def get_filtered_artists(
             *categories: ProcessedArtistCategories,
         ) -> list[str]:

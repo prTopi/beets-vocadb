@@ -108,15 +108,8 @@ def get_genres(
 ) -> list[str] | None:
     """Extract and format genre information from VocaDB tags.
 
-    Processes VocaDB tags to find those categorized as "Genres", sorts them
-    by usage count (most popular first), and formats them as a semicolon-
-    separated string with proper title casing.
-
-    Args:
-        remote_tags: List of tag usage data from VocaDB API
-
-    Returns:
-        List of genres
+    Processes VocaDB tags to find those categorized as "Genres" and sorts them
+    by usage count (most popular first).
     """
     if not remote_tags:
         return None

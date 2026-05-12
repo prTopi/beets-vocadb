@@ -163,7 +163,7 @@ class Mapper:
             album_genres: Default genres for tracks
 
         Returns:
-            List of tracks in Beets TrackInfo format
+            AlbumTrackInfo dict
         """
         remote_disc: AlbumDiscPropertiesContract
         remote_song: SongInAlbumForApiContract

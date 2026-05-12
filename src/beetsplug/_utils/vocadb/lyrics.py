@@ -29,15 +29,6 @@ class LyricsProcessor:
         Processes available lyrics versions to select the most appropriate one
         based on user language preferences and translation type. Also determines
         the script system and language code for the selected lyrics.
-
-        Args:
-            remote_lyrics: Lyrics data from VocaDB API
-
-        Returns:
-            Tuple containing:
-            - Script code (e.g., "Latn", "Jpan", "Qaaa" for multiple scripts)
-            - Language code (e.g., "eng", "jpn", "mul" for multiple languages)
-            - Lyrics text content
         """
         script: str | None = None
         language: str | None = None
@@ -104,13 +95,6 @@ class LyricsProcessor:
         Implements a fallback strategy for lyrics selection when the user's
         preferred language/translation type combination is not available.
         Falls back through English, Romanized, and finally Original lyrics.
-
-        Args:
-            remote_lyrics: Lyrics data from VocaDB
-
-        Returns:
-            Lyrics text from the best available fallback option, or None if none
-            found
         """
         if not remote_lyrics:
             return None
