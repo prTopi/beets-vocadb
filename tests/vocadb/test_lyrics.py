@@ -14,8 +14,8 @@ from beetsplug._utils.vocadb.vocadb_api_client import (
 
 class LyricsTestCase(NamedTuple):
     lyrics: str
-    expected_language_code: str | None
     expected_script: str | None
+    expected_language_code: str | None
     language_preference_expected_lyrics_mapping: list[
         tuple[ContentLanguagePreference, str | None]
     ]
@@ -48,8 +48,8 @@ class TestLyricsProcessor:
         "value": "lyrics3"
     }
 ]""",
-                expected_language_code="Jpan",
-                expected_script="jpn",
+                expected_script="Jpan",
+                expected_language_code="jpn",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.JAPANESE, "lyrics1"),
                     (ContentLanguagePreference.ENGLISH, "lyrics2"),
@@ -72,8 +72,8 @@ class TestLyricsProcessor:
             "value": "lyrics2"
         }
     ]""",
-                expected_language_code="Latn",
-                expected_script="eng",
+                expected_script="Latn",
+                expected_language_code="eng",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.JAPANESE, "lyrics1"),
                     (ContentLanguagePreference.ENGLISH, "lyrics2"),
@@ -88,8 +88,8 @@ class TestLyricsProcessor:
         "value": "lyrics1"
     }
 ]""",
-                expected_language_code="Jpan",
-                expected_script="jpn",
+                expected_script="Jpan",
+                expected_language_code="jpn",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.ENGLISH, "lyrics1")
                 ],
@@ -115,8 +115,8 @@ class TestLyricsProcessor:
             "value": "lyrics3"
         }
     ]""",
-                expected_language_code="Jpan",
-                expected_script="jpn",
+                expected_script="Jpan",
+                expected_language_code="jpn",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.JAPANESE, "lyrics1"),
                     (ContentLanguagePreference.ENGLISH, "lyrics2"),
@@ -139,8 +139,8 @@ class TestLyricsProcessor:
             "value": "lyrics2"
         }
     ]""",
-                expected_language_code="Latn",
-                expected_script="eng",
+                expected_script="Latn",
+                expected_language_code="eng",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.JAPANESE, "lyrics1"),
                     (ContentLanguagePreference.ENGLISH, "lyrics2"),
@@ -156,8 +156,8 @@ class TestLyricsProcessor:
             "value": "lyrics1"
         }
     ]""",
-                expected_language_code="Jpan",
-                expected_script="jpn",
+                expected_script="Jpan",
+                expected_language_code="jpn",
                 language_preference_expected_lyrics_mapping=[
                     (ContentLanguagePreference.DEFAULT, "lyrics1")
                 ],
@@ -181,8 +181,8 @@ class TestLyricsProcessor:
         ) in test_case.language_preference_expected_lyrics_mapping:
             assert LyricsProcessor(
                 language_preference=language_preference
-            ).get_lyrics(remote_lyrics=decoded_lyrics) == (
-                expected_language_code,
-                expected_script,
-                expected_lyrics,
-            )
+            ).get_lyrics(remote_lyrics=decoded_lyrics) == {
+                "script": expected_script,
+                "language": expected_language_code,
+                "lyrics": expected_lyrics,
+            }

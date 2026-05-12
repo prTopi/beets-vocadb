@@ -6,8 +6,14 @@ from .vocadb_api_client import ContentLanguagePreference, TranslationType
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from typing import TypedDict
 
     from .vocadb_api_client import LyricsForSongContract
+
+    class LyricsInfo(TypedDict, closed=True):
+        script: str | None
+        language: str | None
+        lyrics: str | None
 
 
 class LyricsProcessor:
@@ -17,7 +23,7 @@ class LyricsProcessor:
     def get_lyrics(
         self,
         remote_lyrics: Iterable[LyricsForSongContract] | None,
-    ) -> tuple[str | None, str | None, str | None]:
+    ) -> LyricsInfo:
         """Extract lyrics information with language and script metadata.
 
         Processes available lyrics versions to select the most appropriate one
@@ -87,7 +93,7 @@ class LyricsProcessor:
                 remote_lyrics,
             )
 
-        return script, language, lyrics
+        return {"script": script, "language": language, "lyrics": lyrics}
 
     def _get_fallback_lyrics(
         self,

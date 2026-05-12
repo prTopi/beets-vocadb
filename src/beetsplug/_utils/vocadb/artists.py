@@ -5,7 +5,7 @@ from contextlib import suppress
 from enum import auto
 from functools import cache, cached_property, lru_cache
 from logging import Logger
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 from beets.metadata_plugins import MetadataSourcePlugin
 from beets.util import unique_list
@@ -33,6 +33,28 @@ if TYPE_CHECKING:
         ArtistForAlbumForApiContract,
         ArtistForSongContract,
     )
+
+    class ArtistInfoBase(TypedDict, total=False):
+        artist: str
+        artist_id: str | None
+        artists: list[str]
+        artist_ids: list[str]
+
+    class ArtistInfo(ArtistInfoBase, closed=True): ...
+
+    class AlbumArtistInfo(ArtistInfoBase, closed=True, total=False):
+        label: str | None
+        va: bool
+
+    class TrackArtistInfo(ArtistInfoBase, closed=True, total=False):
+        arrangers: list[str] | None
+        arranger_ids: list[str] | None
+        composers: list[str] | None
+        composer_ids: list[str] | None
+        lyricists: list[str] | None
+        lyricist_ids: list[str] | None
+        remixers: list[str] | None
+        remixers_ids: list[str] | None
 
 
 class ProcessedArtistCategories(StrEnum):
@@ -156,15 +178,9 @@ class ArtistsProcessor:
     def get_album_artists(
         self,
         remote_artists: tuple[ArtistForAlbumForApiContract, ...] | None,
-        comp: bool,
+        is_comp: bool,
         include_featured_artists: bool = True,
-    ) -> tuple[
-        str,
-        str | None,
-        list[str],
-        list[str],
-        str | None,
-    ]:
+    ) -> AlbumArtistInfo:
         """Extract and format album artist information.
 
         Args:
@@ -181,39 +197,33 @@ class ArtistsProcessor:
             - Label string
         """
         if not remote_artists:
-            return "", None, [], [], None
+            return {
+                "va": is_comp,
+            }
         artists_by_categories: CategorizedArtists
         not_creditable_artists: frozenset[tuple[str, str]]
         artists_by_categories, not_creditable_artists = (
             self._categorize_artists(remote_artists=remote_artists)
         )
-        return (
-            *self._get_artists(
-                artists_by_categories=artists_by_categories,
-                not_creditable_artists=not_creditable_artists,
-                include_featured_artists=include_featured_artists,
-                comp=comp,
-            ),
-            self._get_label(remote_artists=remote_artists),
+        artist_info: ArtistInfo = self._get_artists(
+            artists_by_categories=artists_by_categories,
+            not_creditable_artists=not_creditable_artists,
+            include_featured_artists=include_featured_artists,
+            comp=is_comp,
         )
+        return {  # pyrefly: ignore[bad-unpacking]
+            **artist_info,
+            "label": self._get_label(remote_artists=remote_artists),
+            "va": is_comp or (artist_info.get("artist") == self.va_name),
+        }
 
     def get_track_artists(
         self,
         remote_artists: tuple[ArtistForSongContract, ...] | None,
+        is_remix: bool,
         remote_original_artists: tuple[ArtistForSongContract, ...]
         | None = None,
-    ) -> tuple[
-        str,
-        str | None,
-        list[str],
-        list[str],
-        list[str] | None,
-        list[str] | None,
-        list[str] | None,
-        list[str] | None,
-        list[str] | None,
-        list[str] | None,
-    ]:
+    ) -> TrackArtistInfo:
         """
         Calls _get_artists with comp=False and include_featured_artists=True.
 
@@ -232,18 +242,7 @@ class ArtistsProcessor:
             - Lyricists IDs
         """
         if not remote_artists:
-            return (
-                "",
-                None,
-                [],
-                [],
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            )
+            return {}
         artists_by_categories: CategorizedArtists
         not_creditable_artists: frozenset[tuple[str, str]]
         artists_by_categories, not_creditable_artists = (
@@ -263,6 +262,12 @@ class ArtistsProcessor:
         arranger_ids: list[str] | None = artists_by_categories[
             ProcessedArtistCategories.ARRANGERS
         ].ids
+
+        remixers: list[str] | None
+        remixers_ids: list[str] | None
+        remixers, remixers_ids = (
+            (arrangers, arranger_ids) if is_remix else (None, None)
+        )
 
         if (
             original_artists_by_categories
@@ -306,20 +311,22 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.LYRICISTS
             ].ids
 
-        return (
-            *self._get_artists(
+        return {  # pyrefly: ignore[bad-unpacking]
+            **self._get_artists(
                 artists_by_categories=artists_by_categories,
                 not_creditable_artists=not_creditable_artists,
                 comp=False,
                 include_featured_artists=True,
             ),
-            arrangers,
-            arranger_ids,
-            composers,
-            composer_ids,
-            lyricists,
-            lyricist_ids,
-        )
+            "arrangers": arrangers,
+            "arranger_ids": arranger_ids,
+            "composers": composers,
+            "composer_ids": composer_ids,
+            "lyricists": lyricists,
+            "lyricist_ids": lyricist_ids,
+            "remixers": remixers,
+            "remixers_ids": remixers_ids,
+        }
 
     @lru_cache(maxsize=128)
     def _categorize_artists(
@@ -481,7 +488,7 @@ class ArtistsProcessor:
         not_creditable_artists: frozenset[tuple[str, str]],
         comp: bool,
         include_featured_artists: bool,
-    ) -> tuple[str, str | None, list[str], list[str]]:
+    ) -> ArtistInfo:
         """
         Returns:
             Tuple containing:
@@ -561,12 +568,12 @@ class ArtistsProcessor:
         if not artist_id:
             artist_id = next(filter(None, artists_ids), None)
 
-        return (
-            artist_string,
-            artist_id,
-            artists_names,
-            artists_ids,
-        )
+        return {
+            "artist": artist_string,
+            "artist_id": artist_id,
+            "artists": artists_names,
+            "artist_ids": artists_ids,
+        }
 
     @staticmethod
     def _get_label(
