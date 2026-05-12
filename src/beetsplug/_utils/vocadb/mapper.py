@@ -239,6 +239,7 @@ class Mapper:
                 album_genres=get_genres(remote_tags=remote_album.tags),
             ),
             album=remote_album.name,
+            albumstatus=remote_album.status,
             asin=get_asin(web_links=remote_album.web_links),
             barcode=remote_album.barcode,
             catalognum=remote_album.catalog_number,
