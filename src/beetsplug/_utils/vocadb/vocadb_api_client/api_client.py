@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import posixpath
+from collections.abc import Iterable
 from functools import cache, cached_property
 from typing import TYPE_CHECKING
 
@@ -57,15 +59,79 @@ class ApiClient:
         """Caches and returns a decoder for the specified type"""
         return msgspec.json.Decoder(type=target_type)
 
-    def decode(self, content: str, target_type: type[H]) -> H:
+    def _normalize_params(
+        self, params: Mapping[str, object]
+    ) -> dict[str, str | list[str]]:
+        """Turn params values into str or list[str]."""
+        return {
+            key: (
+                [str(item) for item in value]
+                if not isinstance(value, str) and isinstance(value, Iterable)
+                else str(value)
+            )
+            for key, value in params.items()
+        }
+
+    def prepare_request(
+        self,
+        *paths: str,
+        params: Mapping[str, object | tuple[object]],
+        headers: MutableMapping[str, str] | None = None,
+    ) -> niquests.PreparedRequest:
+        """Prepare a niquests PreparedRequest using the normalized params."""
+        if not headers:
+            headers = {}
+        # preserve previous behavior: default_headers are applied into headers
+        headers.update(self.default_headers)
+        relative_path = posixpath.join(*paths)
+
+        request: niquests.PreparedRequest = self.session.prepare_request(
+            request=niquests.Request(
+                method="GET",
+                url=relative_path,
+                headers=headers,
+                params=self._normalize_params(params),
+            )
+        )
+        return request
+    def decode(self, content: str | None, target_type: type[H]) -> H | None:
+        if not content:
+            return None
         decoder: msgspec.json.Decoder[H] = self._get_decoder(
             target_type=target_type
         )
         return decoder.decode(content)
 
+    def decode_response(
+        self, response: niquests.Response, target_type: type[H]
+    ) -> H | None:
+        """Handle HTTP errors and decode the response body (returns None on failure)."""
+        try:
+            response = response.raise_for_status()
+            try:
+                self._log.debug(msg=f"url: {response.history[0].url}")
+            except IndexError:
+                self._log.debug(msg=f"url: {response.url}")
+        except niquests.HTTPError as e:
+            if response.status_code == 404:
+                if (original_url := response.history[0].url) and (
+                    redirect_url := response.url
+                ):
+                    e = str(e).replace(redirect_url, original_url)
+            self._log.error("Error fetching {} - {}", target_type.__name__, e)
+            return None
+        try:
+            return self.decode(
+                content=response.text or "", target_type=target_type
+            )
+        except msgspec.DecodeError as e:
+            self._log.info("Error decoding {}: {}", target_type.__name__, e)
+            self._log.debug("{}", msgspec.json.format(response.text or ""))
+            return None
+
     def call_api(
         self,
-        relative_path: str,
+        *paths: str,
         params: Mapping[str, object],
         return_type: type[H],
         headers: MutableMapping[str, str] | None = None,
@@ -73,46 +139,20 @@ class ApiClient:
         """Makes a GET request to the API and returns structured response data.
 
         Args:
-            relative_path: API endpoint path to request
+            paths: components of API endpoint path to request
             params: instance of (a subclass of) ParamsBase
 
         Returns:
             Structured response data if successful, None if request fails
         """
-        if not headers:
-            headers = {}
-        headers.update(self.default_headers)
-
-        try:
-            request: niquests.PreparedRequest = self.session.prepare_request(
-                request=niquests.Request(
-                    method="GET",
-                    url=relative_path,
-                    headers=headers,
-                    params={
-                        key: (
-                            [str(item) for item in value]  # pyright: ignore[reportUnknownArgumentType,reportUnknownVariableType]
-                            if isinstance(value, list | set)
-                            else str(value)
-                        )
-                        for key, value in params.items()
-                    },
+        return self.decode_response(
+            response=self.session.send(
+                request=self.prepare_request(
+                    *paths, params=params, headers=headers
                 )
-            )
-            self._log.debug(msg=f"url: {request.url}")
-            response: niquests.Response = self.session.send(request=request)
-            _ = response.raise_for_status()
-        except niquests.HTTPError as e:
-            self._log.error("Error fetching {} - {}", return_type.__name__, e)
-            return None
-        try:
-            return self.decode(
-                content=response.text or "", target_type=return_type
-            )
-        except msgspec.DecodeError as e:
-            self._log.info("Error decoding {}: {}", return_type.__name__, e)
-            self._log.debug("{}", msgspec.json.format(response.text or ""))
-            return None
+            ),
+            target_type=return_type,
+        )
 
     # TODO: better error handling
 

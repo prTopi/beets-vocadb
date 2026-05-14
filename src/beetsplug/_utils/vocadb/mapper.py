@@ -25,7 +25,6 @@ from .vocadb_api_client import (
     DiscMediaType,
     DiscType,
     SongOptionalFields,
-    SongOptionalFieldsSet,
     SongType,
     TagApiApi,
 )
@@ -300,7 +299,7 @@ class Mapper:
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
                     id_=remote_original_version_id,
-                    fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
+                    fields=(SongOptionalFields.ARTISTS,),
                     lang=self.language_preference,
                 )
             )

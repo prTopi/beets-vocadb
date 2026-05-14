@@ -12,7 +12,6 @@ from beets.util import unique_list
 from .vocadb_api_client import (
     ArtistCategories,
     ArtistOptionalFields,
-    ArtistOptionalFieldsSet,
     ArtistRoles,
     ArtistRolesSet,
     ContentLanguagePreference,
@@ -453,9 +452,7 @@ class ArtistsProcessor:
         if (
             remote_full_artist := self.artist_api.api_artists_id_get(
                 id_=voicebank.id,
-                fields=ArtistOptionalFieldsSet(
-                    (ArtistOptionalFields.BASE_VOICEBANK,)
-                ),
+                fields=(ArtistOptionalFields.BASE_VOICEBANK,),
                 lang=self.language_preference,
             )
         ) and (base_voicebank := remote_full_artist.base_voicebank):

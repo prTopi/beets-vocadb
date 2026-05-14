@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import posixpath
 from typing import TYPE_CHECKING
 
 from ..models.tag_for_api_contract import TagForApiContract
@@ -34,7 +33,7 @@ class TagApiApi(ApiBase, path="tags"):
         self, **params: Unpack[_ApiTagsGetParams]
     ) -> TagForApiContractPartialFindResult | None:
         return self.api_client.call_api(
-            relative_path="tags",
+            self.path,
             params=params,
             return_type=TagForApiContractPartialFindResult,
         )
@@ -49,7 +48,9 @@ class TagApiApi(ApiBase, path="tags"):
         self, id_: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
     ) -> tuple[TagForApiContract, ...] | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id_)),
+            self.path,
+            str(id_),
+            "children",
             params=params,
             return_type=tuple[TagForApiContract, ...],
         )

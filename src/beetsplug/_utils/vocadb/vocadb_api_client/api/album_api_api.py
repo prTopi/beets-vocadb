@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import posixpath
 from typing import TYPE_CHECKING
 
 from ..models.album_for_api_contract import AlbumForApiContract
@@ -16,8 +15,8 @@ if TYPE_CHECKING:
 
     from ..models.album_optional_fields import AlbumOptionalFields
     from ..models.album_sort_rule import AlbumSortRule
-    from ..models.disc_type import DiscTypeSet
-    from ..models.song_optional_fields import SongOptionalFieldsSet
+    from ..models.disc_type import DiscType
+    from ..models.song_optional_fields import SongOptionalFields
     from ._types import AlbumsOrSongsGetParams, ParamsBase
 
 
@@ -29,7 +28,7 @@ class AlbumApiApi(ApiBase, path="albums"):
             total=False,
             closed=True,
         ):
-            discTypes: DiscTypeSet  # noqa: N815
+            discTypes: tuple[DiscType, ...]  # noqa: N815
             barcode: str
             releaseDateAfter: datetime  # noqa: N815
             releaseDateBefore: datetime  # noqa: N815
@@ -39,7 +38,7 @@ class AlbumApiApi(ApiBase, path="albums"):
         self, **params: Unpack[_ApiAlbumsGetParams]
     ) -> AlbumForApiContractPartialFindResult | None:
         return self.api_client.call_api(
-            relative_path=self.path,
+            self.path,
             params=params,
             return_type=AlbumForApiContractPartialFindResult,
         )
@@ -49,13 +48,14 @@ class AlbumApiApi(ApiBase, path="albums"):
         class _ApiAlbumsIdGetParams(
             ParamsBase[AlbumOptionalFields], total=False
         ):
-            songFields: SongOptionalFieldsSet  # noqa: N815
+            songFields: tuple[SongOptionalFields, ...]  # noqa: N815
 
     def api_albums_id_get(
         self, id_: int, **params: Unpack[_ApiAlbumsIdGetParams]
     ) -> AlbumForApiContract | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id_)),
+            self.path,
+            str(id_),
             params=params,
             return_type=AlbumForApiContract,
         )

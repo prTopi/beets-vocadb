@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
     from typing_extensions import Required
 
-    from ..models import PascalCaseStrEnum, StrEnumSet
+    from ..models import PascalCaseStrEnum
     from ..models.artist_participation_status import ArtistParticipationStatus
     from ..models.content_language_preference import ContentLanguagePreference
     from ..models.entry_status import EntryStatus
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     F = TypeVar(name="F", bound=PascalCaseStrEnum)
 
     class ParamsBase(TypedDict, Generic[F], total=False):
-        fields: StrEnumSet[F]
+        fields: tuple[F, ...]
         lang: ContentLanguagePreference
 
     S = TypeVar(name="S", bound=PascalCaseStrEnum)

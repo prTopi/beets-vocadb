@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import posixpath
 from typing import TYPE_CHECKING
 
 from ..models.song_for_api_contract import SongForApiContract
@@ -14,10 +13,10 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    from ..models.pv_services import PVServicesSet
+    from ..models.pv_services import PVServices
     from ..models.song_optional_fields import SongOptionalFields
     from ..models.song_sort_rule import SongSortRule
-    from ..models.song_type import SongTypeSet
+    from ..models.song_type import SongType
     from ._types import AlbumsOrSongsGetParams, ParamsBase
 
 
@@ -28,13 +27,13 @@ class SongApiApi(ApiBase, path="songs"):
             AlbumsOrSongsGetParams[SongOptionalFields, SongSortRule],
             total=False,
         ):
-            songTypes: SongTypeSet  # noqa: N815
+            songTypes: tuple[SongType, ...]  # noqa: N815
             afterDate: datetime  # noqa: N815
             beforeDate: datetime  # noqa: N815
             unifyTypesAndTags: bool  # noqa: N815
-            # artistId[]: Iterable[int]
+            # artistId[]: tuple[int, ...]
             onlyWithPvs: bool  # noqa: N815
-            pvServices: PVServicesSet  # noqa: N815
+            pvServices: tuple[PVServices, ...]  # noqa: N815
             since: int
             minScore: int  # noqa: N815
             userCollectionId: int  # noqa: N815
@@ -44,15 +43,15 @@ class SongApiApi(ApiBase, path="songs"):
             maxMilliBpm: int  # noqa: N815
             minLength: int  # noqa: N815
             maxLength: int  # noqa: N815
-            # languages[]: Iterable[ContentLanguagePreference]
-            # excludedTagIds[]: Iterable[int]
+            # languages[]: tuple[ContentLanguagePreference, ...]
+            # excludedTagIds[]: tuple[int, ...]
 
     def api_songs_get(
         self,
         **params: Unpack[_ApiSongsGetParams],
     ) -> SongForApiContractPartialFindResult | None:
         return self.api_client.call_api(
-            relative_path=self.path,
+            self.path,
             params=params,
             return_type=SongForApiContractPartialFindResult,
         )
@@ -67,7 +66,8 @@ class SongApiApi(ApiBase, path="songs"):
         self, id_: int, **params: Unpack[_ApiSongsIdGetParams]
     ) -> SongForApiContract | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id_)),
+            self.path,
+            str(id_),
             params=params,
             return_type=SongForApiContract,
         )
