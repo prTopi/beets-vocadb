@@ -33,14 +33,15 @@ class ApiClient:
         }
         self.user_agent = user_agent
         self.base_url: str = base_url
+        self.closed: bool = True
 
     @cached_property
     def session(self) -> niquests.Session:
-        session: niquests.Session = niquests.Session(
+        self.closed = False
+        return niquests.Session(
             base_url=self.base_url,
             retries=Retry(total=6, backoff_factor=0.5),
         )
-        return session
 
     @property
     def user_agent(self) -> str:
@@ -117,5 +118,6 @@ class ApiClient:
     # TODO: better error handling
 
     def close(self) -> None:
-        if "session" in self.__dict__:
+        if not self.closed:
             self.session.close()
+            self.closed = True
