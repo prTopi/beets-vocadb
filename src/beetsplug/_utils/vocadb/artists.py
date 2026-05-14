@@ -37,8 +37,8 @@ if TYPE_CHECKING:
     class ArtistInfoBase(TypedDict, total=False):
         artist: str
         artist_id: str | None
-        artists: list[str]
-        artist_ids: list[str]
+        artists: list[str] | None
+        artist_ids: list[str] | None
 
     class ArtistInfo(ArtistInfoBase, closed=True): ...
 
@@ -81,7 +81,7 @@ class ArtistCategory:
 
     @property
     def ids(self) -> list[str] | None:
-        return self._ids or None
+        return self._ids if any(self._ids) else None
 
     def items(self) -> zip[tuple[str, str]]:
         return zip(self._names, self._ids)
@@ -102,20 +102,35 @@ class CategorizedArtists(
             {key: ArtistCategory() for key in ProcessedArtistCategories}
         )
 
-    def _collect_unique_items(self, attr: str) -> list[str]:
-        return unique_list(
-            item
-            for category in self.values()
-            for item in cast(list[str], getattr(category, attr) or [])
+    def _collect_unique_items(self, attr: str) -> list[str] | None:
+        return (
+            unique_items
+            if (
+                unique_items := unique_list(
+                    elements=(
+                        (
+                            element
+                            for category in self.values()
+                            for element in cast(
+                                list[str], getattr(category, attr) or []
+                            )
+                        )
+                    )
+                )
+            )
+            and any(unique_items)
+            else None
         )
 
     @property
-    def names(self) -> list[str]:
+    def names(self) -> list[str] | None:
         return self._collect_unique_items("names")
 
     @property
-    def ids(self) -> list[str]:
-        return self._collect_unique_items("ids")
+    def ids(self) -> list[str] | None:
+        # access attribute directly rather than the property
+        # to preserve empty str values
+        return self._collect_unique_items("_ids")
 
 
 class ArtistsProcessor:
@@ -558,15 +573,19 @@ class ArtistsProcessor:
                 join_key=join_key,
             )
 
-        artists_names: list[str] = artists_by_categories.names
-        artists_ids: list[str] = artists_by_categories.ids
+        artists_names: list[str] | None = artists_by_categories.names
+        artists_ids: list[str] | None = artists_by_categories.ids
         artist_id: str | None = None
-        for artist in main_artists + featured_artists:
-            with suppress(IndexError, ValueError):
-                if artist_id := artists_ids[artists_names.index(artist)]:
-                    break
-        if not artist_id:
-            artist_id = next(filter(None, artists_ids), None)
+        if artists_ids:
+            if artists_names:
+                for artist in main_artists + featured_artists:
+                    with suppress(IndexError, ValueError):
+                        if artist_id := artists_ids[
+                            artists_names.index(artist)
+                        ]:
+                            break
+            if not artist_id:
+                artist_id = next(filter(None, artists_ids), None)
 
         return {
             "artist": artist_string,
