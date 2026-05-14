@@ -598,11 +598,19 @@ class ArtistsProcessor:
     def _get_label(
         remote_artists: Iterable[ArtistForAlbumForApiContract] | None,
     ) -> str | None:
-        return next(
-            (
-                remote_albumartist.name
-                for remote_albumartist in (remote_artists or ())
-                if ArtistCategories.LABEL in remote_albumartist.categories
-            ),
-            None,
-        )
+        labels: list[str] = []
+        circles: list[str] = []
+        for remote_albumartist in remote_artists or ():
+            if filtered_categories := remote_albumartist.categories & {
+                ArtistCategories.LABEL,
+                ArtistCategories.CIRCLE,
+            }:
+                if (
+                    not remote_albumartist.is_support
+                    and remote_albumartist.name
+                ):
+                    if ArtistCategories.LABEL in filtered_categories:
+                        labels.append(remote_albumartist.name)
+                        continue
+                    circles.append(remote_albumartist.name)
+        return ", ".join(labels or circles) or None
