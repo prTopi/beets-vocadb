@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import posixpath
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from contextlib import suppress
 from enum import auto
 from logging import Logger
@@ -84,32 +84,14 @@ class ItemFlexibleAttributes(StrEnum):
     REMIXER_IDS = auto()
 
 
-# TODO: this sucks
-class FlexibleAttributes:
-    def __init__(self, prefix: str) -> None:
-        """Add prefix to all attributes in each field.
-
-        Args:
-            prefix: String prefix to add to attribute names
-
-        Returns:
-            New FlexibleAttributes instance with prefixed attributes
-        """
-
-        self.album: dict[AlbumFlexibleAttributes, str] = {
-            arg: f"{prefix}_{arg}" for arg in AlbumFlexibleAttributes
-        }
-        self.item: dict[ItemFlexibleAttributes, str] = {
-            arg: f"{prefix}_{arg}" for arg in ItemFlexibleAttributes
-        }
-
-
 class Mapper:
     def __init__(
         self,
         base_url: str,
         data_source: str,
-        flexible_attributes: FlexibleAttributes,
+        flexible_attributes: Callable[
+            [AlbumFlexibleAttributes | ItemFlexibleAttributes], str
+        ],
         ignore_video_tracks: bool,
         artist_api: ArtistApiApi,
         song_api: SongApiApi,
@@ -124,7 +106,9 @@ class Mapper:
     ) -> None:
         self.base_url: str = base_url
         self.data_source: str = data_source
-        self.flexible_attributes: FlexibleAttributes = flexible_attributes
+        self.flexible_attributes: Callable[
+            [AlbumFlexibleAttributes | ItemFlexibleAttributes], str
+        ] = flexible_attributes
         self.ignore_video_tracks: bool = ignore_video_tracks
         self.artists_processor: ArtistsProcessor = ArtistsProcessor(
             va_name=va_name,
@@ -269,9 +253,9 @@ class Mapper:
         }
         artist_info.update(
             {
-                self.flexible_attributes.album[
+                self.flexible_attributes(
                     AlbumFlexibleAttributes.ALBUMARTIST_ID
-                ]: artist_info.pop("artist_id"),
+                ): artist_info.pop("artist_id"),
                 # self.flexible_attributes.album[
                 #         AlbumFlexibleAttributes.ALBUMARTIST_IDS
                 # ]: artist_info.pop("artist_ids")
@@ -285,9 +269,9 @@ class Mapper:
         }
         id_info.update(
             {
-                self.flexible_attributes.album[
+                self.flexible_attributes(
                     AlbumFlexibleAttributes.ALBUM_ID
-                ]: id_info.pop("album_id")
+                ): id_info.pop("album_id")
             }
         )
         info.update(id_info)
@@ -397,24 +381,24 @@ class Mapper:
         }
         artist_info.update(
             **{
-                self.flexible_attributes.item[
+                self.flexible_attributes(
                     ItemFlexibleAttributes.ARTIST_ID
-                ]: artist_info.pop("artist_id"),
-                self.flexible_attributes.item[
+                ): artist_info.pop("artist_id"),
+                self.flexible_attributes(
                     ItemFlexibleAttributes.ARTIST_IDS
-                ]: artist_info.pop("artist_ids"),
-                self.flexible_attributes.item[
+                ): artist_info.pop("artist_ids"),
+                self.flexible_attributes(
                     ItemFlexibleAttributes.ARRANGER_IDS
-                ]: artist_info.pop("arranger_ids"),
-                self.flexible_attributes.item[
+                ): artist_info.pop("arranger_ids"),
+                self.flexible_attributes(
                     ItemFlexibleAttributes.COMPOSER_IDS
-                ]: artist_info.pop("composer_ids"),
-                self.flexible_attributes.item[
+                ): artist_info.pop("composer_ids"),
+                self.flexible_attributes(
                     ItemFlexibleAttributes.LYRICIST_IDS
-                ]: artist_info.pop("lyricist_ids"),
-                self.flexible_attributes.item[
+                ): artist_info.pop("lyricist_ids"),
+                self.flexible_attributes(
                     ItemFlexibleAttributes.REMIXER_IDS
-                ]: artist_info.pop("remixer_ids", None),
+                ): artist_info.pop("remixer_ids", None),
             }
         )
         info.update(artist_info)
@@ -423,9 +407,9 @@ class Mapper:
         }
         id_info.update(
             {
-                self.flexible_attributes.item[
+                self.flexible_attributes(
                     ItemFlexibleAttributes.TRACK_ID
-                ]: id_info.pop("track_id")
+                ): id_info.pop("track_id")
             }
         )
         info.update(id_info)

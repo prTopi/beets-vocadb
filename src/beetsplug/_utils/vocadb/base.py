@@ -1,16 +1,11 @@
 from __future__ import annotations
 
 import sys
-from functools import cached_property
+from functools import cache, cached_property
 
 from beets.library import Item
 
-from .mapper import (
-    AlbumFlexibleAttributes,
-    FlexibleAttributes,
-    ItemFlexibleAttributes,
-    Mapper,
-)
+from .mapper import AlbumFlexibleAttributes, ItemFlexibleAttributes, Mapper
 from .utils import get_language_preference
 
 if not sys.version_info < (3, 12):
@@ -109,54 +104,45 @@ class PluginBase(MetadataSourcePlugin):
     instances include VocaDB, UtaiteDB and TouhouDB. Subclassing is required.
     """
 
-    _flexible_attributes: FlexibleAttributes
-
     base_url: str
     api_url: str
     sync_subcommand: str
 
     def __init__(self) -> None:
         super().__init__()  # pyright: ignore[reportUnknownMemberType]
-        self._flexible_attributes = FlexibleAttributes(
-            prefix=self.name,
-        )
-        self.album_types: dict[
-            str, dbcore.types.String | dbcore.types.DelimitedString
-        ] = {
-            self._flexible_attributes.album[
+        self.album_types: dict[str, dbcore.types.Type] = {
+            self._flexible_attributes(
                 AlbumFlexibleAttributes.ALBUM_ID
-            ]: dbcore.types.STRING,
-            self._flexible_attributes.album[
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
                 AlbumFlexibleAttributes.ALBUMARTIST_ID
-            ]: dbcore.types.STRING,
-            self._flexible_attributes.album[
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
                 AlbumFlexibleAttributes.ALBUMARTIST_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
+            ): dbcore.types.MULTI_VALUE_DSV,
         }
-        self.item_types: dict[
-            str, dbcore.types.String | dbcore.types.DelimitedString
-        ] = {
-            self._flexible_attributes.item[
+        self.item_types: dict[str, dbcore.types.Type] = {
+            self._flexible_attributes(
                 ItemFlexibleAttributes.TRACK_ID
-            ]: dbcore.types.STRING,
-            self._flexible_attributes.item[
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.ARTIST_ID
-            ]: dbcore.types.STRING,
-            self._flexible_attributes.item[
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.ARTIST_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
-            self._flexible_attributes.item[
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.ARRANGER_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
-            self._flexible_attributes.item[
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.COMPOSER_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
-            self._flexible_attributes.item[
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.LYRICIST_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
-            self._flexible_attributes.item[
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
                 ItemFlexibleAttributes.REMIXER_IDS
-            ]: dbcore.types.MULTI_VALUE_DSV,
+            ): dbcore.types.MULTI_VALUE_DSV,
         }
         self.config.add(value=DEFAULT_CONFIG)
         self.prefer_romaji: bool = self.config["prefer_romaji"].get(bool)
@@ -184,6 +170,12 @@ class PluginBase(MetadataSourcePlugin):
         cls.base_url = base_url
         cls.api_url = api_url
         cls.sync_subcommand = f"{subcommand_prefix}sync"
+
+    @cache
+    def _flexible_attributes(
+        self, name: AlbumFlexibleAttributes | ItemFlexibleAttributes, /
+    ) -> str:
+        return f"{self.name}_{name}"
 
     @cached_property
     def client(self) -> ApiClient:
@@ -319,16 +311,14 @@ class PluginBase(MetadataSourcePlugin):
             track_id: str
             if not (
                 track_id := item.get(  # pyright: ignore[reportAssignmentType,reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
-                    key=self._flexible_attributes.item[
+                    key=self._flexible_attributes(
                         ItemFlexibleAttributes.TRACK_ID
-                    ]
+                    )
                 )
             ):
                 self._log.debug(
                     "Skipping singleton with no "
-                    + self._flexible_attributes.item[
-                        ItemFlexibleAttributes.TRACK_ID
-                    ]
+                    + self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
                     + ": {}",
                     item,
                 )
@@ -379,16 +369,14 @@ class PluginBase(MetadataSourcePlugin):
         album: library.Album
         for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
             album_id: str | int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                key=self._flexible_attributes.album[
-                    AlbumFlexibleAttributes.ALBUM_ID
-                ]
+                key=self._flexible_attributes(AlbumFlexibleAttributes.ALBUM_ID)
             )
             if not album_id:
                 self._log.debug(
                     "Skipping album with no "
-                    + self._flexible_attributes.album[
+                    + self._flexible_attributes(
                         AlbumFlexibleAttributes.ALBUM_ID
-                    ]
+                    )
                     + ": {}",
                     album,
                 )
@@ -412,9 +400,9 @@ class PluginBase(MetadataSourcePlugin):
                 for track_info in album_info.tracks
                 if (
                     track_id := track_info.get(
-                        self._flexible_attributes.item[
+                        self._flexible_attributes(
                             ItemFlexibleAttributes.TRACK_ID
-                        ]
+                        )
                     )
                 )
             }
@@ -423,9 +411,9 @@ class PluginBase(MetadataSourcePlugin):
             for item in items:
                 # First, try to get track ID from flexible attributes
                 track_id = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
-                    key=self._flexible_attributes.item[
+                    key=self._flexible_attributes(
                         ItemFlexibleAttributes.TRACK_ID
-                    ]
+                    )
                 )
 
                 if track_id:
@@ -442,9 +430,7 @@ class PluginBase(MetadataSourcePlugin):
                 )
                 # Unset track id so that it won't affect distance
                 item[
-                    self._flexible_attributes.item[
-                        ItemFlexibleAttributes.TRACK_ID
-                    ]
+                    self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
                 ] = None
                 matches: dict[str, Distance] = {
                     track_id: track_distance(item, track_info)
@@ -452,9 +438,7 @@ class PluginBase(MetadataSourcePlugin):
                 }
                 new_track_id: str = min(matches, key=matches.__getitem__)
                 item[
-                    self._flexible_attributes.item[
-                        ItemFlexibleAttributes.TRACK_ID
-                    ]
+                    self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
                 ] = new_track_id
                 mapping[item] = track_index[new_track_id]
                 self._log.warning(
@@ -487,7 +471,12 @@ class PluginBase(MetadataSourcePlugin):
                 }:
                     album[key] = any_changed_item[key]
                 # Copy flexible attributes from album_info to album
-                for flex_key in self._flexible_attributes.album.values():
+                for flex_key in (
+                    *(
+                        self._flexible_attributes(name)
+                        for name in AlbumFlexibleAttributes
+                    ),
+                ):
                     if flex_key in album_info:
                         album[flex_key] = album_info[flex_key]
                 album.store()  # pyright: ignore[reportUnknownMemberType]
