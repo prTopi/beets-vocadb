@@ -53,7 +53,7 @@ class SongApiApi(ApiBase, path="songs"):
     ) -> SongForApiContractPartialFindResult | None:
         return self.api_client.call_api(
             relative_path=self.path,
-            params=params,  # pyrefly: ignore[bad-argument-type]
+            params=params,
             return_type=SongForApiContractPartialFindResult,
         )
 
@@ -67,7 +67,7 @@ class SongApiApi(ApiBase, path="songs"):
         self, id_: int, **params: Unpack[_ApiSongsIdGetParams]
     ) -> SongForApiContract | None:
         return self.api_client.call_api(
-            params=params,  # pyrefly: ignore[bad-argument-type]
             relative_path=posixpath.join(self.path, str(id_)),
+            params=params,
             return_type=SongForApiContract,
         )

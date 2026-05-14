@@ -40,7 +40,7 @@ class AlbumApiApi(ApiBase, path="albums"):
     ) -> AlbumForApiContractPartialFindResult | None:
         return self.api_client.call_api(
             relative_path=self.path,
-            params=params,  # pyrefly: ignore[bad-argument-type]
+            params=params,
             return_type=AlbumForApiContractPartialFindResult,
         )
 
@@ -55,7 +55,7 @@ class AlbumApiApi(ApiBase, path="albums"):
         self, id_: int, **params: Unpack[_ApiAlbumsIdGetParams]
     ) -> AlbumForApiContract | None:
         return self.api_client.call_api(
-            params=params,  # pyrefly: ignore[bad-argument-type]
             relative_path=posixpath.join(self.path, str(id_)),
+            params=params,
             return_type=AlbumForApiContract,
         )

@@ -26,7 +26,7 @@ class ArtistApiApi(ApiBase, path="artists"):
         self, id_: int, **params: Unpack[_ApiArtistsIdGetParams]
     ) -> ArtistForApiContract | None:
         return self.api_client.call_api(
-            params=params,  # pyrefly: ignore[bad-argument-type]
             relative_path=posixpath.join(self.path, str(id_)),
+            params=params,
             return_type=ArtistForApiContract,
         )

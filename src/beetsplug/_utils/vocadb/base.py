@@ -3,7 +3,6 @@ from __future__ import annotations
 import sys
 from functools import cache, cached_property
 
-from beets.library import Item
 
 from .mapper import AlbumFlexibleAttributes, ItemFlexibleAttributes, Mapper
 from .utils import get_language_preference
@@ -13,7 +12,7 @@ if not sys.version_info < (3, 12):
 else:
     from typing_extensions import override
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 from beets import __version__ as beets_version
 from beets import config as beets_config
@@ -31,26 +30,23 @@ from beets.ui import (
 from .vocadb_api_client import (
     AlbumApiApi,
     AlbumOptionalFields,
-    AlbumOptionalFieldsSet,
     ApiClient,
     ArtistApiApi,
     ContentLanguagePreference,
     NameMatchMode,
     SongApiApi,
     SongOptionalFields,
-    SongOptionalFieldsSet,
     SongSortRule,
-    TagApiApi,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Iterable, Iterator, Sequence
     from optparse import Values
+    from typing import TypedDict
 
     from beets import library
     from beets.autotag.hooks import AlbumInfo, TrackInfo
     from beets.dbcore import Results
-    from beets.library import Item, Library
 
     from .vocadb_api_client import (
         AlbumForApiContract,
@@ -85,14 +81,12 @@ IGNORE_VIDEO_TRACKS: bool = beets_config["match"]["ignore_video_tracks"].get(
     template=bool
 )
 
-SONG_FIELDS: SongOptionalFieldsSet = SongOptionalFieldsSet(
-    (
-        SongOptionalFields.ARTISTS,
-        SongOptionalFields.CULTURE_CODES,
-        SongOptionalFields.TAGS,
-        SongOptionalFields.BPM,
-        SongOptionalFields.LYRICS,
-    )
+SONG_FIELDS: tuple[SongOptionalFields, ...] = (
+    SongOptionalFields.ARTISTS,
+    SongOptionalFields.CULTURE_CODES,
+    SongOptionalFields.TAGS,
+    SongOptionalFields.BPM,
+    SongOptionalFields.LYRICS,
 )
 
 
@@ -198,10 +192,6 @@ class PluginBase(MetadataSourcePlugin):
         return SongApiApi(api_client=self.client)
 
     @cached_property
-    def tag_api(self) -> TagApiApi:
-        return TagApiApi(api_client=self.client)
-
-    @cached_property
     def language_preference(self) -> ContentLanguagePreference:
         return get_language_preference(
             languages=LANGUAGES,
@@ -217,7 +207,6 @@ class PluginBase(MetadataSourcePlugin):
             ignore_video_tracks=IGNORE_VIDEO_TRACKS,
             artist_api=self.artist_api,
             song_api=self.song_api,
-            tag_api=self.tag_api,
             language_preference=self.language_preference,
             include_featured_album_artists=self.include_featured_album_artists,
             use_base_voicebank=self.use_base_voicebank,
@@ -265,7 +254,7 @@ class PluginBase(MetadataSourcePlugin):
         sync_cmd.func = self.sync
         return [sync_cmd]
 
-    def sync(self, lib: Library, opts: Values, args: list[str]) -> None:
+    def sync(self, lib: library.Library, opts: Values, args: list[str]) -> None:
         """Command handler for the VocaDB sync subcommand.
 
         Handles the execution of the sync command for both singleton tracks
@@ -289,7 +278,7 @@ class PluginBase(MetadataSourcePlugin):
 
     def singletons(
         self,
-        lib: Library,
+        lib: library.Library,
         query: list[str],
         move: bool,
         pretend: bool,
@@ -345,7 +334,7 @@ class PluginBase(MetadataSourcePlugin):
 
     def albums(
         self,
-        lib: Library,
+        lib: library.Library,
         query: list[str],
         move: bool,
         pretend: bool,
@@ -406,7 +395,7 @@ class PluginBase(MetadataSourcePlugin):
                     )
                 )
             }
-            mapping: dict[Item, TrackInfo] = {}
+            mapping: dict[library.Item, TrackInfo] = {}
             item: library.Item
             for item in items:
                 # First, try to get track ID from flexible attributes
@@ -493,7 +482,7 @@ class PluginBase(MetadataSourcePlugin):
         artist: str,
         album: str,
         va_likely: bool,
-    ) -> Iterable[AlbumInfo]:
+    ) -> Iterator[AlbumInfo]:
         self._log.debug(msg=f"Searching for album {album}")
         remote_album_find_result: (
             AlbumForApiContractPartialFindResult | None
@@ -524,7 +513,7 @@ class PluginBase(MetadataSourcePlugin):
     @override
     def item_candidates(
         self, item: library.Item, artist: str, title: str
-    ) -> Iterable[TrackInfo]:
+    ) -> Iterator[TrackInfo]:
         self._log.debug(msg=f"Searching for track {title}")
         remote_item_find_result: SongForApiContractPartialFindResult | None = (
             self.song_api.api_songs_get(
@@ -565,15 +554,14 @@ class PluginBase(MetadataSourcePlugin):
         remote_album: AlbumForApiContract | None = (
             self.album_api.api_albums_id_get(
                 id_=int(album_id),
-                fields=AlbumOptionalFieldsSet(
-                    (
-                        AlbumOptionalFields.ARTISTS,
-                        AlbumOptionalFields.DISCS,
-                        AlbumOptionalFields.TAGS,
-                        AlbumOptionalFields.TRACKS,
-                        AlbumOptionalFields.WEB_LINKS,
-                        AlbumOptionalFields.MAIN_PICTURE,
-                    )
+                fields=(
+                    AlbumOptionalFields.ARTISTS,
+                    AlbumOptionalFields.DISCS,
+                    AlbumOptionalFields.TAGS,
+                    AlbumOptionalFields.TRACKS,
+                    AlbumOptionalFields.WEB_LINKS,
+                    AlbumOptionalFields.MAIN_PICTURE,
+                    AlbumOptionalFields.DESCRIPTION,
                 ),
                 songFields=SONG_FIELDS,
                 lang=self.language_preference,

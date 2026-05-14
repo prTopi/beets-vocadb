@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import posixpath
-from collections.abc import Callable, MutableMapping
 from contextlib import suppress
 from enum import auto
 from logging import Logger
@@ -33,7 +32,13 @@ from .vocadb_api_client import (
 from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable, Sequence
+    from collections.abc import (
+        Callable,
+        Collection,
+        Iterable,
+        MutableMapping,
+        Sequence,
+    )
     from datetime import datetime
 
     from .vocadb_api_client import (

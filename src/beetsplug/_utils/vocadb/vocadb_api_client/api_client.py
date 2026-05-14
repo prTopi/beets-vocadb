@@ -1,19 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Hashable
 from functools import cache, cached_property
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import msgspec
 import niquests
 from urllib3 import Retry
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, MutableMapping
+    from collections.abc import Hashable, Mapping, MutableMapping
     from logging import Logger
+    from typing import TypeVar
 
-
-H = TypeVar(name="H", bound=Hashable)
+    H = TypeVar(name="H", bound=Hashable)
 
 
 class ApiClient:

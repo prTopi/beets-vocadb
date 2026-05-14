@@ -1,6 +1,12 @@
-from enum import auto
+from __future__ import annotations
 
-from . import PascalCaseStrEnum, StrEnumSet, TypeAlias
+from enum import auto
+from typing import TYPE_CHECKING
+
+from . import PascalCaseStrEnum, StrEnumSet
+
+if TYPE_CHECKING:
+    from . import TypeAlias
 
 
 class AlbumOptionalFields(PascalCaseStrEnum):

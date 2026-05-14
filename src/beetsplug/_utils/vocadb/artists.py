@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from contextlib import suppress
 from enum import auto
 from functools import cache, cached_property, lru_cache
@@ -11,10 +10,7 @@ from beets.metadata_plugins import MetadataSourcePlugin
 from beets.util import unique_list
 
 from .vocadb_api_client import (
-    ArtistApiApi,
     ArtistCategories,
-    ArtistContract,
-    ArtistForApiContract,
     ArtistOptionalFields,
     ArtistOptionalFieldsSet,
     ArtistRoles,
@@ -27,11 +23,18 @@ from .vocadb_api_client import (
 from .vocadb_api_client.models import StrEnum
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Iterator
+    from logging import Logger
+    from typing import TypedDict
 
     from .vocadb_api_client import (
+        ArtistApiApi,
+        ArtistContract,
         ArtistForAlbumForApiContract,
+        ArtistForApiContract,
         ArtistForSongContract,
+        ArtistRolesSet,
+        ContentLanguagePreference,
     )
 
     class ArtistInfoBase(TypedDict, total=False):
@@ -180,7 +183,7 @@ class ArtistsProcessor:
                 (
                     child.name
                     for child in self.tag_api.api_tags_id_children_get(
-                        id=id,
+                        id_=id,
                         lang=self.language_preference,
                     )
                     or ()
@@ -211,7 +214,7 @@ class ArtistsProcessor:
             include_featured_artists=include_featured_artists,
             comp=is_comp,
         )
-        return {  # pyrefly: ignore[bad-unpacking]
+        return {
             **artist_info,
             "label": self._get_label(remote_artists=remote_artists),
             "va": is_comp or (artist_info.get("artist") == self.va_name),
@@ -294,7 +297,7 @@ class ArtistsProcessor:
                 ProcessedArtistCategories.LYRICISTS
             ].ids
 
-        return {  # pyrefly: ignore[bad-unpacking]
+        return {
             **self._get_artists(
                 artists_by_categories=artists_by_categories,
                 not_creditable_artists=not_creditable_artists,

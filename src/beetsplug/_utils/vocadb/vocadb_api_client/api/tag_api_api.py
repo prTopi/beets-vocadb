@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from ..models.tag_for_api_contract import TagForApiContract
 from ..models.tag_for_api_contract_partial_find_result import (
     TagForApiContractPartialFindResult,  # noqa: E501
+    TagForApiContractPartialFindResult,
 )
 from ._api_base import ApiBase
 
@@ -34,7 +35,7 @@ class TagApiApi(ApiBase, path="tags"):
     ) -> TagForApiContractPartialFindResult | None:
         return self.api_client.call_api(
             relative_path="tags",
-            params=params,  # pyrefly: ignore[bad-argument-type]
+            params=params,
             return_type=TagForApiContractPartialFindResult,
         )
 
@@ -48,7 +49,7 @@ class TagApiApi(ApiBase, path="tags"):
         self, id_: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
     ) -> tuple[TagForApiContract, ...] | None:
         return self.api_client.call_api(
-            params=params,  # pyrefly: ignore[bad-argument-type]
             relative_path=posixpath.join(self.path, str(id_)),
+            params=params,
             return_type=tuple[TagForApiContract, ...],
         )
