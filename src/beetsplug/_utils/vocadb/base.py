@@ -564,7 +564,7 @@ class PluginBase(MetadataSourcePlugin):
         self._log.debug(msg=f"Searching for album {album_id}")
         remote_album: AlbumForApiContract | None = (
             self.album_api.api_albums_id_get(
-                id=int(album_id),
+                id_=int(album_id),
                 fields=AlbumOptionalFieldsSet(
                     (
                         AlbumOptionalFields.ARTISTS,
@@ -596,7 +596,7 @@ class PluginBase(MetadataSourcePlugin):
             return None
         self._log.debug(msg=f"Searching for track {track_id}")
         remote_song: SongForApiContract | None = self.song_api.api_songs_id_get(
-            id=int(track_id),
+            id_=int(track_id),
             fields=SONG_FIELDS,
             lang=self.language_preference,
         )

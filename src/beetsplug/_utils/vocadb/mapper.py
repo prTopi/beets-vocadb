@@ -189,8 +189,8 @@ class Mapper:
             media = remote_discs[0].name
         return {"tracks": tracks, "mediums": len(remote_discs), "media": media}
 
-    def _parse_album_id(self, id: int) -> AlbumIdInfo:
-        album_id: str = str(id)
+    def _parse_album_id(self, id_: int) -> AlbumIdInfo:
+        album_id: str = str(id_)
         return {
             "album_id": album_id,
             "data_url": urljoin(self.base_url, posixpath.join("Al", album_id)),
@@ -265,7 +265,7 @@ class Mapper:
         info.update(artist_info)
 
         id_info: MutableMapping[str, str] = {
-            **self._parse_album_id(id=remote_album.id)
+            **self._parse_album_id(id_=remote_album.id)
         }
         id_info.update(
             {
@@ -294,7 +294,7 @@ class Mapper:
             )
             remote_original_song: SongForApiContract | None = (
                 self.song_api.api_songs_id_get(
-                    id=remote_original_version_id,
+                    id_=remote_original_version_id,
                     fields=SongOptionalFieldsSet((SongOptionalFields.ARTISTS,)),
                     lang=self.language_preference,
                 )
@@ -305,8 +305,8 @@ class Mapper:
 
         return remote_song
 
-    def _parse_song_id(self, id: int) -> TrackIdInfo:
-        track_id: str = str(id)
+    def _parse_song_id(self, id_: int) -> TrackIdInfo:
+        track_id: str = str(id_)
         return {
             "track_id": track_id,
             "data_url": urljoin(self.base_url, posixpath.join("S", track_id)),
@@ -403,7 +403,7 @@ class Mapper:
         )
         info.update(artist_info)
         id_info: MutableMapping[str, str] = {
-            **self._parse_song_id(id=remote_song.id)
+            **self._parse_song_id(id_=remote_song.id)
         }
         id_info.update(
             {

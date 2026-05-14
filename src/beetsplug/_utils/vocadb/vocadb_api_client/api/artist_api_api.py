@@ -23,10 +23,10 @@ class ArtistApiApi(ApiBase, path="artists"):
             relations: ArtistRelationsFieldsSet
 
     def api_artists_id_get(
-        self, id: int, **params: Unpack[_ApiArtistsIdGetParams]
+        self, id_: int, **params: Unpack[_ApiArtistsIdGetParams]
     ) -> ArtistForApiContract | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id)),
             params=params,  # pyrefly: ignore[bad-argument-type]
+            relative_path=posixpath.join(self.path, str(id_)),
             return_type=ArtistForApiContract,
         )

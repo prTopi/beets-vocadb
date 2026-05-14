@@ -71,9 +71,9 @@ class ArtistCategory:
         self._names: list[str] = []
         self._ids: list[str] = []
 
-    def add(self, name: str, id: str) -> None:
+    def add(self, name: str, id_: str) -> None:
         self._names.append(name)
-        self._ids.append(id)
+        self._ids.append(id_)
 
     @property
     def names(self) -> list[str] | None:
@@ -373,9 +373,9 @@ class ArtistsProcessor:
                     if (name := remote_artist.name)
                     else None
                 )
-                id: str = str(remote_artist.id)
+                id_: str = str(remote_artist.id)
             else:
-                name, id = (
+                name, id_ = (
                     (
                         remote_album_or_song_artist.name or remote_artist.name,
                         str(remote_artist.id),
@@ -392,7 +392,7 @@ class ArtistsProcessor:
                 }
                 & remote_album_or_song_artist.categories
             ):
-                not_creditable_artists.add((name, id))
+                not_creditable_artists.add((name, id_))
 
             # Handle producers/bands first
             effective_roles: ArtistRolesSet = (
@@ -406,7 +406,7 @@ class ArtistsProcessor:
                 if "Default" in remote_album_or_song_artist.effective_roles:
                     effective_roles |= producer_roles
                 artists_by_categories[ProcessedArtistCategories.PRODUCERS].add(
-                    name, id
+                    name, id_
                 )
 
             # Apply role/category mappings
@@ -417,7 +417,7 @@ class ArtistsProcessor:
                     isinstance(remote_role, ArtistCategories)
                     and remote_role in remote_album_or_song_artist.categories
                 ) or remote_role in effective_roles:
-                    artists_by_categories[category].add(name, id)
+                    artists_by_categories[category].add(name, id_)
 
         # Set producer fallbacks if needed
         if (
@@ -449,7 +449,7 @@ class ArtistsProcessor:
         base_voicebank: ArtistContract | None
         if (
             remote_full_artist := self.artist_api.api_artists_id_get(
-                id=voicebank.id,
+                id_=voicebank.id,
                 fields=ArtistOptionalFieldsSet(
                     (ArtistOptionalFields.BASE_VOICEBANK,)
                 ),

@@ -52,10 +52,10 @@ class AlbumApiApi(ApiBase, path="albums"):
             songFields: SongOptionalFieldsSet  # noqa: N815
 
     def api_albums_id_get(
-        self, id: int, **params: Unpack[_ApiAlbumsIdGetParams]
+        self, id_: int, **params: Unpack[_ApiAlbumsIdGetParams]
     ) -> AlbumForApiContract | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id)),
             params=params,  # pyrefly: ignore[bad-argument-type]
+            relative_path=posixpath.join(self.path, str(id_)),
             return_type=AlbumForApiContract,
         )

@@ -45,10 +45,10 @@ class TagApiApi(ApiBase, path="tags"):
         ): ...
 
     def api_tags_id_children_get(
-        self, id: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
+        self, id_: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
     ) -> tuple[TagForApiContract, ...] | None:
         return self.api_client.call_api(
-            relative_path=posixpath.join(self.path, str(id), "children"),
             params=params,  # pyrefly: ignore[bad-argument-type]
+            relative_path=posixpath.join(self.path, str(id_)),
             return_type=tuple[TagForApiContract, ...],
         )
