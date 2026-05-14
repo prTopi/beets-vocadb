@@ -26,7 +26,6 @@ from .vocadb_api_client import (
     DiscType,
     SongOptionalFields,
     SongType,
-    TagApiApi,
 )
 from .vocadb_api_client.models import StrEnum
 
@@ -99,7 +98,6 @@ class Mapper:
         ignore_video_tracks: bool,
         artist_api: ArtistApiApi,
         song_api: SongApiApi,
-        tag_api: TagApiApi,
         language_preference: ContentLanguagePreference,
         include_featured_album_artists: bool,
         use_base_voicebank: bool,
@@ -117,7 +115,6 @@ class Mapper:
         self.artists_processor: ArtistsProcessor = ArtistsProcessor(
             va_name=va_name,
             artist_api=artist_api,
-            tag_api=tag_api,
             use_base_voicebank=use_base_voicebank,
             language_preference=language_preference,
             logger=logger,

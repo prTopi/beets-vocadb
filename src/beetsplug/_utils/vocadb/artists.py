@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from enum import auto
-from functools import cache, cached_property, lru_cache
+from functools import cache, lru_cache
 from logging import Logger
 from typing import TYPE_CHECKING, TypedDict, cast
 
@@ -14,10 +14,8 @@ from .vocadb_api_client import (
     ArtistOptionalFields,
     ArtistRoles,
     ArtistRolesSet,
+    ArtistType,
     ContentLanguagePreference,
-    TagApiApi,
-    TagForApiContract,
-    TagForApiContractPartialFindResult,
 )
 from .vocadb_api_client.models import StrEnum
 
@@ -141,56 +139,16 @@ class ArtistsProcessor:
         va_name: str,
         use_base_voicebank: bool,
         artist_api: ArtistApiApi,
-        tag_api: TagApiApi,
         language_preference: ContentLanguagePreference,
         logger: Logger,
     ) -> None:
         self.va_name: str = va_name
         self.use_base_voicebank: bool = use_base_voicebank
         self.artist_api: ArtistApiApi = artist_api
-        self.tag_api: TagApiApi = tag_api
         self.language_preference: ContentLanguagePreference = (
             language_preference
         )
         self._log: Logger = logger
-
-    @cached_property
-    def voicebank_artist_types(self) -> set[str]:
-        remote_tag_find_result: TagForApiContractPartialFindResult | None
-        remote_tag_candidates: tuple[TagForApiContract, ...] | None
-        id: int | None = None
-        if (
-            remote_tag_find_result := (
-                self.tag_api.api_tags_get(
-                    query="vocal synthesizer",
-                    lang=self.language_preference,
-                    maxResults=1,
-                    preferAccurateMatches=True,
-                )
-            )
-        ) and (remote_tag_candidates := remote_tag_find_result.items):
-            with suppress(IndexError):
-                id = remote_tag_candidates[0].id
-
-        if not id:
-            self._log.info('no "vocal synthesizer" tag found')
-            return set()
-
-        types = set(
-            filter(
-                None,
-                (
-                    child.name
-                    for child in self.tag_api.api_tags_id_children_get(
-                        id_=id,
-                        lang=self.language_preference,
-                    )
-                    or ()
-                ),
-            )
-        )
-        self._log.debug("Voicebank Artist Types: {}", types)
-        return types
 
     def get_album_artists(
         self,
@@ -360,10 +318,7 @@ class ArtistsProcessor:
             if (
                 (remote_artist := remote_album_or_song_artist.artist)
                 and self.use_base_voicebank
-                and (
-                    str(remote_artist.artist_type)
-                    in self.voicebank_artist_types
-                )
+                and (remote_artist.artist_type in ArtistType.any_vocal_synth())
                 and (
                     remote_artist := self.get_base_voicebank(
                         voicebank=remote_artist

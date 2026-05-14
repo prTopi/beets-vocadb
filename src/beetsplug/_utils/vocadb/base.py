@@ -3,7 +3,6 @@ from __future__ import annotations
 import sys
 from functools import cache, cached_property
 
-
 from .mapper import AlbumFlexibleAttributes, ItemFlexibleAttributes, Mapper
 from .utils import get_language_preference
 

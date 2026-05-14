@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from enum import auto
+from functools import cache
 
 from . import PascalCaseStrEnum
 
@@ -44,3 +47,22 @@ class ArtistType(PascalCaseStrEnum):
     LYRICIST = auto()
     INSTRUMENTALIST = auto()
     OTHER_INDIVIDUAL = auto()
+
+    @classmethod
+    @cache
+    def any_vocal_synth(cls) -> set[ArtistType]:
+        return {
+            cls.VOCALOID,
+            cls.UTAU,
+            cls.CEVIO,
+            cls.SYNTHESIZER_V,
+            cls.NEUTRINO,
+            cls.VOI_SONA,
+            cls.NEW_TYPE,
+            cls.VOICEROID,
+            cls.VOICEVOX,
+            cls.AIVOICE,
+            cls.A_C_E_VIRTUAL_SINGER,
+            cls.OTHER_VOICE_SYNTHESIZER,
+            cls.OTHER_VOCALIST,
+        }
