@@ -14,7 +14,7 @@ class SongType(PascalCaseStrEnum):
     MASHUP = auto()
     SHORT_VERSION = auto()
     MUSIC_P_V = auto()
-    DRAMAPV = auto()
+    DRAMA_P_V = auto()
     LIVE = auto()
     ILLUSTRATION = auto()
     OTHER = auto()
