@@ -1,0 +1,188 @@
+from __future__ import annotations
+
+from typing import NamedTuple
+
+import msgspec
+import pytest
+
+from beetsplug._utils.vocadb.lyrics import LyricsProcessor
+from beetsplug._utils.vocadb.vocadb_api_client import (
+    ContentLanguagePreference,
+    LyricsForSongContract,
+)
+
+
+class LyricsTestCase(NamedTuple):
+    lyrics: str
+    expected_script: str | None
+    expected_language_code: str | None
+    language_preference_expected_lyrics_mapping: list[
+        tuple[ContentLanguagePreference, str | None]
+    ]
+
+
+class TestLyricsProcessor:
+    @pytest.mark.parametrize(
+        argnames="test_case",
+        argvalues=[
+            LyricsTestCase(
+                lyrics="""[
+    {
+        "cultureCodes": ["ja"],
+        "id": 0,
+        "translationType": "Original",
+        "value": "lyrics1"
+    },
+    {
+        "cultureCodes": ["en"],
+        "id": 0,
+        "source": "FooBar",
+        "translationType": "Translation",
+        "url": "https://foo.bar",
+        "value": "lyrics2"
+    },
+    {
+        "cultureCodes": [""],
+        "id": 0,
+        "translationType": "Romanized",
+        "value": "lyrics3"
+    }
+]""",
+                expected_script="Jpan",
+                expected_language_code="jpn",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.JAPANESE, "lyrics1"),
+                    (ContentLanguagePreference.ENGLISH, "lyrics2"),
+                    (ContentLanguagePreference.ROMAJI, "lyrics3"),
+                    (ContentLanguagePreference.DEFAULT, "lyrics1"),
+                ],
+            ),
+            LyricsTestCase(
+                lyrics="""[
+        {
+            "cultureCodes": ["ja"],
+            "id": 0,
+            "translationType": "Translation",
+            "value": "lyrics1"
+        },
+        {
+            "cultureCodes": ["en"],
+            "id": 0,
+            "translationType": "Original",
+            "value": "lyrics2"
+        }
+    ]""",
+                expected_script="Latn",
+                expected_language_code="eng",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.JAPANESE, "lyrics1"),
+                    (ContentLanguagePreference.ENGLISH, "lyrics2"),
+                ],
+            ),
+            LyricsTestCase(
+                lyrics="""[
+    {
+        "cultureCodes": ["ja"],
+        "id": 0,
+        "translationType": "Original",
+        "value": "lyrics1"
+    }
+]""",
+                expected_script="Jpan",
+                expected_language_code="jpn",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.ENGLISH, "lyrics1")
+                ],
+            ),
+            LyricsTestCase(
+                lyrics="""[
+        {
+            "cultureCodes": ["ja"],
+            "id": 0,
+            "translationType": "Original",
+            "value": "lyrics1"
+        },
+        {
+            "cultureCodes": ["en"],
+            "id": 0,
+            "translationType": "Translation",
+            "value": "lyrics2"
+        },
+        {
+            "cultureCodes": [""],
+            "id": 0,
+            "translationType": "Romanized",
+            "value": "lyrics3"
+        }
+    ]""",
+                expected_script="Jpan",
+                expected_language_code="jpn",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.JAPANESE, "lyrics1"),
+                    (ContentLanguagePreference.ENGLISH, "lyrics2"),
+                    (ContentLanguagePreference.ROMAJI, "lyrics3"),
+                    (ContentLanguagePreference.DEFAULT, "lyrics1"),
+                ],
+            ),
+            LyricsTestCase(
+                lyrics="""[
+        {
+            "cultureCodes": ["ja"],
+            "id": 0,
+            "translationType": "Translation",
+            "value": "lyrics1"
+        },
+        {
+            "cultureCodes": ["en"],
+            "id": 0,
+            "translationType": "Original",
+            "value": "lyrics2"
+        }
+    ]""",
+                expected_script="Latn",
+                expected_language_code="eng",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.JAPANESE, "lyrics1"),
+                    (ContentLanguagePreference.ENGLISH, "lyrics2"),
+                    (ContentLanguagePreference.DEFAULT, "lyrics2"),
+                ],
+            ),
+            LyricsTestCase(
+                lyrics="""[
+        {
+            "cultureCodes": ["ja"],
+            "id": 0,
+            "translationType": "Original",
+            "value": "lyrics1"
+        }
+    ]""",
+                expected_script="Jpan",
+                expected_language_code="jpn",
+                language_preference_expected_lyrics_mapping=[
+                    (ContentLanguagePreference.DEFAULT, "lyrics1")
+                ],
+            ),
+        ],
+    )
+    def test_get_lyrics(
+        self,
+        test_case: LyricsTestCase,
+    ) -> None:
+        decoded_lyrics: tuple[LyricsForSongContract, ...] = msgspec.json.decode(
+            test_case.lyrics, type=tuple[LyricsForSongContract, ...]
+        )
+        expected_language_code: str | None = test_case.expected_language_code
+        expected_script: str | None = test_case.expected_script
+        language_preference: ContentLanguagePreference
+        expected_lyrics: str | None
+        for (
+            language_preference,
+            expected_lyrics,
+        ) in test_case.language_preference_expected_lyrics_mapping:
+            assert LyricsProcessor(
+                language_preference=language_preference
+            ).get_lyrics(remote_lyrics=decoded_lyrics) == {
+                "script": expected_script,
+                "language": expected_language_code,
+                "lyrics": expected_lyrics,
+            }

@@ -1,0 +1,683 @@
+from __future__ import annotations
+
+import sys
+from collections import deque
+from functools import cache, cached_property
+from operator import attrgetter
+
+from .mapper import AlbumFlexibleAttributes, ItemFlexibleAttributes, Mapper
+from .utils import get_language_preference
+
+if not sys.version_info < (3, 12):
+    from typing import override  # pyright: ignore[reportUnreachable]
+else:
+    from typing_extensions import override
+
+from typing import TYPE_CHECKING
+
+from beets import __version__ as beets_version
+from beets import config as beets_config
+from beets import dbcore
+from beets.autotag.distance import Distance
+from beets.metadata_plugins import MetadataSourcePlugin
+from beets.plugins import apply_item_changes
+from beets.ui import (
+    Subcommand,
+    should_move,  # pyright: ignore[reportUnknownVariableType]
+    should_write,  # pyright: ignore[reportUnknownVariableType]
+    show_model_changes,
+)
+
+from .vocadb_api_client import (
+    AlbumApiApi,
+    AlbumOptionalFields,
+    ApiClient,
+    ArtistApiApi,
+    ContentLanguagePreference,
+    NameMatchMode,
+    SongApiApi,
+    SongOptionalFields,
+    SongSortRule,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Sequence
+    from optparse import Values
+    from typing import TypedDict
+
+    from beets import library
+    from beets.autotag.hooks import AlbumInfo, TrackInfo
+    from beets.dbcore import Results
+
+    from .vocadb_api_client import (
+        AlbumForApiContract,
+        AlbumForApiContractPartialFindResult,
+        SongForApiContract,
+        SongForApiContractPartialFindResult,
+    )
+
+    class BaseConfig(TypedDict):
+        prefer_romaji: bool
+        include_featured_album_artists: bool
+        use_base_voicebank: bool
+        search_limit: int
+        exclude_item_fields: list[str]
+        exclude_album_fields: list[str]
+
+
+USER_AGENT: str = f"beets/{beets_version} +https://beets.io/"
+
+DEFAULT_CONFIG: BaseConfig = {
+    "prefer_romaji": False,
+    "include_featured_album_artists": False,
+    "use_base_voicebank": False,
+    "search_limit": 5,
+    "exclude_item_fields": [],
+    "exclude_album_fields": [],
+}
+
+LANGUAGES: list[str] | None = beets_config["import"]["languages"].as_str_seq()
+VA_NAME: str = beets_config["va_name"].as_str()
+IGNORE_VIDEO_TRACKS: bool = beets_config["match"]["ignore_video_tracks"].get(
+    template=bool
+)
+
+SONG_FIELDS: tuple[SongOptionalFields, ...] = (
+    SongOptionalFields.ARTISTS,
+    SongOptionalFields.CULTURE_CODES,
+    SongOptionalFields.TAGS,
+    SongOptionalFields.BPM,
+    SongOptionalFields.LYRICS,
+)
+
+
+class PluginBase(MetadataSourcePlugin):
+    """Base plugin class for integration of VocaDB instances with Beets.
+
+    This base class provides the core functionality for retrieving metadata from
+    an instance of VocaDB and saving it to a Beets library. Examples of VocaDB
+    instances include VocaDB, UtaiteDB and TouhouDB. Subclassing is required.
+    """
+
+    base_url: str
+    api_url: str
+    sync_subcommand: str
+
+    def __init__(self) -> None:
+        super().__init__()  # pyright: ignore[reportUnknownMemberType]
+        self.album_types: dict[str, dbcore.types.Type] = {
+            self._flexible_attributes(
+                AlbumFlexibleAttributes.ALBUM_ID
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
+                AlbumFlexibleAttributes.ALBUMARTIST_ID
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
+                AlbumFlexibleAttributes.ALBUMARTIST_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+        }
+        self.item_types: dict[str, dbcore.types.Type] = {
+            self._flexible_attributes(
+                ItemFlexibleAttributes.TRACK_ID
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.ARTIST_ID
+            ): dbcore.types.STRING,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.ARTIST_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.ARRANGER_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.COMPOSER_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.LYRICIST_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+            self._flexible_attributes(
+                ItemFlexibleAttributes.REMIXER_IDS
+            ): dbcore.types.MULTI_VALUE_DSV,
+        }
+        self.config.add(value=DEFAULT_CONFIG)
+        self.prefer_romaji: bool = self.config["prefer_romaji"].get(bool)
+        self.include_featured_album_artists: bool = self.config[
+            "include_featured_album_artists"
+        ].get(bool)
+        self.use_base_voicebank: bool = self.config["use_base_voicebank"].get(
+            bool
+        )
+        self.search_limit: int = self.config["search_limit"].get(int)
+        self.exclude_album_fields: list[str] = self.config[
+            "exclude_album_fields"
+        ].as_str_seq()
+        self.exclude_item_fields: list[str] = self.config[
+            "exclude_item_fields"
+        ].as_str_seq()
+
+    def __init_subclass__(
+        cls,
+        base_url: str,
+        api_url: str,
+        subcommand_prefix: str,
+    ) -> None:
+        super().__init_subclass__()
+        cls.base_url = base_url
+        cls.api_url = api_url
+        cls.sync_subcommand = f"{subcommand_prefix}sync"
+
+    @cache
+    def _flexible_attributes(
+        self, name: AlbumFlexibleAttributes | ItemFlexibleAttributes, /
+    ) -> str:
+        return f"{self.name}_{name}"
+
+    @cached_property
+    def client(self) -> ApiClient:
+        client: ApiClient = ApiClient(
+            user_agent=USER_AGENT, base_url=self.api_url, logger=self._log
+        )
+        self.register_listener(event="cli_exit", func=client.close)
+        return client
+
+    @cached_property
+    def album_api(self) -> AlbumApiApi:
+        return AlbumApiApi(api_client=self.client)
+
+    @cached_property
+    def artist_api(self) -> ArtistApiApi:
+        return ArtistApiApi(api_client=self.client)
+
+    @cached_property
+    def song_api(self) -> SongApiApi:
+        return SongApiApi(api_client=self.client)
+
+    @cached_property
+    def language_preference(self) -> ContentLanguagePreference:
+        return get_language_preference(
+            languages=LANGUAGES,
+            prefer_romaji=self.prefer_romaji,
+        )
+
+    @cached_property
+    def mapper(self) -> Mapper:
+        return Mapper(
+            base_url=self.base_url,
+            data_source=self.data_source,
+            flexible_attributes=self._flexible_attributes,
+            ignore_video_tracks=IGNORE_VIDEO_TRACKS,
+            artist_api=self.artist_api,
+            song_api=self.song_api,
+            language_preference=self.language_preference,
+            include_featured_album_artists=self.include_featured_album_artists,
+            use_base_voicebank=self.use_base_voicebank,
+            exclude_item_fields=self.exclude_item_fields,
+            exclude_album_fields=self.exclude_album_fields,
+            va_name=VA_NAME,
+            logger=self._log,
+        )
+
+    @override
+    def commands(self) -> Sequence[Subcommand]:
+        sync_cmd: Subcommand = Subcommand(
+            name=self.sync_subcommand,
+            help=f"update metadata from {self.data_source}",
+        )
+        _ = sync_cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            "-p",
+            "--pretend",
+            action="store_true",
+            help="show all changes but do nothing",
+        )
+        _ = sync_cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            "-m",
+            "--move",
+            action="store_true",
+            dest="move",
+            help="move files in the library directory",
+        )
+        _ = sync_cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            "-M",
+            "--nomove",
+            action="store_false",
+            dest="move",
+            help="don't move files in library",
+        )
+        _ = sync_cmd.parser.add_option(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            "-W",
+            "--nowrite",
+            action="store_false",
+            default=None,
+            dest="write",
+            help="don't write updated metadata to files",
+        )
+        _ = sync_cmd.parser.add_format_option()  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+        sync_cmd.func = self.sync
+        return [sync_cmd]
+
+    def sync(self, lib: library.Library, opts: Values, args: list[str]) -> None:
+        """Command handler for the VocaDB sync subcommand.
+
+        Handles the execution of the sync command for both singleton tracks
+        and albums, applying metadata updates from VocaDB to the Beets library.
+
+        Args:
+            lib: Beets library instance
+            opts: Command line options parsed from argparse
+            args: Command line arguments (typically query strings)
+        """
+        move: bool = should_move(move_opt=opts.move)  # pyright: ignore[reportAny]
+        pretend: bool = opts.pretend  # pyright: ignore[reportAny]
+        write: bool = should_write(write_opt=opts.write)  # pyright: ignore[reportAny]
+
+        self.singletons(
+            lib=lib, query=args, move=move, pretend=pretend, write=write
+        )
+        self.albums(
+            lib=lib, query=args, move=move, pretend=pretend, write=write
+        )
+
+    def singletons(
+        self,
+        lib: library.Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
+    ) -> None:
+        """Update metadata for singleton tracks (not part of albums).
+
+        Args:
+            lib: Beets library instance
+            query: Query to filter items
+            move: Whether to move files
+            pretend: Show changes without applying them
+            write: Whether to write changes to files
+        """
+        from beets.autotag import TrackMatch
+
+        track_ids: list[int | str] = []
+        items: deque[library.Item] = deque()
+
+        item: library.Item
+        for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
+            track_id: int | str | None
+            if not (
+                track_id := item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
+                    key=self._flexible_attributes(
+                        ItemFlexibleAttributes.TRACK_ID
+                    )
+                )
+            ):
+                self._log.debug(
+                    "Skipping singleton with no "
+                    + self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
+                    + ": {}",
+                    item,
+                )
+                continue
+            if (
+                data_source := item.get(key="data_source")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            ) and data_source != self.data_source:
+                self._log.debug(
+                    f"Skipping non-{self.data_source} singleton: {{}}", item
+                )
+                continue
+            track_ids.append(track_id)  # pyright: ignore[reportUnknownArgumentType]
+            items.append(item)
+
+        total: int = len(track_ids)
+
+        for index, (track_id, track_info) in enumerate(
+            zip(track_ids, self.tracks_for_ids(ids=track_ids)), start=1
+        ):
+            item = items.popleft()
+            if not track_info:
+                self._log.info(
+                    f"Recording ID not found: {track_id} " + "for track {}",
+                    item,
+                )
+                continue
+            self._log.info(
+                "Processing singleton {}/{} - {}", index, total, item
+            )
+            with lib.transaction():
+                TrackMatch(
+                    distance=Distance(), info=track_info, item=item
+                ).apply_metadata()
+                if show_model_changes(new=item):
+                    apply_item_changes(lib, item, move, pretend, write)
+
+    def albums(
+        self,
+        lib: library.Library,
+        query: list[str],
+        move: bool,
+        pretend: bool,
+        write: bool,
+    ) -> None:
+        """Update metadata for albums and their tracks.
+
+        Args:
+            lib: Beets library instance
+            query: Query to filter albums
+            move: Whether to move files
+            pretend: Show changes without applying them
+            write: Whether to write changes to files
+        """
+        from contextlib import suppress
+
+        from beets.autotag import AlbumMatch
+        from beets.autotag.distance import track_distance
+        from beets.util import ancestry
+
+        album_ids: list[int | str] = []
+        albums: deque[library.Album] = deque()
+
+        album: library.Album
+        for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
+            album_id: str | int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                key=self._flexible_attributes(AlbumFlexibleAttributes.ALBUM_ID)
+            )
+            if not album_id:
+                self._log.debug(
+                    "Skipping album with no "
+                    + self._flexible_attributes(
+                        AlbumFlexibleAttributes.ALBUM_ID
+                    )
+                    + ": {}",
+                    album,
+                )
+                continue
+            if (
+                data_source := album.get(key="data_source")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                or (temp_item := album.items().get())
+                and (data_source := temp_item.get("data_source"))  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            ) and data_source != self.data_source:
+                self._log.debug(
+                    f"Skipping non-{self.data_source} album: {{}}", album
+                )
+                continue
+            album_ids.append(album_id)  # pyright: ignore[reportUnknownArgumentType]
+            albums.append(album)
+
+        total: int = len(album_ids)
+
+        for index, (album_id, album_info) in enumerate(
+            zip(album_ids, self.albums_for_ids(ids=album_ids)), start=1
+        ):
+            album = albums.popleft()
+            if not album_info:
+                self._log.info(
+                    f"Release ID {album_id} not found for album {{}}", album
+                )
+                continue
+            self._log.info("Processing album {}/{} - {}", index, total, album)
+            items: Results[library.Item] = album.items()
+
+            track_id: int | str | None
+            track_index: dict[str, TrackInfo] = {
+                str(track_id): track_info
+                for track_info in album_info.tracks
+                if (
+                    track_id := track_info.get(
+                        self._flexible_attributes(
+                            ItemFlexibleAttributes.TRACK_ID
+                        )
+                    )
+                )
+            }
+            mapping: dict[library.Item, TrackInfo] = {}
+            item: library.Item
+            for item in items:
+                # First, try to get track ID from flexible attributes
+                track_id = item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                    key=self._flexible_attributes(
+                        ItemFlexibleAttributes.TRACK_ID
+                    )
+                )
+
+                if track_id:
+                    with suppress(KeyError):
+                        mapping[item] = track_index[str(track_id)]  # pyright: ignore[reportUnknownArgumentType]
+
+                        continue
+
+                # use automatic matching
+                self._log.warning(
+                    f"Trying to automatch missing track ID {track_id}"
+                    + " in album info for {}...",
+                    album,
+                )
+                # Unset track id so that it won't affect distance
+                item[
+                    self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
+                ] = None
+                matches: dict[str, Distance] = {
+                    track_id: track_distance(item, track_info)
+                    for track_id, track_info in track_index.items()
+                }
+                new_track_id: str = min(matches, key=matches.__getitem__)
+                item[
+                    self._flexible_attributes(ItemFlexibleAttributes.TRACK_ID)
+                ] = new_track_id
+                mapping[item] = track_index[new_track_id]
+                self._log.warning(
+                    msg=f"Success, automatched to ID {new_track_id}"
+                )
+            with lib.transaction():
+                AlbumMatch(
+                    distance=Distance(), info=album_info, mapping=mapping
+                ).apply_metadata()
+                # Copy flexible attributes from album_info to album
+                for flex_key in (
+                    "cover_art_url",
+                    "data_source",
+                    "label",
+                    *(
+                        self._flexible_attributes(name)
+                        for name in AlbumFlexibleAttributes
+                    ),
+                ):
+                    if album_info.get(flex_key):
+                        album[flex_key] = album_info[flex_key]
+                _ = show_model_changes(new=album)
+                changed: bool = False
+                any_changed_item: library.Item | None = items.get()
+                for item in items:
+                    item_changed: bool = show_model_changes(new=item)
+                    changed |= item_changed
+                    if item_changed:
+                        any_changed_item = item
+                        apply_item_changes(lib, item, move, pretend, write)
+                if pretend:
+                    continue
+                if any_changed_item and changed:
+                    key: str
+                    for key in album.item_keys - {
+                        "original_day",
+                        "original_month",
+                        "original_year",
+                        "genres",
+                        "language",
+                        "script",
+                    }:
+                        album[key] = any_changed_item[key]
+                album.store()  # pyright: ignore[reportUnknownMemberType]
+                if (
+                    move
+                    and any_changed_item
+                    and lib.directory in ancestry(path=any_changed_item.path)
+                ):
+                    self._log.debug("moving album {}", album)
+                    album.move()  # pyright: ignore[reportUnknownMemberType]
+
+    @override
+    def album_for_id(self, album_id: int | str) -> AlbumInfo | None:
+        norm_id: str | None
+        if not (norm_id := self._extract_id(album_id)):
+            self._log.debug(
+                msg=f"Skipping non-{self.data_source} album: {album_id}"
+            )
+            return None
+        self._log.debug(msg=f"Searching for album {norm_id}")
+        remote_album: AlbumForApiContract | None = (
+            self.album_api.api_albums_id_get(
+                id_=int(norm_id),
+                fields=(
+                    (
+                        AlbumOptionalFields.ARTISTS,
+                        AlbumOptionalFields.DISCS,
+                        AlbumOptionalFields.TAGS,
+                        AlbumOptionalFields.TRACKS,
+                        AlbumOptionalFields.WEB_LINKS,
+                        AlbumOptionalFields.MAIN_PICTURE,
+                        AlbumOptionalFields.DESCRIPTION,
+                    )
+                ),
+                songFields=SONG_FIELDS,
+                lang=self.language_preference,
+            )
+        )
+        return self.mapper.album_info(
+            remote_album=remote_album,
+        )
+
+    @override
+    def track_for_id(self, track_id: int | str) -> TrackInfo | None:
+        norm_id: str | None
+        if not (norm_id := self._extract_id(url=track_id)):
+            self._log.debug(
+                msg=f"Skipping non-{self.data_source} singleton: {track_id}"
+            )
+            return None
+        self._log.debug(msg=f"Searching for track {norm_id}")
+        remote_song: SongForApiContract | None = self.song_api.api_songs_id_get(
+            id_=int(norm_id),
+            fields=SONG_FIELDS,
+            lang=self.language_preference,
+        )
+        return (
+            self.mapper.track_info(
+                remote_song=remote_song,
+            )
+            if remote_song
+            else None
+        )
+
+    @override
+    def candidates(
+        self,
+        items: Iterable[library.Item],
+        artist: str,
+        album: str,
+        va_likely: bool,
+    ) -> Iterator[AlbumInfo]:
+        self._log.debug(msg=f"Searching for album {album}")
+        remote_album_find_result: (
+            AlbumForApiContractPartialFindResult | None
+        ) = self.album_api.api_albums_get(
+            query=album,
+            maxResults=self.search_limit,
+            nameMatchMode=NameMatchMode.AUTO,
+        )
+        remote_album_candidates: tuple[AlbumForApiContract, ...] | None
+        if not remote_album_find_result or not (
+            remote_album_candidates := remote_album_find_result.items
+        ):
+            return
+        else:
+            self._log.debug(
+                msg=f"Found {len(remote_album_candidates)} result(s) for '{album}'"
+            )
+        # songFields parameter doesn't exist for album search
+        # so we'll get albums by their id
+        yield from filter(
+            None,
+            (
+                self.albums_for_ids(
+                    ids=map(
+                        attrgetter("id"),
+                        remote_album_candidates,
+                    )
+                )
+            ),
+        )
+
+    @override
+    def item_candidates(
+        self, item: library.Item, artist: str, title: str
+    ) -> Iterator[TrackInfo]:
+        self._log.debug(msg=f"Searching for track {title}")
+        remote_item_find_result: SongForApiContractPartialFindResult | None = (
+            self.song_api.api_songs_get(
+                query=title,
+                fields=SONG_FIELDS,
+                maxResults=self.search_limit,
+                nameMatchMode=NameMatchMode.AUTO,
+                preferAccurateMatches=True,
+                sort=SongSortRule.SONG_TYPE,
+                lang=self.language_preference,
+            )
+        )
+        remote_item_candidates: tuple[SongForApiContract, ...] | None
+        if not remote_item_find_result or not (
+            remote_item_candidates := remote_item_find_result.items
+        ):
+            self._log.debug(msg=f"Found 0 results for '{title}'")
+            return
+        self._log.debug(
+            msg=f"Found {len(remote_item_candidates)} result(s) for '{title}'"
+        )
+        yield from filter(
+            None,
+            map(
+                self.mapper.track_info,
+                remote_item_candidates,
+            ),
+        )
+
+    @override
+    def albums_for_ids(
+        self, ids: Iterable[int | str]
+    ) -> Iterator[AlbumInfo | None]:
+        yield from map(
+            self.mapper.album_info,
+            self.album_api.api_albums_ids_get(
+                ids=[
+                    int(id) if id else None for id in map(self._extract_id, ids)
+                ],
+                fields=(
+                    AlbumOptionalFields.ARTISTS,
+                    AlbumOptionalFields.DISCS,
+                    AlbumOptionalFields.TAGS,
+                    AlbumOptionalFields.TRACKS,
+                    AlbumOptionalFields.WEB_LINKS,
+                    AlbumOptionalFields.MAIN_PICTURE,
+                    AlbumOptionalFields.DESCRIPTION,
+                ),
+                songFields=SONG_FIELDS,
+                lang=self.language_preference,
+            ),
+        )
+
+    @override
+    def tracks_for_ids(
+        self, ids: Iterable[int | str]
+    ) -> Iterable[TrackInfo | None]:
+        yield from map(
+            self.mapper.track_info,
+            self.song_api.api_songs_ids_get(
+                ids=[
+                    int(id) if id else None for id in map(self._extract_id, ids)
+                ],
+                fields=SONG_FIELDS,
+                lang=self.language_preference,
+            ),
+        )
+
+    @override
+    def _extract_id(self, url: int | str) -> str | None:
+        return (
+            str(url) if isinstance(url, int) else url if url.isalnum() else None
+        )
