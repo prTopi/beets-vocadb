@@ -311,7 +311,9 @@ class PluginBase(MetadataSourcePlugin):
                     item,
                 )
                 continue
-            if not item.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
+            if (
+                data_source := item.get(key="data_source")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            ) and data_source != self.data_source:
                 self._log.debug(
                     f"Skipping non-{self.data_source} singleton: {{}}", item
                 )
@@ -369,7 +371,11 @@ class PluginBase(MetadataSourcePlugin):
                     album,
                 )
                 continue
-            if not album.get(key="data_source") == self.data_source:  # pyright: ignore[reportUnknownMemberType]
+            if (
+                data_source := album.get(key="data_source")  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+                or (temp_item := album.items().get())
+                and (data_source := temp_item.get("data_source"))  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
+            ) and data_source != self.data_source:
                 self._log.debug(
                     f"Skipping non-{self.data_source} album: {{}}", album
                 )
@@ -438,6 +444,19 @@ class PluginBase(MetadataSourcePlugin):
                 AlbumMatch(
                     distance=Distance(), info=album_info, mapping=mapping
                 ).apply_metadata()
+                # Copy flexible attributes from album_info to album
+                for flex_key in (
+                    "cover_art_url",
+                    "data_source",
+                    "label",
+                    *(
+                        self._flexible_attributes(name)
+                        for name in AlbumFlexibleAttributes
+                    ),
+                ):
+                    if album_info.get(flex_key):
+                        album[flex_key] = album_info[flex_key]
+                _ = show_model_changes(new=album)
                 changed: bool = False
                 any_changed_item: library.Item | None = items.get()
                 for item in items:
@@ -446,30 +465,24 @@ class PluginBase(MetadataSourcePlugin):
                     if item_changed:
                         any_changed_item = item
                         apply_item_changes(lib, item, move, pretend, write)
-                if pretend or not changed or not any_changed_item:
+                if pretend:
                     continue
-                key: str
-                for key in set(album.item_keys) - {
-                    "original_day",
-                    "original_month",
-                    "original_year",
-                    "genres",
-                    "language",
-                    "script",
-                }:
-                    album[key] = any_changed_item[key]
-                # Copy flexible attributes from album_info to album
-                for flex_key in (
-                    *(
-                        self._flexible_attributes(name)
-                        for name in AlbumFlexibleAttributes
-                    ),
-                ):
-                    if flex_key in album_info:
-                        album[flex_key] = album_info[flex_key]
+                if any_changed_item and changed:
+                    key: str
+                    for key in album.item_keys - {
+                        "original_day",
+                        "original_month",
+                        "original_year",
+                        "genres",
+                        "language",
+                        "script",
+                    }:
+                        album[key] = any_changed_item[key]
                 album.store()  # pyright: ignore[reportUnknownMemberType]
-                if move and lib.directory in ancestry(
-                    path=any_changed_item.path
+                if (
+                    move
+                    and any_changed_item
+                    and lib.directory in ancestry(path=any_changed_item.path)
                 ):
                     self._log.debug("moving album {}", album)
                     album.move()  # pyright: ignore[reportUnknownMemberType]
