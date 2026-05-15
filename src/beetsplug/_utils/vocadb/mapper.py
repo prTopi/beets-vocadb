@@ -169,7 +169,7 @@ class Mapper:
             track_info: TrackInfo | None
             total: int = len(remote_disc_tracks)
             for remote_song in remote_disc_tracks:
-                if not remote_song.song or not (
+                if not (
                     track_info := self.track_info(
                         remote_song=remote_song.song,
                         index=remote_song.track_number,
@@ -202,7 +202,7 @@ class Mapper:
 
     def album_info(
         self,
-        remote_album: AlbumForApiContract,
+        remote_album: AlbumForApiContract | None,
     ) -> AlbumInfo | None:
         """Convert VocaDB album API response to Beets AlbumInfo format.
 
@@ -212,7 +212,7 @@ class Mapper:
         Returns:
             Album information in Beets format or None if conversion fails
         """
-        if not remote_album.tracks:
+        if not (remote_album and remote_album.tracks):
             return None
         info: AlbumInfo = AlbumInfo(
             **self._get_album_track_infos(
@@ -327,7 +327,7 @@ class Mapper:
 
     def track_info(
         self,
-        remote_song: SongForApiContract,
+        remote_song: SongForApiContract | None,
         index: int | None = None,
         media: str | None = None,
         medium: int | None = None,
@@ -347,6 +347,8 @@ class Mapper:
         Returns:
             Track information in Beets TrackInfo format
         """
+        if not remote_song:
+            return None
 
         info: TrackInfo = TrackInfo(
             bpm=normalize_bpm(milli_bpm=remote_song.max_milli_bpm),
