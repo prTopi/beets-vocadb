@@ -44,8 +44,10 @@ class TagApiApi(ApiBase, path="tags"):
         ): ...
 
     def api_tags_id_children_get(
-        self, id_: int, **params: Unpack[_ApiTagsIdChildrenGetParams]
+        self, id_: int | None, **params: Unpack[_ApiTagsIdChildrenGetParams]
     ) -> tuple[TagForApiContract, ...] | None:
+        if not id_:
+            return None
         return self.api_client.call_api(
             self.path,
             str(id_),

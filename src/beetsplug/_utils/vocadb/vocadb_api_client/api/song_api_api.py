@@ -9,6 +9,7 @@ from ..models.song_for_api_contract_partial_find_result import (
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from datetime import datetime
 
     from typing_extensions import Unpack
@@ -63,11 +64,34 @@ class SongApiApi(ApiBase, path="songs"):
         ): ...
 
     def api_songs_id_get(
-        self, id_: int, **params: Unpack[_ApiSongsIdGetParams]
+        self, id_: int | None, **params: Unpack[_ApiSongsIdGetParams]
     ) -> SongForApiContract | None:
+        if not id_:
+            return None
         return self.api_client.call_api(
             self.path,
             str(id_),
             params=params,
             return_type=SongForApiContract,
+        )
+
+    def api_songs_ids_get(
+        self, ids: Iterable[int | None], **params: Unpack[_ApiSongsIdGetParams]
+    ) -> Iterator[SongForApiContract | None]:
+        yield from (
+            self.api_client.decode_response(
+                response=response, target_type=SongForApiContract
+            )
+            for response in self.api_client.send_requests(
+                prepared_requests=[
+                    self.api_client.prepare_request(
+                        self.path,
+                        str(id),
+                        params=params,
+                    )
+                    if id
+                    else None
+                    for id in ids
+                ]
+            )
         )

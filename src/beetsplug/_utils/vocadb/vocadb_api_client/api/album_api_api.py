@@ -9,6 +9,7 @@ from ..models.album_for_api_contract_partial_find_result import (
 from ._api_base import ApiBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
     from datetime import datetime
 
     from typing_extensions import Unpack
@@ -51,11 +52,38 @@ class AlbumApiApi(ApiBase, path="albums"):
             songFields: tuple[SongOptionalFields, ...]  # noqa: N815
 
     def api_albums_id_get(
-        self, id_: int, **params: Unpack[_ApiAlbumsIdGetParams]
+        self, id_: int | None, **params: Unpack[_ApiAlbumsIdGetParams]
     ) -> AlbumForApiContract | None:
+        if not id_:
+            return None
         return self.api_client.call_api(
             self.path,
             str(id_),
             params=params,
             return_type=AlbumForApiContract,
+        )
+
+    def api_albums_ids_get(
+        self,
+        ids: Iterable[int | None],
+        **params: Unpack[_ApiAlbumsIdGetParams],
+    ) -> Iterator[AlbumForApiContract | None]:
+        yield from (
+            self.api_client.decode_response(
+                response=response, target_type=AlbumForApiContract
+            )
+            for response in self.api_client.send_requests(
+                prepared_requests=[
+                    (
+                        self.api_client.prepare_request(
+                            self.path,
+                            str(id),
+                            params=params,
+                        )
+                        if id
+                        else None
+                    )
+                    for id in ids
+                ]
+            )
         )

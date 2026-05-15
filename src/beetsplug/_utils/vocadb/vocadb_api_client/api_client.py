@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import posixpath
-from collections.abc import Iterable
+import time
+from collections.abc import Iterable, Sequence
 from functools import cache, cached_property
 from typing import TYPE_CHECKING
 
@@ -94,6 +95,34 @@ class ApiClient:
             )
         )
         return request
+
+    def send_requests(
+        self,
+        prepared_requests: Sequence[niquests.PreparedRequest | None],
+    ) -> list[niquests.Response | None]:
+        t0: float = time.monotonic()
+        if len(prepared_requests) == 1 and (
+            prepared_request := prepared_requests[0]
+        ):
+            responses: list[niquests.Response | None] = [
+                self.session.send(request=prepared_request)
+            ]
+        else:
+            responses = [
+                (
+                    self.session.send(
+                        request=prepared_request, multiplexed=True
+                    )
+                    if prepared_request
+                    else None
+                )
+                for prepared_request in prepared_requests
+            ]
+        self._log.debug(
+            f"sending {len(responses)} requests took {time.monotonic() - t0:.2f}s"
+        )
+        return responses
+
     def decode(self, content: str | None, target_type: type[H]) -> H | None:
         if not content:
             return None
@@ -103,9 +132,11 @@ class ApiClient:
         return decoder.decode(content)
 
     def decode_response(
-        self, response: niquests.Response, target_type: type[H]
+        self, response: niquests.Response | None, target_type: type[H]
     ) -> H | None:
         """Handle HTTP errors and decode the response body (returns None on failure)."""
+        if not response:
+            return None
         try:
             response = response.raise_for_status()
             try:
