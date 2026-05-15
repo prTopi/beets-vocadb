@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import sys
+from collections import deque
 from functools import cache, cached_property
+from operator import attrgetter
 
 from .mapper import AlbumFlexibleAttributes, ItemFlexibleAttributes, Mapper
 from .utils import get_language_preference
@@ -294,11 +296,14 @@ class PluginBase(MetadataSourcePlugin):
         """
         from beets.autotag import TrackMatch
 
+        track_ids: list[int | str] = []
+        items: deque[library.Item] = deque()
+
         item: library.Item
         for item in lib.items(query=query + ["singleton:true"]):  # pyright: ignore[reportUnknownMemberType]
-            track_id: str
+            track_id: int | str | None
             if not (
-                track_id := item.get(  # pyright: ignore[reportAssignmentType,reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
+                track_id := item.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType] # pyrefly: ignore[bad-assignment]
                     key=self._flexible_attributes(
                         ItemFlexibleAttributes.TRACK_ID
                     )
@@ -318,14 +323,24 @@ class PluginBase(MetadataSourcePlugin):
                     f"Skipping non-{self.data_source} singleton: {{}}", item
                 )
                 continue
-            self._log.debug("Searching for track {0}", item)
-            track_info: TrackInfo | None = self.track_for_id(track_id)
+            track_ids.append(track_id)  # pyright: ignore[reportUnknownArgumentType]
+            items.append(item)
+
+        total: int = len(track_ids)
+
+        for index, (track_id, track_info) in enumerate(
+            zip(track_ids, self.tracks_for_ids(ids=track_ids)), start=1
+        ):
+            item = items.popleft()
             if not track_info:
                 self._log.info(
                     f"Recording ID not found: {track_id} " + "for track {}",
                     item,
                 )
                 continue
+            self._log.info(
+                "Processing singleton {}/{} - {}", index, total, item
+            )
             with lib.transaction():
                 TrackMatch(
                     distance=Distance(), info=track_info, item=item
@@ -356,6 +371,9 @@ class PluginBase(MetadataSourcePlugin):
         from beets.autotag.distance import track_distance
         from beets.util import ancestry
 
+        album_ids: list[int | str] = []
+        albums: deque[library.Album] = deque()
+
         album: library.Album
         for album in lib.albums(query):  # pyright: ignore[reportUnknownMemberType]
             album_id: str | int | None = album.get(  # pyright: ignore[reportUnknownMemberType,reportUnknownVariableType]
@@ -380,12 +398,21 @@ class PluginBase(MetadataSourcePlugin):
                     f"Skipping non-{self.data_source} album: {{}}", album
                 )
                 continue
-            album_info: AlbumInfo | None = self.album_for_id(album_id=album_id)  # pyright: ignore[reportUnknownArgumentType]
+            album_ids.append(album_id)  # pyright: ignore[reportUnknownArgumentType]
+            albums.append(album)
+
+        total: int = len(album_ids)
+
+        for index, (album_id, album_info) in enumerate(
+            zip(album_ids, self.albums_for_ids(ids=album_ids)), start=1
+        ):
+            album = albums.popleft()
             if not album_info:
                 self._log.info(
                     f"Release ID {album_id} not found for album {{}}", album
                 )
                 continue
+            self._log.info("Processing album {}/{} - {}", index, total, album)
             items: Results[library.Item] = album.items()
 
             track_id: int | str | None
@@ -438,8 +465,6 @@ class PluginBase(MetadataSourcePlugin):
                 self._log.warning(
                     msg=f"Success, automatched to ID {new_track_id}"
                 )
-
-            self._log.debug("applying changes to {}", album)
             with lib.transaction():
                 AlbumMatch(
                     distance=Distance(), info=album_info, mapping=mapping
@@ -488,6 +513,59 @@ class PluginBase(MetadataSourcePlugin):
                     album.move()  # pyright: ignore[reportUnknownMemberType]
 
     @override
+    def album_for_id(self, album_id: int | str) -> AlbumInfo | None:
+        norm_id: str | None
+        if not (norm_id := self._extract_id(album_id)):
+            self._log.debug(
+                msg=f"Skipping non-{self.data_source} album: {album_id}"
+            )
+            return None
+        self._log.debug(msg=f"Searching for album {norm_id}")
+        remote_album: AlbumForApiContract | None = (
+            self.album_api.api_albums_id_get(
+                id_=int(norm_id),
+                fields=(
+                    (
+                        AlbumOptionalFields.ARTISTS,
+                        AlbumOptionalFields.DISCS,
+                        AlbumOptionalFields.TAGS,
+                        AlbumOptionalFields.TRACKS,
+                        AlbumOptionalFields.WEB_LINKS,
+                        AlbumOptionalFields.MAIN_PICTURE,
+                        AlbumOptionalFields.DESCRIPTION,
+                    )
+                ),
+                songFields=SONG_FIELDS,
+                lang=self.language_preference,
+            )
+        )
+        return self.mapper.album_info(
+            remote_album=remote_album,
+        )
+
+    @override
+    def track_for_id(self, track_id: int | str) -> TrackInfo | None:
+        norm_id: str | None
+        if not (norm_id := self._extract_id(url=track_id)):
+            self._log.debug(
+                msg=f"Skipping non-{self.data_source} singleton: {track_id}"
+            )
+            return None
+        self._log.debug(msg=f"Searching for track {norm_id}")
+        remote_song: SongForApiContract | None = self.song_api.api_songs_id_get(
+            id_=int(norm_id),
+            fields=SONG_FIELDS,
+            lang=self.language_preference,
+        )
+        return (
+            self.mapper.track_info(
+                remote_song=remote_song,
+            )
+            if remote_song
+            else None
+        )
+
+    @override
     def candidates(
         self,
         items: Iterable[library.Item],
@@ -517,8 +595,12 @@ class PluginBase(MetadataSourcePlugin):
         yield from filter(
             None,
             (
-                self.album_for_id(album_id=remote_album_candidate.id)
-                for remote_album_candidate in remote_album_candidates
+                self.albums_for_ids(
+                    ids=map(
+                        attrgetter("id"),
+                        remote_album_candidates,
+                    )
+                )
             ),
         )
 
@@ -556,16 +638,15 @@ class PluginBase(MetadataSourcePlugin):
         )
 
     @override
-    def album_for_id(self, album_id: int | str) -> AlbumInfo | None:
-        if isinstance(album_id, str) and not album_id.isnumeric():
-            self._log.debug(
-                msg=f"Skipping non-{self.data_source} album: {album_id}"
-            )
-            return None
-        self._log.debug(msg=f"Searching for album {album_id}")
-        remote_album: AlbumForApiContract | None = (
-            self.album_api.api_albums_id_get(
-                id_=int(album_id),
+    def albums_for_ids(
+        self, ids: Iterable[int | str]
+    ) -> Iterator[AlbumInfo | None]:
+        yield from map(
+            self.mapper.album_info,
+            self.album_api.api_albums_ids_get(
+                ids=[
+                    int(id) if id else None for id in map(self._extract_id, ids)
+                ],
                 fields=(
                     AlbumOptionalFields.ARTISTS,
                     AlbumOptionalFields.DISCS,
@@ -577,33 +658,26 @@ class PluginBase(MetadataSourcePlugin):
                 ),
                 songFields=SONG_FIELDS,
                 lang=self.language_preference,
-            )
-        )
-        return (
-            self.mapper.album_info(
-                remote_album=remote_album,
-            )
-            if remote_album
-            else None
+            ),
         )
 
     @override
-    def track_for_id(self, track_id: int | str) -> TrackInfo | None:
-        if isinstance(track_id, str) and not track_id.isnumeric():
-            self._log.debug(
-                msg=f"Skipping non-{self.data_source} singleton: {track_id}"
-            )
-            return None
-        self._log.debug(msg=f"Searching for track {track_id}")
-        remote_song: SongForApiContract | None = self.song_api.api_songs_id_get(
-            id_=int(track_id),
-            fields=SONG_FIELDS,
-            lang=self.language_preference,
+    def tracks_for_ids(
+        self, ids: Iterable[int | str]
+    ) -> Iterable[TrackInfo | None]:
+        yield from map(
+            self.mapper.track_info,
+            self.song_api.api_songs_ids_get(
+                ids=[
+                    int(id) if id else None for id in map(self._extract_id, ids)
+                ],
+                fields=SONG_FIELDS,
+                lang=self.language_preference,
+            ),
         )
+
+    @override
+    def _extract_id(self, url: int | str) -> str | None:
         return (
-            self.mapper.track_info(
-                remote_song=remote_song,
-            )
-            if remote_song
-            else None
+            str(url) if isinstance(url, int) else url if url.isalnum() else None
         )
