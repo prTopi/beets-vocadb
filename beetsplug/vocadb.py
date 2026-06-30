@@ -24,9 +24,14 @@ if TYPE_CHECKING:
     from _typeshed import SupportsRead
 
 import beets
-from beets.autotag.distance import Distance
-from beets.autotag.hooks import AlbumInfo, AlbumMatch, TrackInfo, TrackMatch
-from beets.autotag.match import track_distance
+from beets.autotag import (
+    AlbumInfo,
+    AlbumMatch,
+    Distance,
+    TrackInfo,
+    TrackMatch,
+    track_distance,
+)
 from beets.library import Album, Item, Library
 from beets.metadata_plugins import MetadataSourcePlugin
 from beets.plugins import apply_item_changes
