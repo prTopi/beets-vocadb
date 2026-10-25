@@ -3,6 +3,7 @@ from datetime import datetime
 from itertools import chain
 from json import load
 from optparse import Values
+from os import fsencode
 from re import Match, match, search
 from sys import version_info
 from typing import TYPE_CHECKING, NamedTuple, Optional, TypedDict, Union
@@ -426,7 +427,9 @@ class VocaDBPlugin(MetadataSourcePlugin):
                         ]:
                             album[key] = any_changed_item[key]
                     album.store()
-                    if move and lib.directory in ancestry(items[0].path):
+                    if move and fsencode(lib.directory) in ancestry(
+                        items[0].path
+                    ):
                         self._log.debug("moving album {0}", album_formatted)
                         album.move()
 
